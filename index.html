@@ -1,0 +1,106 @@
+---
+layout: default
+title: Home
+---
+
+<style>
+  .miki-section { margin: 1.5rem 0; }
+  .miki-list { list-style: none; padding: 0; margin: 0; }
+  .miki-list li { margin: 0.4rem 0; }
+  .miki-meta { color: #666; font-size: 0.9rem; }
+  .miki-flex { display: flex; gap: 1rem; align-items: flex-start; }
+  .miki-col { flex: 1 1 0; min-width: 260px; }
+  .miki-badge { display: inline-block; padding: 0.1rem 0.4rem; border-radius: 6px; background: #f2f2f2; font-size: 0.8rem; }
+  .miki-small { font-size: 0.85rem; }
+  .miki-grid { display: grid; grid-template-columns: repeat(auto-fit, minmax(280px, 1fr)); gap: 1rem; }
+</style>
+
+<h1>미키 위키</h1>
+<p class="miki-meta">AI가 도와주는 개인 위키. 최근 문서와 기록을 한 눈에 확인하세요.</p>
+
+<div class="miki-grid">
+  <section class="miki-section">
+    <h2>최근 게시된 문서</h2>
+    <ul class="miki-list">
+      {% assign recent_posts = site.posts | sort: 'date' | reverse %}
+      {% for post in recent_posts limit:10 %}
+        <li>
+          <a href="{{ post.url | relative_url }}">{{ post.title }}</a>
+          <span class="miki-meta"> · {{ post.date | date: "%Y-%m-%d %H:%M" }}</span>
+        </li>
+      {% endfor %}
+      {% if recent_posts == empty %}
+        <li class="miki-meta">아직 게시된 문서가 없습니다.</li>
+      {% endif %}
+    </ul>
+  </section>
+
+  <section class="miki-section">
+    <h2>최근 편집된 문서</h2>
+    <ul class="miki-list">
+      {% comment %}
+        updated_at을 Front Matter로 관리한다면 다음처럼 사용 가능합니다.
+        없는 경우에는 posts의 date로 대체합니다.
+      {% endcomment %}
+      {% assign edited = site.posts | map: 'updatedAt' %}
+      {% assign recent_edited = site.posts | sort: 'updatedAt' | reverse %}
+      {% assign source = recent_edited | size | gt: 0 | default: false %}
+      {% if source %}
+        {% for post in recent_edited limit:10 %}
+          <li>
+            <a href="{{ post.url | relative_url }}">{{ post.title }}</a>
+            <span class="miki-meta"> · {{ post.updatedAt | date: "%Y-%m-%d %H:%M" }}</span>
+          </li>
+        {% endfor %}
+      {% else %}
+        {% for post in recent_posts limit:10 %}
+          <li>
+            <a href="{{ post.url | relative_url }}">{{ post.title }}</a>
+            <span class="miki-meta"> · {{ post.date | date: "%Y-%m-%d %H:%M" }}</span>
+          </li>
+        {% endfor %}
+      {% endif %}
+    </ul>
+  </section>
+
+  <section class="miki-section">
+    <h2>문서 계층 / 상위 문서</h2>
+    <ul class="miki-list">
+      {% comment %}
+        각 문서의 Front Matter에서 parent: "/notes/parent-title/" 형태로 지정한다는 가정.
+        parent가 있는 문서들을 그룹화하여 상위-하위 관계를 표시합니다.
+      {% endcomment %}
+      {% assign child_posts = site.posts | where_exp: "p", "p.parent" %}
+      {% if child_posts and child_posts.size > 0 %}
+        {% assign grouped = child_posts | group_by: 'parent' %}
+        {% for g in grouped %}
+          <li>
+            <span class="miki-badge">상위</span>
+            <a href="{{ g.name | relative_url }}">{{ g.name }}</a>
+            <div class="miki-small miki-meta">
+              하위 문서: 
+              {% for p in g.items %}
+                <a href="{{ p.url | relative_url }}">{{ p.title }}</a>{% unless forloop.last %}, {% endunless %}
+              {% endfor %}
+            </div>
+          </li>
+        {% endfor %}
+      {% else %}
+        <li class="miki-meta">지정된 상위 문서(parent)가 있는 문서가 아직 없습니다.</li>
+      {% endif %}
+    </ul>
+  </section>
+</div>
+
+<section class="miki-section">
+  <h2>히스토리</h2>
+  <p class="miki-meta">각 문서의 상세 페이지에서 개별 히스토리(스냅샷) 페이지로 이동할 수 있습니다.</p>
+  <ul class="miki-list">
+    <li><a href="{{ '/history.html' | relative_url }}">히스토리 인덱스 보기</a></li>
+  </ul>
+  {% comment %}
+    서버에서 /history/index.json 을 생성하도록 되어 있으므로, 필요하면 해당 JSON을 가져와 SPA 구성으로 확장 가능합니다.
+  {% endcomment %}
+</section>
+
+

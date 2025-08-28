@@ -3,9 +3,10 @@ title: 미키 (Miki) - 당신의 AI 기반 위키
 email: your-email@example.com
 description: >-
   AI가 도와주는 개인 위키형 일기/기록 서비스입니다. 복잡한 문법 없이 글쓰기에만 집중하세요.
-baseurl: "" # GitHub Pages 루트에 배포 시 비워둡니다.
-url: "" # GitHub Pages 배포 시 자동으로 설정됩니다. 예: https://username.github.io
-github_username: username # 실제 GitHub 사용자명으로 변경하세요.
+baseurl: "" # 사용자 페이지(repo 이름이 username.github.io)인 경우 빈 값
+url: "https://halim714.github.io" # 사용자 페이지 도메인
+github_username: halim714 # 실제 GitHub 사용자명
+timezone: Asia/Seoul
 
 # 빌드 설정
 theme: minima # 기본 테마, 추후 커스텀 테마로 변경하거나 스타일 직접 관리
@@ -18,6 +19,16 @@ plugins:
 
 # "미키" 위키 커스텀 설정
 permalink: /notes/:title/ # 노트의 기본 URL 구조
+
+# 기본 레이아웃/값
+defaults:
+  - scope:
+      path: ""
+      type: "posts"
+    values:
+      layout: post
+      # updatedAt이 Front Matter에 있으면 홈에서 최근 편집에 사용
+      updatedAt: null
 collections:
   notes:
     output: true
@@ -45,4 +56,10 @@ exclude:
   - miki-editor/ # React 에디터 소스 디렉토리 (빌드 결과만 포함하거나 별도 배포)
   - README.md
   - LICENSE
+
+# 빌드 옵션 안정화
+markdown: kramdown
+kramdown:
+  input: GFM
+  hard_wrap: false
 
