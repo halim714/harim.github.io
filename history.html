@@ -1,0 +1,66 @@
+---
+layout: default
+title: History
+---
+<div class="container">
+  <h1>History</h1>
+  <div id="history-root">Loading...</div>
+</div>
+<script>
+(function(){
+  const params = new URLSearchParams(window.location.search);
+  const docId = params.get('id');
+  const root = document.getElementById('history-root');
+
+  function el(tag, attrs={}, children=[]) {
+    const e = document.createElement(tag);
+    Object.entries(attrs).forEach(([k,v]) => { if (v!=null) e.setAttribute(k,v); });
+    children.forEach(c => e.appendChild(typeof c === 'string' ? document.createTextNode(c) : c));
+    return e;
+  }
+
+  async function fetchJson(url){
+    const resp = await fetch(url);
+    if(!resp.ok) throw new Error('Fetch failed: '+url);
+    return resp.json();
+  }
+
+  async function renderGlobal(){
+    try{
+      const data = await fetchJson('/history/index.json');
+      const list = el('ul');
+      (data.docs||[]).forEach(d => {
+        const link = el('a', { href: `/history.html?id=${encodeURIComponent(d.id)}` }, [d.title || d.id]);
+        const meta = el('small', {}, [ ` (snapshots: ${d.count || 0})` ]);
+        list.appendChild(el('li', {}, [link, meta]));
+      });
+      root.innerHTML = '';
+      root.appendChild(el('h2', {}, ['All documents']));
+      root.appendChild(list);
+    }catch(e){
+      root.textContent = 'Failed to load history index.';
+    }
+  }
+
+  async function renderDoc(id){
+    try{
+      const data = await fetchJson(`/history/${encodeURIComponent(id)}/index.json`);
+      root.innerHTML = '';
+      root.appendChild(el('h2', {}, [data.title || id]));
+      const back = el('a', { href: '/history.html' }, ['← Back to all']);
+      root.appendChild(back);
+      const list = el('ul');
+      (data.snapshots||[]).forEach(s => {
+        const link = el('a', { href: s.path }, [s.timestamp]);
+        list.appendChild(el('li', {}, [link]));
+      });
+      root.appendChild(list);
+    }catch(e){
+      root.textContent = 'Failed to load document history.';
+    }
+  }
+
+  if(docId){ renderDoc(docId); } else { renderGlobal(); }
+})();
+</script>
+
