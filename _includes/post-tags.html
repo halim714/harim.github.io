@@ -1,0 +1,11 @@
+{% if page.tags %}
+<div class="miki-section">
+  <span class="miki-meta">Tags:</span>
+  <span class="miki-tags">
+    {% for tag in page.tags %}
+      <a class="miki-badge" href="{{ '/tag/' | relative_url }}{{ tag | uri_escape }}">#{{ tag }}</a>
+    {% endfor %}
+  </span>
+</div>
+{% endif %}
+

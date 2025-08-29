@@ -26,15 +26,13 @@
       </div>
     </header>
 
+    {% include searchbox.html %}
+
     <main class="miki-container miki-main">
       {{ content }}
     </main>
 
-    <footer class="miki-footer">
-      <div class="miki-container">
-        <small class="miki-meta">© {{ site.title }} · Built with Jekyll · {{ site.time | date: '%Y' }}</small>
-      </div>
-    </footer>
+    {% include footer.html %}
   </body>
   </html>
 
