@@ -1,0 +1,45 @@
+:root{
+  --font-ui: 'Pretendard Variable','Pretendard',-apple-system,BlinkMacSystemFont,'Segoe UI','Roboto','Oxygen','Ubuntu','Cantarell','Fira Sans','Droid Sans','Helvetica Neue',system-ui,Arial,sans-serif;
+  --font-title-en: 'Switzer', 'Pretendard', 'Inter', system-ui, -apple-system, sans-serif;
+  --fg: #111;
+  --fg-muted: #666;
+  --bg: #fff;
+  --line: #eaeaea;
+  --accent: #0b57d0;
+  --container: 760px;
+}
+*{box-sizing:border-box}
+html,body{margin:0;padding:0;background:var(--bg);color:var(--fg);font-family:var(--font-ui);line-height:1.6}
+a{color:var(--accent);text-decoration:none}
+a:hover{text-decoration:underline}
+
+.miki-container{max-width:var(--container);margin:0 auto;padding:0 16px}
+.miki-header{border-bottom:1px solid var(--line);background:#fff}
+.miki-header-inner{display:flex;justify-content:space-between;align-items:center;height:56px}
+.miki-brand{font-weight:600}
+.miki-nav a{margin-left:14px;color:#333}
+.miki-main{padding:24px 0}
+.miki-footer{border-top:1px solid var(--line);padding:24px 0;margin-top:40px;background:#fff}
+.miki-meta{color:var(--fg-muted)}
+
+.miki-section{margin:24px 0}
+.miki-badge{display:inline-block;background:#f3f3f3;color:#333;border-radius:8px;padding:2px 8px;font-size:.8rem}
+.miki-title-en{font-family:var(--font-title-en);font-weight:700;letter-spacing:.2px;margin:.2rem 0 0}
+.miki-subtitle{font-family:var(--font-title-en);font-weight:600;font-size:1.1rem;margin:1rem 0 .5rem}
+.miki-post-meta{color:var(--fg-muted);font-size:.9rem}
+
+.miki-list{list-style:none;padding:0;margin:0}
+.miki-list li{margin:.4rem 0}
+.miki-grid{display:grid;grid-template-columns:repeat(auto-fit,minmax(280px,1fr));gap:16px}
+
+.miki-prose h1,.miki-prose h2,.miki-prose h3{font-family:var(--font-title-en)}
+.miki-prose img{max-width:100%;height:auto}
+.miki-prose pre{background:#f7f7f7;border:1px solid var(--line);padding:12px;border-radius:8px;overflow:auto}
+.miki-prose code{background:#f7f7f7;padding:2px 4px;border-radius:4px}
+
+@media (max-width: 640px){
+  .miki-header-inner{height:52px}
+  .miki-main{padding:16px 0}
+}
+
+

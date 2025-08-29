@@ -1,0 +1,51 @@
+---
+layout: default
+---
+<article class="miki-post">
+  <header class="miki-post-header">
+    <h1 class="miki-title-en">{{ page.title }}</h1>
+    <div class="miki-post-meta">
+      <span>created: {{ page.date | date: '%Y.%m.%d' }}</span>
+      {% if page.updatedAt %}<span> · updated: {{ page.updatedAt | date: '%Y.%m.%d' }}</span>{% endif %}
+      {% if page.tags %}
+        <span> · </span>
+        <span class="miki-tags">
+          {% for tag in page.tags %}
+            <span class="miki-badge">#{{ tag }}</span>{% unless forloop.last %} {% endunless %}
+          {% endfor %}
+        </span>
+      {% endif %}
+    </div>
+  </header>
+
+  <div class="miki-prose">
+    {{ content }}
+  </div>
+
+  <section class="miki-section">
+    <h2 class="miki-subtitle">Hierarchy</h2>
+    <div id="parent-list" class="miki-meta"></div>
+  </section>
+
+  <section class="miki-section">
+    <h2 class="miki-subtitle">History</h2>
+    <p class="miki-meta"><a href="{{ '/history.html' | relative_url }}?id={{ page.docId | default: page.id }}">이 문서 히스토리 보기</a></p>
+  </section>
+
+  <script src="https://cdn.jsdelivr.net/npm/axios/dist/axios.min.js"></script>
+  <script>
+  (function(){
+    // Optional: load parent info if Front Matter has parent
+    const parent = {{ page.parent | jsonify }};
+    const root = document.getElementById('parent-list');
+    if (parent && root) {
+      const a = document.createElement('a');
+      a.href = parent;
+      a.textContent = '상위 문서로 이동';
+      root.appendChild(a);
+    }
+  })();
+  </script>
+</article>
+
+
