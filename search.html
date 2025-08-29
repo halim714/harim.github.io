@@ -1,0 +1,46 @@
+---
+layout: default
+title: Search
+---
+<div class="miki-section">
+  <h1>Search</h1>
+  <div id="search-result" class="miki-section">검색어를 입력하세요.</div>
+</div>
+
+<script>
+(function(){
+  function qs(name){
+    const p = new URLSearchParams(window.location.search);
+    return p.get(name) || '';
+  }
+  function escapeHtml(s){
+    return (s||'').replace(/[&<>"']/g, m => ({'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;','\'':'&#39;'}[m]));
+  }
+  const q = qs('q').trim();
+  const root = document.getElementById('search-result');
+  if(!q){ root.textContent = '검색어를 입력하세요.'; return; }
+
+  const posts = [
+    {% for post in site.posts %}
+      { url: '{{ post.url | relative_url }}', title: {{ post.title | jsonify }}, date: '{{ post.date | date: "%Y-%m-%d %H:%M" }}' },
+    {% endfor %}
+  ];
+
+  const lower = q.toLowerCase();
+  const result = posts.filter(p => (p.title || '').toLowerCase().includes(lower));
+  if(result.length === 0){ root.textContent = '검색 결과가 없습니다.'; return; }
+
+  const ul = document.createElement('ul');
+  ul.className = 'miki-list';
+  result.forEach(p => {
+    const li = document.createElement('li');
+    const a = document.createElement('a'); a.href = p.url; a.textContent = p.title || p.url;
+    const meta = document.createElement('span'); meta.className = 'miki-meta'; meta.textContent = ' · ' + p.date;
+    li.appendChild(a); li.appendChild(meta); ul.appendChild(li);
+  });
+  root.innerHTML = '';
+  root.appendChild(ul);
+})();
+</script>
+
+

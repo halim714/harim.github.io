@@ -18,7 +18,7 @@ plugins:
   - jekyll-relative-links
 
 # "미키" 위키 커스텀 설정
-permalink: /notes/:title/ # 노트의 기본 URL 구조
+permalink: /doc/:title/ # 편집기 링크 구조와 정합성 유지
 
 # 기본 레이아웃/값
 defaults:
