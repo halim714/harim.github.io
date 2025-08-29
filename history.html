@@ -27,10 +27,10 @@ title: History
 
   async function renderGlobal(){
     try{
-      const data = await fetchJson('/history/index.json');
+      const data = await fetchJson('{{ "/history/index.json" | relative_url }}');
       const list = el('ul');
       (data.docs||[]).forEach(d => {
-        const link = el('a', { href: `/history.html?id=${encodeURIComponent(d.id)}` }, [d.title || d.id]);
+        const link = el('a', { href: '{{ "/history.html" | relative_url }}' + `?id=${encodeURIComponent(d.id)}` }, [d.title || d.id]);
         const meta = el('small', {}, [ ` (snapshots: ${d.count || 0})` ]);
         list.appendChild(el('li', {}, [link, meta]));
       });
@@ -44,14 +44,14 @@ title: History
 
   async function renderDoc(id){
     try{
-      const data = await fetchJson(`/history/${encodeURIComponent(id)}/index.json`);
+      const data = await fetchJson('{{ "/history/" | relative_url }}' + `${encodeURIComponent(id)}/index.json`);
       root.innerHTML = '';
       root.appendChild(el('h2', {}, [data.title || id]));
-      const back = el('a', { href: '/history.html' }, ['← Back to all']);
+      const back = el('a', { href: '{{ "/history.html" | relative_url }}' }, ['← Back to all']);
       root.appendChild(back);
       const list = el('ul');
       (data.snapshots||[]).forEach(s => {
-        const link = el('a', { href: s.path }, [s.timestamp]);
+        const link = el('a', { href: '{{ "/" | relative_url }}'.replace(/\/$/,'') + s.path }, [s.timestamp]);
         list.appendChild(el('li', {}, [link]));
       });
       root.appendChild(list);
