@@ -1,0 +1,17 @@
+---
+layout: default
+title: Debug
+---
+<h1>Debug: Built Post URLs</h1>
+<p class="miki-meta">아래 목록은 Jekyll이 빌드한 모든 포스트의 최종 URL입니다. 각 링크를 클릭해 404 여부를 확인하세요.</p>
+
+<ul class="miki-list">
+{% for post in site.posts %}
+  <li>
+    <a href="{{ post.url | relative_url }}">{{ post.title | default: post.url }}</a>
+    <span class="miki-meta"> · {{ post.url }}</span>
+  </li>
+{% endfor %}
+</ul>
+
+
