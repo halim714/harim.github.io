@@ -3,10 +3,10 @@ title: 미키 (Miki) - 당신의 AI 기반 위키
 email: your-email@example.com
 description: >-
   AI가 도와주는 개인 위키형 일기/기록 서비스입니다. 복잡한 문법 없이 글쓰기에만 집중하세요.
-baseurl: "/harim.github.io" # 프로젝트 페이지 경로
-url: "https://halim714.github.io" # 사용자 페이지 도메인
+baseurl: "/miki-wiki"
+url: "https://halim714.github.io"
 github_username: halim714 # 실제 GitHub 사용자명
-timezone: Asia/Seoul
+timezone: "Asia/Seoul"
 future: true
 
 # 빌드 설정
@@ -19,7 +19,7 @@ plugins:
   - jekyll-relative-links
 
 # "미키" 위키 커스텀 설정
-permalink: /doc/:title/ # 편집기 링크 구조와 정합성 유지
+permalink: "/doc/:title/"
 
 # 기본 레이아웃/값
 defaults:
