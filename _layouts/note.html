@@ -1,0 +1,108 @@
+---
+layout: default
+---
+
+<div class="note-container">
+  <div class="note-header">
+    <h1 class="note-title">{{ page.title }}</h1>
+    
+    {% if page.tags.size > 0 %}
+    <div class="note-tags">
+      {% for tag in page.tags %}
+        <a href="{{ site.baseurl }}/tags#{{ tag | slugify }}" class="note-tag">#{{ tag }}</a>
+      {% endfor %}
+    </div>
+    {% endif %}
+    
+    <div class="note-meta">
+      <span class="note-date">작성: {{ page.date | date: "%Y-%m-%d" }}</span>
+      {% if page.last_modified_at %}
+      <span class="note-modified">수정: {{ page.last_modified_at | date: "%Y-%m-%d" }}</span>
+      {% endif %}
+    </div>
+    
+    {% if page.parent %}
+    <div class="note-parent">
+      상위 문서: <a href="{% link {{ site.collections.notes.relative_directory }}/{{ page.parent }}.md %}">{{ page.parent | replace: "-", " " | capitalize }}</a>
+    </div>
+    {% endif %}
+  </div>
+
+  <div class="note-content">
+    {{ content }}
+  </div>
+
+  <div class="note-footer">
+    {% if site.use_backlinks %}
+    <div class="note-backlinks">
+      <h3>이 문서를 참조하는 문서 (Backlinks)</h3>
+      {% assign notes_linking_here = "" | split: "" %}
+      {% assign current_url_md = page.url | prepend: "(" | append: ")" %}
+      {% for other_note in site.notes %}
+        {% if other_note.url != page.url and other_note.content contains current_url_md %}
+          {% assign notes_linking_here = notes_linking_here | push: other_note %}
+        {% endif %}
+      {% endfor %}
+      {% if notes_linking_here.size > 0 %}
+        <ul>
+        {% for linking_note in notes_linking_here %}
+          <li><a href="{{ linking_note.url | relative_url }}">{{ linking_note.title }}</a></li>
+        {% endfor %}
+        </ul>
+      {% else %}
+        <p>이 문서를 참조하는 다른 문서가 없습니다.</p>
+      {% endif %}
+    </div>
+    {% endif %}
+    
+    <div class="note-history">
+      <h3>문서 히스토리</h3>
+      {% assign repo_name = site.github_repo_name | default: site.github_username | append: ".github.io" %}
+      <p>
+        <a href="https://github.com/{{ site.github_username }}/{{ repo_name }}/commits/main/{{ page.path }}" target="_blank" class="history-link">
+          <span class="history-icon">📜</span> 이 문서의 변경 이력 보기
+        </a>
+      </p>
+      <p>
+        <a href="https://github.com/{{ site.github_username }}/{{ repo_name }}/blame/main/{{ page.path }}" target="_blank" class="history-link">
+          <span class="history-icon">🔍</span> 이 문서의 Blame 보기
+        </a>
+      </p>
+    </div>
+  </div>
+</div>
+
+<style>
+  .history-link {
+    display: inline-flex;
+    align-items: center;
+    padding: 0.5rem 1rem;
+    background-color: #f1f8ff;
+    border: 1px solid #c8e1ff;
+    border-radius: 3px;
+    color: #0366d6;
+    text-decoration: none;
+    margin-bottom: 0.5rem; /* Add some spacing */
+  }
+  
+  .history-link:hover {
+    background-color: #dbedff;
+    text-decoration: none;
+  }
+  
+  .history-icon {
+    margin-right: 0.5rem;
+  }
+  
+  .note-backlinks {
+    margin-top: 2rem;
+    padding-top: 1rem;
+    border-top: 1px solid var(--border-color);
+  }
+  
+  .note-backlinks ul {
+    list-style: disc;
+    padding-left: 1.5rem;
+  }
+</style>
+

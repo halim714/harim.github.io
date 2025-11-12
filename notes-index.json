@@ -1,0 +1,18 @@
+---
+layout: null # No layout needed for JSON output
+permalink: /notes-index.json # Output path
+---
+[
+  {% assign notes_list = site.notes | where_exp: "item", "item.title != nil" %}
+  {% for note in notes_list %}
+  {
+    "title": {{ note.title | jsonify }},
+    "slug": {{ note.basename | replace: ".md", "" | jsonify }},
+    "url": {{ note.url | relative_url | jsonify }},
+    "date": {{ note.date | date: "%Y-%m-%d" | jsonify }},
+    "tags": {{ note.tags | jsonify }},
+    "content_snippet": {{ note.content | strip_html | strip_newlines | truncate: 150 | jsonify }}
+  }{% unless forloop.last %},{% endunless %}
+  {% endfor %}
+]
+

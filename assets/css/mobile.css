@@ -1,0 +1,231 @@
+/* 모바일 최적화 추가 스타일 */
+
+/* 기본 반응형 설정 */
+@media (max-width: 768px) {
+  .wrapper {
+    padding: 0 0.8rem;
+  }
+  
+  .note-container {
+    padding: 1rem;
+    margin-bottom: 1rem;
+  }
+  
+  .note-title {
+    font-size: 1.5rem;
+  }
+  
+  .note-tags {
+    display: flex;
+    flex-wrap: wrap;
+    gap: 0.3rem;
+    margin-bottom: 0.8rem;
+  }
+  
+  .note-tag {
+    font-size: 0.8rem;
+    padding: 0.1rem 0.4rem;
+  }
+  
+  .site-nav {
+    display: flex;
+    flex-wrap: wrap;
+    gap: 1rem;
+    margin-top: 0.5rem;
+  }
+  
+  .search-form {
+    flex-direction: column;
+  }
+  
+  .search-input {
+    border-radius: 4px;
+    margin-bottom: 0.5rem;
+  }
+  
+  .search-button {
+    border-radius: 4px;
+    width: 100%;
+  }
+  
+  .tag-cloud {
+    margin: 1rem 0;
+  }
+  
+  .history-link {
+    display: block;
+    margin-bottom: 0.5rem;
+  }
+}
+
+/* 작은 모바일 화면 최적화 */
+@media (max-width: 480px) {
+  .site-header .wrapper {
+    flex-direction: column;
+    align-items: center;
+    text-align: center;
+  }
+  
+  .site-title {
+    margin-bottom: 0.5rem;
+  }
+  
+  .site-nav {
+    justify-content: center;
+  }
+  
+  .note-meta {
+    display: flex;
+    flex-direction: column;
+  }
+  
+  .note-date, .note-modified {
+    margin-right: 0;
+    margin-bottom: 0.3rem;
+  }
+  
+  .note-backlinks ul {
+    padding-left: 1rem;
+  }
+  
+  .tree {
+    padding-left: 1rem;
+  }
+  
+  .tree ul {
+    padding-left: 1rem;
+  }
+  
+  /* 터치 인터페이스 최적화 */
+  .note-tag, .site-nav a, .history-link, .search-button {
+    padding: 0.5rem 0.8rem;
+  }
+  
+  /* 폰트 크기 조정 */
+  body {
+    font-size: 16px;
+  }
+  
+  .note-content {
+    font-size: 1rem;
+    line-height: 1.5;
+  }
+  
+  /* 스크롤 개선 */
+  pre {
+    max-width: 100%;
+    overflow-x: auto;
+    -webkit-overflow-scrolling: touch;
+  }
+  
+  /* 이미지 최적화 */
+  img {
+    max-width: 100%;
+    height: auto;
+  }
+}
+
+/* 다크 모드 지원 */
+@media (prefers-color-scheme: dark) {
+  :root {
+    --main-bg-color: #1a1a1a;
+    --content-bg-color: #2d2d2d;
+    --text-color: #e0e0e0;
+    --link-color: #58a6ff;
+    --tag-bg-color: #3a3a3a;
+    --border-color: #444444;
+    --header-bg-color: #000000;
+    --header-text-color: #ffffff;
+  }
+  
+  .code-example, pre, code {
+    background-color: #2a2a2a;
+    color: #e0e0e0;
+  }
+  
+  .history-link {
+    background-color: #1f2937;
+    border-color: #374151;
+    color: #58a6ff;
+  }
+  
+  .history-link:hover {
+    background-color: #374151;
+  }
+  
+  .breadcrumb {
+    background-color: #1f2937;
+  }
+  
+  .search-input {
+    background-color: #2d2d2d;
+    color: #e0e0e0;
+    border-color: #444444;
+  }
+  
+  .search-button {
+    background-color: #0366d6;
+  }
+  
+  a {
+    color: #58a6ff;
+  }
+}
+
+/* 접근성 개선 */
+:focus {
+  outline: 3px solid #0366d6;
+  outline-offset: 2px;
+}
+
+.skip-link {
+  position: absolute;
+  top: -40px;
+  left: 0;
+  background: #0366d6;
+  color: white;
+  padding: 8px;
+  z-index: 100;
+}
+
+.skip-link:focus {
+  top: 0;
+}
+
+/* 터치 영역 최적화 */
+button, 
+.note-tag, 
+.site-nav a, 
+.history-link {
+  min-height: 44px;
+  min-width: 44px;
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+}
+
+/* 인쇄 스타일 */
+@media print {
+  body {
+    background-color: white;
+    color: black;
+  }
+  
+  .site-header, .site-footer, .site-nav {
+    display: none;
+  }
+  
+  .note-container {
+    box-shadow: none;
+    border: 1px solid #ddd;
+  }
+  
+  a {
+    color: black;
+    text-decoration: underline;
+  }
+  
+  .note-history, .note-backlinks {
+    display: none;
+  }
+}
