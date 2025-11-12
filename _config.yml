@@ -5,3 +5,4 @@ baseurl: "/harim.github.io"
 permalink: "/doc/:title/"
 
 timezone: "Asia/Seoul"
+repository: harim/harim.github.io
