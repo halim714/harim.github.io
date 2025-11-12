@@ -1,0 +1,2708 @@
+// Jest Snapshot v1, https://goo.gl/fbAQLP
+
+exports[`App Component Snapshots App 컴포넌트 DOM 구조 검증: app-dom-structure 1`] = `
+<div
+  class="h-screen flex flex-col bg-gray-100"
+>
+  <header
+    class="p-4 bg-blue-500 text-white "
+  >
+    <div
+      class="container mx-auto flex justify-between items-center"
+    >
+      <h1
+        class="text-xl font-bold"
+      >
+        Miki Editor v7 AI 연동
+      </h1>
+    </div>
+  </header>
+  <div
+    class="flex-grow p-4 overflow-hidden"
+  >
+    <div
+      class="flex h-full"
+      style="flex-direction: row;"
+    >
+      <div
+        class="bg-white rounded shadow flex flex-col w-1/5 mr-2"
+        style="display: flex;"
+      >
+        <div
+          class="flex justify-between items-center p-3 border-b"
+        >
+          <h2
+            class="text-lg font-bold"
+          >
+            문서 목록
+          </h2>
+          <div
+            class="flex items-center"
+          >
+            <span
+              class="text-sm text-gray-500 mr-2"
+            >
+              0
+              개의 문서
+            </span>
+            <button
+              class="p-1 text-gray-600 hover:text-gray-900 rounded mr-1"
+              title="새로고침"
+            >
+              <svg
+                class="w-5 h-5"
+                fill="none"
+                stroke="currentColor"
+                viewBox="0 0 24 24"
+              >
+                <path
+                  d="M4 4v5h.582m15.356 2A8.001 8.001 0 004.582 9m0 0H9m11 11v-5h-.581m0 0a8.003 8.003 0 01-15.357-2m15.357 2H15"
+                  stroke-linecap="round"
+                  stroke-linejoin="round"
+                  stroke-width="2"
+                />
+              </svg>
+            </button>
+            <button
+              class="p-1 text-gray-600 hover:text-red-600 rounded mr-1"
+              title="로컬 스토리지 정리"
+            >
+              <svg
+                class="w-5 h-5"
+                fill="none"
+                stroke="currentColor"
+                viewBox="0 0 24 24"
+              >
+                <path
+                  d="M19 7l-.867 12.142A2 2 0 0116.138 21H7.862a2 2 0 01-1.995-1.858L5 7m5 4v6m4-6v6m1-10V4a1 1 0 00-1-1h-4a1 1 0 00-1 1v3M4 7h16"
+                  stroke-linecap="round"
+                  stroke-linejoin="round"
+                  stroke-width="2"
+                />
+              </svg>
+            </button>
+          </div>
+        </div>
+        <div
+          class="p-3 border-b"
+        >
+          <div
+            class="relative"
+          >
+            <input
+              class="w-full px-3 py-2 border rounded-md pr-10 focus:outline-none focus:ring-2 focus:ring-blue-300"
+              placeholder="문서 검색..."
+              type="text"
+              value=""
+            />
+            <svg
+              class="absolute right-3 top-2.5 h-5 w-5 text-gray-400"
+              fill="none"
+              stroke="currentColor"
+              viewBox="0 0 24 24"
+            >
+              <path
+                d="M21 21l-6-6m2-5a7 7 0 11-14 0 7 7 0 0114 0z"
+                stroke-linecap="round"
+                stroke-linejoin="round"
+                stroke-width="2"
+              />
+            </svg>
+            
+          </div>
+        </div>
+        <div
+          class="flex-grow overflow-auto p-3"
+        >
+          <div
+            class="flex flex-col items-center justify-center h-40 text-gray-500"
+          >
+            <svg
+              class="w-12 h-12 mb-2 text-gray-300"
+              fill="none"
+              stroke="currentColor"
+              viewBox="0 0 24 24"
+            >
+              <path
+                d="M9 12h6m-6 4h6m2 5H7a2 2 0 01-2-2V5a2 2 0 012-2h5.586a1 1 0 01.707.293l5.414 5.414a1 1 0 01.293.707V19a2 2 0 01-2 2z"
+                stroke-linecap="round"
+                stroke-linejoin="round"
+                stroke-width="1.5"
+              />
+            </svg>
+            <p>
+              저장된 글이 없습니다
+            </p>
+            <button
+              class="mt-2 px-3 py-1 text-sm bg-blue-500 text-white rounded hover:bg-blue-600"
+            >
+              새 글 작성하기
+            </button>
+          </div>
+        </div>
+      </div>
+      <div
+        class="bg-white rounded shadow flex flex-col flex-1 mx-2"
+        style="display: flex;"
+      >
+        <div
+          class="mb-4 flex flex-col p-4 border-b"
+        >
+          <div
+            class="flex justify-between items-center mb-2"
+          >
+            <div
+              class="flex items-center"
+            >
+              <h2
+                class="text-lg font-bold"
+              >
+                에디터
+              </h2>
+              <span
+                class="ml-4 text-xs px-2 py-1 rounded bg-green-100 text-green-700"
+              >
+                저장됨
+              </span>
+            </div>
+            <div
+              class="flex items-center space-x-2"
+            >
+              <button
+                class="px-3 py-1 text-sm rounded flex items-center bg-green-500 text-white hover:bg-green-600"
+                title="새 글 작성 (Ctrl+N)"
+              >
+                <svg
+                  class="w-4 h-4 mr-1"
+                  fill="none"
+                  stroke="currentColor"
+                  viewBox="0 0 24 24"
+                >
+                  <path
+                    d="M12 6v6m0 0v6m0-6h6m-6 0H6"
+                    stroke-linecap="round"
+                    stroke-linejoin="round"
+                    stroke-width="2"
+                  />
+                </svg>
+                새 글
+              </button>
+              <button
+                class="px-3 py-1 text-sm rounded flex items-center bg-gray-200 text-gray-500 cursor-not-allowed"
+                disabled=""
+                title="저장 (Ctrl+S)"
+              >
+                <svg
+                  class="w-4 h-4 mr-1"
+                  fill="none"
+                  stroke="currentColor"
+                  viewBox="0 0 24 24"
+                >
+                  <path
+                    d="M8 7H5a2 2 0 00-2 2v9a2 2 0 002 2h14a2 2 0 002-2V9a2 2 0 00-2-2h-3m-1 4l-3 3m0 0l-3-3m3 3V4"
+                    stroke-linecap="round"
+                    stroke-linejoin="round"
+                    stroke-width="2"
+                  />
+                </svg>
+                <span
+                  class="ml-1"
+                >
+                  저장
+                </span>
+              </button>
+              <button
+                class="p-1 text-gray-600 hover:text-gray-900 rounded"
+                title="전체화면 토글 (Ctrl+Enter)"
+              >
+                <svg
+                  class="w-5 h-5"
+                  fill="none"
+                  stroke="currentColor"
+                  viewBox="0 0 24 24"
+                >
+                  <path
+                    d="M4 8V4m0 0h4M4 4l5 5m11-1V4m0 0h-4m4 0l-5 5M4 16v4m0 0h4m-4 0l5-5m11 5v-4m0 4h-4m4 0l-5-5"
+                    stroke-linecap="round"
+                    stroke-linejoin="round"
+                    stroke-width="2"
+                  />
+                </svg>
+              </button>
+            </div>
+          </div>
+          <input
+            class="w-full px-3 py-2 text-xl font-medium border-b border-gray-200 focus:outline-none focus:border-blue-500 mb-2 bg-transparent"
+            placeholder="문서 제목을 입력하세요 (편집기 첫 줄 텍스트가 자동으로 제목이 됩니다)"
+            type="text"
+            value=""
+          />
+        </div>
+        <div
+          class="flex-grow border rounded relative"
+        >
+          <div
+            class="miki-editor-container flex-grow"
+            style="position: relative; height: 100%; overflow: auto; display: flex; flex-direction: column;"
+          >
+            <div
+              style="height: 100%;"
+            >
+              <div
+                class="toastui-editor-default toastui-editor-defaultUI"
+              >
+                <div
+                  class="toastui-editor-toolbar"
+                >
+                  <div
+                    class="toastui-editor-md-tab-container"
+                    style="display: none"
+                  >
+                    <div
+                      aria-role="tabpanel"
+                      class="toastui-editor-tabs"
+                    >
+                      <div
+                        aria-label="Write"
+                        aria-role="tab"
+                        aria-selected="true"
+                        class="tab-item active"
+                        tabindex="0"
+                      >
+                        Write
+                      </div>
+                      <div
+                        aria-label="Preview"
+                        aria-role="tab"
+                        aria-selected="false"
+                        class="tab-item"
+                        tabindex="-1"
+                      >
+                        Preview
+                      </div>
+                    </div>
+                  </div>
+                  <div
+                    class="toastui-editor-defaultUI-toolbar"
+                  >
+                    <div
+                      class="toastui-editor-toolbar-group"
+                    >
+                      <button
+                        aria-label="Headings"
+                        class="heading toastui-editor-toolbar-icons"
+                        type="button"
+                      >
+                        
+                      </button>
+                      <button
+                        aria-label="Bold"
+                        class="bold toastui-editor-toolbar-icons"
+                        type="button"
+                      >
+                        
+                      </button>
+                      <button
+                        aria-label="Italic"
+                        class="italic toastui-editor-toolbar-icons"
+                        type="button"
+                      >
+                        
+                      </button>
+                      <button
+                        aria-label="Strike"
+                        class="strike toastui-editor-toolbar-icons"
+                        type="button"
+                      >
+                        
+                      </button>
+                      <div
+                        class="toastui-editor-toolbar-divider"
+                      />
+                    </div>
+                    <div
+                      class="toastui-editor-toolbar-group"
+                    >
+                      <button
+                        aria-label="Line"
+                        class="hrline toastui-editor-toolbar-icons"
+                        type="button"
+                      >
+                        
+                      </button>
+                      <button
+                        aria-label="Blockquote"
+                        class="quote toastui-editor-toolbar-icons"
+                        type="button"
+                      >
+                        
+                      </button>
+                      <button
+                        aria-label="Unordered list"
+                        class="bullet-list toastui-editor-toolbar-icons"
+                        type="button"
+                      >
+                        
+                      </button>
+                      <button
+                        aria-label="Ordered list"
+                        class="ordered-list toastui-editor-toolbar-icons"
+                        type="button"
+                      >
+                        
+                      </button>
+                      <button
+                        aria-label="Task"
+                        class="task-list toastui-editor-toolbar-icons"
+                        type="button"
+                      >
+                        
+                      </button>
+                      <div
+                        class="toastui-editor-toolbar-divider"
+                      />
+                    </div>
+                    <div
+                      class="toastui-editor-toolbar-group"
+                    >
+                      <button
+                        aria-label="Insert table"
+                        class="table toastui-editor-toolbar-icons"
+                        type="button"
+                      >
+                        
+                      </button>
+                      <button
+                        aria-label="Insert image"
+                        class="image toastui-editor-toolbar-icons"
+                        type="button"
+                      >
+                        
+                      </button>
+                      <button
+                        aria-label="Insert link"
+                        class="link toastui-editor-toolbar-icons"
+                        type="button"
+                      >
+                        
+                      </button>
+                      <div
+                        class="toastui-editor-toolbar-divider"
+                      />
+                    </div>
+                    <div
+                      class="toastui-editor-toolbar-group"
+                    >
+                      <button
+                        aria-label="Inline code"
+                        class="code toastui-editor-toolbar-icons"
+                        type="button"
+                      >
+                        
+                      </button>
+                      <button
+                        aria-label="Insert codeBlock"
+                        class="codeblock toastui-editor-toolbar-icons"
+                        type="button"
+                      >
+                        
+                      </button>
+                      <div
+                        class="toastui-editor-toolbar-divider"
+                        style="display: none;"
+                      />
+                    </div>
+                    <div
+                      class="toastui-editor-toolbar-group"
+                      style="display: none;"
+                    >
+                      <button
+                        class="more toastui-editor-toolbar-icons"
+                        type="button"
+                      />
+                      <div
+                        class="toastui-editor-dropdown-toolbar"
+                        style="display: none;"
+                      />
+                    </div>
+                    <div
+                      class="toastui-editor-tooltip"
+                      style="display:none"
+                    >
+                      
+        
+                      <div
+                        class="arrow"
+                      />
+                      
+        
+                      <span
+                        class="text"
+                      />
+                      
+      
+                    </div>
+                  </div>
+                  <div
+                    aria-role="dialog"
+                    class="toastui-editor-popup "
+                    style="display: none;"
+                  >
+                    <div
+                      class="toastui-editor-popup-body"
+                    />
+                  </div>
+                </div>
+                <div
+                  class="toastui-editor-main toastui-editor-ww-mode"
+                >
+                  <div
+                    class="toastui-editor-main-container"
+                  >
+                    <div
+                      class="toastui-editor-md-container toastui-editor-md-vertical-style"
+                    >
+                      <div
+                        class="toastui-editor md-mode"
+                        style="min-height: 25px;"
+                      >
+                        <textarea
+                          class="toastui-editor-pseudo-clipboard"
+                        />
+                        <div
+                          class="ProseMirror"
+                          contenteditable="true"
+                          translate="no"
+                        >
+                          <div>
+                            <br
+                              class="ProseMirror-trailingBreak"
+                            />
+                          </div>
+                        </div>
+                      </div>
+                      <div
+                        class="toastui-editor-md-splitter"
+                      />
+                      <div
+                        class="toastui-editor-md-preview"
+                        style="min-height: 25px;"
+                      >
+                        <div
+                          class="toastui-editor-contents"
+                        />
+                      </div>
+                    </div>
+                    <div
+                      class="toastui-editor-ww-container"
+                    >
+                      <div
+                        class="toastui-editor ww-mode"
+                        style="min-height: 25px;"
+                      >
+                        <div
+                          class="ProseMirror toastui-editor-contents"
+                          contenteditable="true"
+                          translate="no"
+                        >
+                          <p>
+                            <br
+                              class="ProseMirror-trailingBreak"
+                            />
+                          </p>
+                        </div>
+                      </div>
+                    </div>
+                  </div>
+                </div>
+                <div
+                  class="toastui-editor-mode-switch"
+                  style="display: block"
+                >
+                  <div
+                    class="tab-item"
+                  >
+                    Markdown
+                  </div>
+                  <div
+                    class="tab-item active"
+                  >
+                    WYSIWYG
+                  </div>
+                </div>
+                <div
+                  aria-role="menu"
+                  class="toastui-editor-context-menu"
+                  style="display: none;"
+                />
+              </div>
+            </div>
+          </div>
+        </div>
+      </div>
+      <div
+        class="bg-white rounded shadow overflow-hidden flex flex-col w-1/4 ml-2"
+        style="display: flex; flex-direction: column; height: 100%; position: relative;"
+      >
+        <div
+          class="p-3 border-b flex justify-between items-center"
+          style="flex-shrink: 0;"
+        >
+          <h2
+            class="text-lg font-bold"
+          >
+            AI 패널
+          </h2>
+        </div>
+        <div
+          class="flex-grow relative"
+        >
+          <div
+            class="ai-panel expanded"
+          >
+            <div
+              class="panel-header"
+            >
+              <h3>
+                AI 어시스턴트
+              </h3>
+              <div
+                class="controls"
+              >
+                <button>
+                  접기
+                </button>
+              </div>
+            </div>
+            <div
+              class="panel-content"
+            >
+              <div
+                class="conversation-history"
+              >
+                <div />
+              </div>
+              <div
+                class="input-area"
+              >
+                <textarea
+                  placeholder="AI에게 질문하세요..."
+                />
+                <button
+                  disabled=""
+                >
+                  전송
+                </button>
+              </div>
+            </div>
+          </div>
+        </div>
+      </div>
+    </div>
+  </div>
+</div>
+`;
+
+exports[`App Component Snapshots App 컴포넌트 기본 렌더링 스냅샷 1`] = `
+<DocumentFragment>
+  <div
+    class="h-screen flex flex-col bg-gray-100"
+  >
+    <header
+      class="p-4 bg-blue-500 text-white "
+    >
+      <div
+        class="container mx-auto flex justify-between items-center"
+      >
+        <h1
+          class="text-xl font-bold"
+        >
+          Miki Editor v7 AI 연동
+        </h1>
+      </div>
+    </header>
+    <div
+      class="flex-grow p-4 overflow-hidden"
+    >
+      <div
+        class="flex h-full"
+        style="flex-direction: row;"
+      >
+        <div
+          class="bg-white rounded shadow flex flex-col w-1/5 mr-2"
+          style="display: flex;"
+        >
+          <div
+            class="flex justify-between items-center p-3 border-b"
+          >
+            <h2
+              class="text-lg font-bold"
+            >
+              문서 목록
+            </h2>
+            <div
+              class="flex items-center"
+            >
+              <span
+                class="text-sm text-gray-500 mr-2"
+              >
+                0개의 문서
+              </span>
+              <button
+                class="p-1 text-gray-600 hover:text-gray-900 rounded mr-1"
+                title="새로고침"
+              >
+                <svg
+                  class="w-5 h-5"
+                  fill="none"
+                  stroke="currentColor"
+                  viewBox="0 0 24 24"
+                >
+                  <path
+                    d="M4 4v5h.582m15.356 2A8.001 8.001 0 004.582 9m0 0H9m11 11v-5h-.581m0 0a8.003 8.003 0 01-15.357-2m15.357 2H15"
+                    stroke-linecap="round"
+                    stroke-linejoin="round"
+                    stroke-width="2"
+                  />
+                </svg>
+              </button>
+              <button
+                class="p-1 text-gray-600 hover:text-red-600 rounded mr-1"
+                title="로컬 스토리지 정리"
+              >
+                <svg
+                  class="w-5 h-5"
+                  fill="none"
+                  stroke="currentColor"
+                  viewBox="0 0 24 24"
+                >
+                  <path
+                    d="M19 7l-.867 12.142A2 2 0 0116.138 21H7.862a2 2 0 01-1.995-1.858L5 7m5 4v6m4-6v6m1-10V4a1 1 0 00-1-1h-4a1 1 0 00-1 1v3M4 7h16"
+                    stroke-linecap="round"
+                    stroke-linejoin="round"
+                    stroke-width="2"
+                  />
+                </svg>
+              </button>
+            </div>
+          </div>
+          <div
+            class="p-3 border-b"
+          >
+            <div
+              class="relative"
+            >
+              <input
+                class="w-full px-3 py-2 border rounded-md pr-10 focus:outline-none focus:ring-2 focus:ring-blue-300"
+                placeholder="문서 검색..."
+                type="text"
+                value=""
+              />
+              <svg
+                class="absolute right-3 top-2.5 h-5 w-5 text-gray-400"
+                fill="none"
+                stroke="currentColor"
+                viewBox="0 0 24 24"
+              >
+                <path
+                  d="M21 21l-6-6m2-5a7 7 0 11-14 0 7 7 0 0114 0z"
+                  stroke-linecap="round"
+                  stroke-linejoin="round"
+                  stroke-width="2"
+                />
+              </svg>
+            </div>
+          </div>
+          <div
+            class="flex-grow overflow-auto p-3"
+          >
+            <div
+              class="flex flex-col items-center justify-center h-40 text-gray-500"
+            >
+              <svg
+                class="w-12 h-12 mb-2 text-gray-300"
+                fill="none"
+                stroke="currentColor"
+                viewBox="0 0 24 24"
+              >
+                <path
+                  d="M9 12h6m-6 4h6m2 5H7a2 2 0 01-2-2V5a2 2 0 012-2h5.586a1 1 0 01.707.293l5.414 5.414a1 1 0 01.293.707V19a2 2 0 01-2 2z"
+                  stroke-linecap="round"
+                  stroke-linejoin="round"
+                  stroke-width="1.5"
+                />
+              </svg>
+              <p>
+                저장된 글이 없습니다
+              </p>
+              <button
+                class="mt-2 px-3 py-1 text-sm bg-blue-500 text-white rounded hover:bg-blue-600"
+              >
+                새 글 작성하기
+              </button>
+            </div>
+          </div>
+        </div>
+        <div
+          class="bg-white rounded shadow flex flex-col flex-1 mx-2"
+          style="display: flex;"
+        >
+          <div
+            class="mb-4 flex flex-col p-4 border-b"
+          >
+            <div
+              class="flex justify-between items-center mb-2"
+            >
+              <div
+                class="flex items-center"
+              >
+                <h2
+                  class="text-lg font-bold"
+                >
+                  에디터
+                </h2>
+                <span
+                  class="ml-4 text-xs px-2 py-1 rounded bg-green-100 text-green-700"
+                >
+                  저장됨
+                </span>
+              </div>
+              <div
+                class="flex items-center space-x-2"
+              >
+                <button
+                  class="px-3 py-1 text-sm rounded flex items-center bg-green-500 text-white hover:bg-green-600"
+                  title="새 글 작성 (Ctrl+N)"
+                >
+                  <svg
+                    class="w-4 h-4 mr-1"
+                    fill="none"
+                    stroke="currentColor"
+                    viewBox="0 0 24 24"
+                  >
+                    <path
+                      d="M12 6v6m0 0v6m0-6h6m-6 0H6"
+                      stroke-linecap="round"
+                      stroke-linejoin="round"
+                      stroke-width="2"
+                    />
+                  </svg>
+                  새 글
+                </button>
+                <button
+                  class="px-3 py-1 text-sm rounded flex items-center bg-gray-200 text-gray-500 cursor-not-allowed"
+                  disabled=""
+                  title="저장 (Ctrl+S)"
+                >
+                  <svg
+                    class="w-4 h-4 mr-1"
+                    fill="none"
+                    stroke="currentColor"
+                    viewBox="0 0 24 24"
+                  >
+                    <path
+                      d="M8 7H5a2 2 0 00-2 2v9a2 2 0 002 2h14a2 2 0 002-2V9a2 2 0 00-2-2h-3m-1 4l-3 3m0 0l-3-3m3 3V4"
+                      stroke-linecap="round"
+                      stroke-linejoin="round"
+                      stroke-width="2"
+                    />
+                  </svg>
+                  <span
+                    class="ml-1"
+                  >
+                    저장
+                  </span>
+                </button>
+                <button
+                  class="p-1 text-gray-600 hover:text-gray-900 rounded"
+                  title="전체화면 토글 (Ctrl+Enter)"
+                >
+                  <svg
+                    class="w-5 h-5"
+                    fill="none"
+                    stroke="currentColor"
+                    viewBox="0 0 24 24"
+                  >
+                    <path
+                      d="M4 8V4m0 0h4M4 4l5 5m11-1V4m0 0h-4m4 0l-5 5M4 16v4m0 0h4m-4 0l5-5m11 5v-4m0 4h-4m4 0l-5-5"
+                      stroke-linecap="round"
+                      stroke-linejoin="round"
+                      stroke-width="2"
+                    />
+                  </svg>
+                </button>
+              </div>
+            </div>
+            <input
+              class="w-full px-3 py-2 text-xl font-medium border-b border-gray-200 focus:outline-none focus:border-blue-500 mb-2 bg-transparent"
+              placeholder="문서 제목을 입력하세요 (편집기 첫 줄 텍스트가 자동으로 제목이 됩니다)"
+              type="text"
+              value=""
+            />
+          </div>
+          <div
+            class="flex-grow border rounded relative"
+          >
+            <div
+              class="miki-editor-container flex-grow"
+              style="position: relative; height: 100%; overflow: auto; display: flex; flex-direction: column;"
+            >
+              <div
+                style="height: 100%;"
+              >
+                <div
+                  class="toastui-editor-default toastui-editor-defaultUI"
+                >
+                  <div
+                    class="toastui-editor-toolbar"
+                  >
+                    <div
+                      class="toastui-editor-md-tab-container"
+                      style="display: none"
+                    >
+                      <div
+                        aria-role="tabpanel"
+                        class="toastui-editor-tabs"
+                      >
+                        <div
+                          aria-label="Write"
+                          aria-role="tab"
+                          aria-selected="true"
+                          class="tab-item active"
+                          tabindex="0"
+                        >
+                          Write
+                        </div>
+                        <div
+                          aria-label="Preview"
+                          aria-role="tab"
+                          aria-selected="false"
+                          class="tab-item"
+                          tabindex="-1"
+                        >
+                          Preview
+                        </div>
+                      </div>
+                    </div>
+                    <div
+                      class="toastui-editor-defaultUI-toolbar"
+                    >
+                      <div
+                        class="toastui-editor-toolbar-group"
+                      >
+                        <button
+                          aria-label="Headings"
+                          class="heading toastui-editor-toolbar-icons"
+                          type="button"
+                        />
+                        <button
+                          aria-label="Bold"
+                          class="bold toastui-editor-toolbar-icons"
+                          type="button"
+                        />
+                        <button
+                          aria-label="Italic"
+                          class="italic toastui-editor-toolbar-icons"
+                          type="button"
+                        />
+                        <button
+                          aria-label="Strike"
+                          class="strike toastui-editor-toolbar-icons"
+                          type="button"
+                        />
+                        <div
+                          class="toastui-editor-toolbar-divider"
+                        />
+                      </div>
+                      <div
+                        class="toastui-editor-toolbar-group"
+                      >
+                        <button
+                          aria-label="Line"
+                          class="hrline toastui-editor-toolbar-icons"
+                          type="button"
+                        />
+                        <button
+                          aria-label="Blockquote"
+                          class="quote toastui-editor-toolbar-icons"
+                          type="button"
+                        />
+                        <button
+                          aria-label="Unordered list"
+                          class="bullet-list toastui-editor-toolbar-icons"
+                          type="button"
+                        />
+                        <button
+                          aria-label="Ordered list"
+                          class="ordered-list toastui-editor-toolbar-icons"
+                          type="button"
+                        />
+                        <button
+                          aria-label="Task"
+                          class="task-list toastui-editor-toolbar-icons"
+                          type="button"
+                        />
+                        <div
+                          class="toastui-editor-toolbar-divider"
+                        />
+                      </div>
+                      <div
+                        class="toastui-editor-toolbar-group"
+                      >
+                        <button
+                          aria-label="Insert table"
+                          class="table toastui-editor-toolbar-icons"
+                          type="button"
+                        />
+                        <button
+                          aria-label="Insert image"
+                          class="image toastui-editor-toolbar-icons"
+                          type="button"
+                        />
+                        <button
+                          aria-label="Insert link"
+                          class="link toastui-editor-toolbar-icons"
+                          type="button"
+                        />
+                        <div
+                          class="toastui-editor-toolbar-divider"
+                        />
+                      </div>
+                      <div
+                        class="toastui-editor-toolbar-group"
+                      >
+                        <button
+                          aria-label="Inline code"
+                          class="code toastui-editor-toolbar-icons"
+                          type="button"
+                        />
+                        <button
+                          aria-label="Insert codeBlock"
+                          class="codeblock toastui-editor-toolbar-icons"
+                          type="button"
+                        />
+                        <div
+                          class="toastui-editor-toolbar-divider"
+                          style="display: none;"
+                        />
+                      </div>
+                      <div
+                        class="toastui-editor-toolbar-group"
+                        style="display: none;"
+                      >
+                        <button
+                          class="more toastui-editor-toolbar-icons"
+                          type="button"
+                        />
+                        <div
+                          class="toastui-editor-dropdown-toolbar"
+                          style="display: none;"
+                        />
+                      </div>
+                      <div
+                        class="toastui-editor-tooltip"
+                        style="display:none"
+                      >
+                        
+        
+                        <div
+                          class="arrow"
+                        />
+                        
+        
+                        <span
+                          class="text"
+                        />
+                        
+      
+                      </div>
+                    </div>
+                    <div
+                      aria-role="dialog"
+                      class="toastui-editor-popup "
+                      style="display: none;"
+                    >
+                      <div
+                        class="toastui-editor-popup-body"
+                      />
+                    </div>
+                  </div>
+                  <div
+                    class="toastui-editor-main toastui-editor-ww-mode"
+                  >
+                    <div
+                      class="toastui-editor-main-container"
+                    >
+                      <div
+                        class="toastui-editor-md-container toastui-editor-md-vertical-style"
+                      >
+                        <div
+                          class="toastui-editor md-mode"
+                          style="min-height: 25px;"
+                        >
+                          <textarea
+                            class="toastui-editor-pseudo-clipboard"
+                          />
+                          <div
+                            class="ProseMirror"
+                            contenteditable="true"
+                            translate="no"
+                          >
+                            <div>
+                              <br
+                                class="ProseMirror-trailingBreak"
+                              />
+                            </div>
+                          </div>
+                        </div>
+                        <div
+                          class="toastui-editor-md-splitter"
+                        />
+                        <div
+                          class="toastui-editor-md-preview"
+                          style="min-height: 25px;"
+                        >
+                          <div
+                            class="toastui-editor-contents"
+                          />
+                        </div>
+                      </div>
+                      <div
+                        class="toastui-editor-ww-container"
+                      >
+                        <div
+                          class="toastui-editor ww-mode"
+                          style="min-height: 25px;"
+                        >
+                          <div
+                            class="ProseMirror toastui-editor-contents"
+                            contenteditable="true"
+                            translate="no"
+                          >
+                            <p>
+                              <br
+                                class="ProseMirror-trailingBreak"
+                              />
+                            </p>
+                          </div>
+                        </div>
+                      </div>
+                    </div>
+                  </div>
+                  <div
+                    class="toastui-editor-mode-switch"
+                    style="display: block"
+                  >
+                    <div
+                      class="tab-item"
+                    >
+                      Markdown
+                    </div>
+                    <div
+                      class="tab-item active"
+                    >
+                      WYSIWYG
+                    </div>
+                  </div>
+                  <div
+                    aria-role="menu"
+                    class="toastui-editor-context-menu"
+                    style="display: none;"
+                  />
+                </div>
+              </div>
+            </div>
+          </div>
+        </div>
+        <div
+          class="bg-white rounded shadow overflow-hidden flex flex-col w-1/4 ml-2"
+          style="display: flex; flex-direction: column; height: 100%; position: relative;"
+        >
+          <div
+            class="p-3 border-b flex justify-between items-center"
+            style="flex-shrink: 0;"
+          >
+            <h2
+              class="text-lg font-bold"
+            >
+              AI 패널
+            </h2>
+          </div>
+          <div
+            class="flex-grow relative"
+          >
+            <div
+              class="ai-panel expanded"
+            >
+              <div
+                class="panel-header"
+              >
+                <h3>
+                  AI 어시스턴트
+                </h3>
+                <div
+                  class="controls"
+                >
+                  <button>
+                    접기
+                  </button>
+                </div>
+              </div>
+              <div
+                class="panel-content"
+              >
+                <div
+                  class="conversation-history"
+                >
+                  <div />
+                </div>
+                <div
+                  class="input-area"
+                >
+                  <textarea
+                    placeholder="AI에게 질문하세요..."
+                  />
+                  <button
+                    disabled=""
+                  >
+                    전송
+                  </button>
+                </div>
+              </div>
+            </div>
+          </div>
+        </div>
+      </div>
+    </div>
+  </div>
+</DocumentFragment>
+`;
+
+exports[`App Component Snapshots 반응형 레이아웃 스냅샷 (데스크톱): app-desktop-layout 1`] = `
+<DocumentFragment>
+  <div
+    class="h-screen flex flex-col bg-gray-100"
+  >
+    <header
+      class="p-4 bg-blue-500 text-white "
+    >
+      <div
+        class="container mx-auto flex justify-between items-center"
+      >
+        <h1
+          class="text-xl font-bold"
+        >
+          Miki Editor v7 AI 연동
+        </h1>
+      </div>
+    </header>
+    <div
+      class="flex-grow p-4 overflow-hidden"
+    >
+      <div
+        class="flex h-full"
+        style="flex-direction: row;"
+      >
+        <div
+          class="bg-white rounded shadow flex flex-col w-1/5 mr-2"
+          style="display: flex;"
+        >
+          <div
+            class="flex justify-between items-center p-3 border-b"
+          >
+            <h2
+              class="text-lg font-bold"
+            >
+              문서 목록
+            </h2>
+            <div
+              class="flex items-center"
+            >
+              <span
+                class="text-sm text-gray-500 mr-2"
+              >
+                0개의 문서
+              </span>
+              <button
+                class="p-1 text-gray-600 hover:text-gray-900 rounded mr-1"
+                title="새로고침"
+              >
+                <svg
+                  class="w-5 h-5"
+                  fill="none"
+                  stroke="currentColor"
+                  viewBox="0 0 24 24"
+                >
+                  <path
+                    d="M4 4v5h.582m15.356 2A8.001 8.001 0 004.582 9m0 0H9m11 11v-5h-.581m0 0a8.003 8.003 0 01-15.357-2m15.357 2H15"
+                    stroke-linecap="round"
+                    stroke-linejoin="round"
+                    stroke-width="2"
+                  />
+                </svg>
+              </button>
+              <button
+                class="p-1 text-gray-600 hover:text-red-600 rounded mr-1"
+                title="로컬 스토리지 정리"
+              >
+                <svg
+                  class="w-5 h-5"
+                  fill="none"
+                  stroke="currentColor"
+                  viewBox="0 0 24 24"
+                >
+                  <path
+                    d="M19 7l-.867 12.142A2 2 0 0116.138 21H7.862a2 2 0 01-1.995-1.858L5 7m5 4v6m4-6v6m1-10V4a1 1 0 00-1-1h-4a1 1 0 00-1 1v3M4 7h16"
+                    stroke-linecap="round"
+                    stroke-linejoin="round"
+                    stroke-width="2"
+                  />
+                </svg>
+              </button>
+            </div>
+          </div>
+          <div
+            class="p-3 border-b"
+          >
+            <div
+              class="relative"
+            >
+              <input
+                class="w-full px-3 py-2 border rounded-md pr-10 focus:outline-none focus:ring-2 focus:ring-blue-300"
+                placeholder="문서 검색..."
+                type="text"
+                value=""
+              />
+              <svg
+                class="absolute right-3 top-2.5 h-5 w-5 text-gray-400"
+                fill="none"
+                stroke="currentColor"
+                viewBox="0 0 24 24"
+              >
+                <path
+                  d="M21 21l-6-6m2-5a7 7 0 11-14 0 7 7 0 0114 0z"
+                  stroke-linecap="round"
+                  stroke-linejoin="round"
+                  stroke-width="2"
+                />
+              </svg>
+            </div>
+          </div>
+          <div
+            class="flex-grow overflow-auto p-3"
+          >
+            <div
+              class="flex flex-col items-center justify-center h-40 text-gray-500"
+            >
+              <svg
+                class="w-12 h-12 mb-2 text-gray-300"
+                fill="none"
+                stroke="currentColor"
+                viewBox="0 0 24 24"
+              >
+                <path
+                  d="M9 12h6m-6 4h6m2 5H7a2 2 0 01-2-2V5a2 2 0 012-2h5.586a1 1 0 01.707.293l5.414 5.414a1 1 0 01.293.707V19a2 2 0 01-2 2z"
+                  stroke-linecap="round"
+                  stroke-linejoin="round"
+                  stroke-width="1.5"
+                />
+              </svg>
+              <p>
+                저장된 글이 없습니다
+              </p>
+              <button
+                class="mt-2 px-3 py-1 text-sm bg-blue-500 text-white rounded hover:bg-blue-600"
+              >
+                새 글 작성하기
+              </button>
+            </div>
+          </div>
+        </div>
+        <div
+          class="bg-white rounded shadow flex flex-col flex-1 mx-2"
+          style="display: flex;"
+        >
+          <div
+            class="mb-4 flex flex-col p-4 border-b"
+          >
+            <div
+              class="flex justify-between items-center mb-2"
+            >
+              <div
+                class="flex items-center"
+              >
+                <h2
+                  class="text-lg font-bold"
+                >
+                  에디터
+                </h2>
+                <span
+                  class="ml-4 text-xs px-2 py-1 rounded bg-green-100 text-green-700"
+                >
+                  저장됨
+                </span>
+              </div>
+              <div
+                class="flex items-center space-x-2"
+              >
+                <button
+                  class="px-3 py-1 text-sm rounded flex items-center bg-green-500 text-white hover:bg-green-600"
+                  title="새 글 작성 (Ctrl+N)"
+                >
+                  <svg
+                    class="w-4 h-4 mr-1"
+                    fill="none"
+                    stroke="currentColor"
+                    viewBox="0 0 24 24"
+                  >
+                    <path
+                      d="M12 6v6m0 0v6m0-6h6m-6 0H6"
+                      stroke-linecap="round"
+                      stroke-linejoin="round"
+                      stroke-width="2"
+                    />
+                  </svg>
+                  새 글
+                </button>
+                <button
+                  class="px-3 py-1 text-sm rounded flex items-center bg-gray-200 text-gray-500 cursor-not-allowed"
+                  disabled=""
+                  title="저장 (Ctrl+S)"
+                >
+                  <svg
+                    class="w-4 h-4 mr-1"
+                    fill="none"
+                    stroke="currentColor"
+                    viewBox="0 0 24 24"
+                  >
+                    <path
+                      d="M8 7H5a2 2 0 00-2 2v9a2 2 0 002 2h14a2 2 0 002-2V9a2 2 0 00-2-2h-3m-1 4l-3 3m0 0l-3-3m3 3V4"
+                      stroke-linecap="round"
+                      stroke-linejoin="round"
+                      stroke-width="2"
+                    />
+                  </svg>
+                  <span
+                    class="ml-1"
+                  >
+                    저장
+                  </span>
+                </button>
+                <button
+                  class="p-1 text-gray-600 hover:text-gray-900 rounded"
+                  title="전체화면 토글 (Ctrl+Enter)"
+                >
+                  <svg
+                    class="w-5 h-5"
+                    fill="none"
+                    stroke="currentColor"
+                    viewBox="0 0 24 24"
+                  >
+                    <path
+                      d="M4 8V4m0 0h4M4 4l5 5m11-1V4m0 0h-4m4 0l-5 5M4 16v4m0 0h4m-4 0l5-5m11 5v-4m0 4h-4m4 0l-5-5"
+                      stroke-linecap="round"
+                      stroke-linejoin="round"
+                      stroke-width="2"
+                    />
+                  </svg>
+                </button>
+              </div>
+            </div>
+            <input
+              class="w-full px-3 py-2 text-xl font-medium border-b border-gray-200 focus:outline-none focus:border-blue-500 mb-2 bg-transparent"
+              placeholder="문서 제목을 입력하세요 (편집기 첫 줄 텍스트가 자동으로 제목이 됩니다)"
+              type="text"
+              value=""
+            />
+          </div>
+          <div
+            class="flex-grow border rounded relative"
+          >
+            <div
+              class="miki-editor-container flex-grow"
+              style="position: relative; height: 100%; overflow: auto; display: flex; flex-direction: column;"
+            >
+              <div
+                style="height: 100%;"
+              >
+                <div
+                  class="toastui-editor-default toastui-editor-defaultUI"
+                >
+                  <div
+                    class="toastui-editor-toolbar"
+                  >
+                    <div
+                      class="toastui-editor-md-tab-container"
+                      style="display: none"
+                    >
+                      <div
+                        aria-role="tabpanel"
+                        class="toastui-editor-tabs"
+                      >
+                        <div
+                          aria-label="Write"
+                          aria-role="tab"
+                          aria-selected="true"
+                          class="tab-item active"
+                          tabindex="0"
+                        >
+                          Write
+                        </div>
+                        <div
+                          aria-label="Preview"
+                          aria-role="tab"
+                          aria-selected="false"
+                          class="tab-item"
+                          tabindex="-1"
+                        >
+                          Preview
+                        </div>
+                      </div>
+                    </div>
+                    <div
+                      class="toastui-editor-defaultUI-toolbar"
+                    >
+                      <div
+                        class="toastui-editor-toolbar-group"
+                      >
+                        <button
+                          aria-label="Headings"
+                          class="heading toastui-editor-toolbar-icons"
+                          type="button"
+                        />
+                        <button
+                          aria-label="Bold"
+                          class="bold toastui-editor-toolbar-icons"
+                          type="button"
+                        />
+                        <button
+                          aria-label="Italic"
+                          class="italic toastui-editor-toolbar-icons"
+                          type="button"
+                        />
+                        <button
+                          aria-label="Strike"
+                          class="strike toastui-editor-toolbar-icons"
+                          type="button"
+                        />
+                        <div
+                          class="toastui-editor-toolbar-divider"
+                        />
+                      </div>
+                      <div
+                        class="toastui-editor-toolbar-group"
+                      >
+                        <button
+                          aria-label="Line"
+                          class="hrline toastui-editor-toolbar-icons"
+                          type="button"
+                        />
+                        <button
+                          aria-label="Blockquote"
+                          class="quote toastui-editor-toolbar-icons"
+                          type="button"
+                        />
+                        <button
+                          aria-label="Unordered list"
+                          class="bullet-list toastui-editor-toolbar-icons"
+                          type="button"
+                        />
+                        <button
+                          aria-label="Ordered list"
+                          class="ordered-list toastui-editor-toolbar-icons"
+                          type="button"
+                        />
+                        <button
+                          aria-label="Task"
+                          class="task-list toastui-editor-toolbar-icons"
+                          type="button"
+                        />
+                        <div
+                          class="toastui-editor-toolbar-divider"
+                        />
+                      </div>
+                      <div
+                        class="toastui-editor-toolbar-group"
+                      >
+                        <button
+                          aria-label="Insert table"
+                          class="table toastui-editor-toolbar-icons"
+                          type="button"
+                        />
+                        <button
+                          aria-label="Insert image"
+                          class="image toastui-editor-toolbar-icons"
+                          type="button"
+                        />
+                        <button
+                          aria-label="Insert link"
+                          class="link toastui-editor-toolbar-icons"
+                          type="button"
+                        />
+                        <div
+                          class="toastui-editor-toolbar-divider"
+                        />
+                      </div>
+                      <div
+                        class="toastui-editor-toolbar-group"
+                      >
+                        <button
+                          aria-label="Inline code"
+                          class="code toastui-editor-toolbar-icons"
+                          type="button"
+                        />
+                        <button
+                          aria-label="Insert codeBlock"
+                          class="codeblock toastui-editor-toolbar-icons"
+                          type="button"
+                        />
+                        <div
+                          class="toastui-editor-toolbar-divider"
+                          style="display: none;"
+                        />
+                      </div>
+                      <div
+                        class="toastui-editor-toolbar-group"
+                        style="display: none;"
+                      >
+                        <button
+                          class="more toastui-editor-toolbar-icons"
+                          type="button"
+                        />
+                        <div
+                          class="toastui-editor-dropdown-toolbar"
+                          style="display: none;"
+                        />
+                      </div>
+                      <div
+                        class="toastui-editor-tooltip"
+                        style="display:none"
+                      >
+                        
+        
+                        <div
+                          class="arrow"
+                        />
+                        
+        
+                        <span
+                          class="text"
+                        />
+                        
+      
+                      </div>
+                    </div>
+                    <div
+                      aria-role="dialog"
+                      class="toastui-editor-popup "
+                      style="display: none;"
+                    >
+                      <div
+                        class="toastui-editor-popup-body"
+                      />
+                    </div>
+                  </div>
+                  <div
+                    class="toastui-editor-main toastui-editor-ww-mode"
+                  >
+                    <div
+                      class="toastui-editor-main-container"
+                    >
+                      <div
+                        class="toastui-editor-md-container toastui-editor-md-vertical-style"
+                      >
+                        <div
+                          class="toastui-editor md-mode"
+                          style="min-height: 25px;"
+                        >
+                          <textarea
+                            class="toastui-editor-pseudo-clipboard"
+                          />
+                          <div
+                            class="ProseMirror"
+                            contenteditable="true"
+                            translate="no"
+                          >
+                            <div>
+                              <br
+                                class="ProseMirror-trailingBreak"
+                              />
+                            </div>
+                          </div>
+                        </div>
+                        <div
+                          class="toastui-editor-md-splitter"
+                        />
+                        <div
+                          class="toastui-editor-md-preview"
+                          style="min-height: 25px;"
+                        >
+                          <div
+                            class="toastui-editor-contents"
+                          />
+                        </div>
+                      </div>
+                      <div
+                        class="toastui-editor-ww-container"
+                      >
+                        <div
+                          class="toastui-editor ww-mode"
+                          style="min-height: 25px;"
+                        >
+                          <div
+                            class="ProseMirror toastui-editor-contents"
+                            contenteditable="true"
+                            translate="no"
+                          >
+                            <p>
+                              <br
+                                class="ProseMirror-trailingBreak"
+                              />
+                            </p>
+                          </div>
+                        </div>
+                      </div>
+                    </div>
+                  </div>
+                  <div
+                    class="toastui-editor-mode-switch"
+                    style="display: block"
+                  >
+                    <div
+                      class="tab-item"
+                    >
+                      Markdown
+                    </div>
+                    <div
+                      class="tab-item active"
+                    >
+                      WYSIWYG
+                    </div>
+                  </div>
+                  <div
+                    aria-role="menu"
+                    class="toastui-editor-context-menu"
+                    style="display: none;"
+                  />
+                </div>
+              </div>
+            </div>
+          </div>
+        </div>
+        <div
+          class="bg-white rounded shadow overflow-hidden flex flex-col w-1/4 ml-2"
+          style="display: flex; flex-direction: column; height: 100%; position: relative;"
+        >
+          <div
+            class="p-3 border-b flex justify-between items-center"
+            style="flex-shrink: 0;"
+          >
+            <h2
+              class="text-lg font-bold"
+            >
+              AI 패널
+            </h2>
+          </div>
+          <div
+            class="flex-grow relative"
+          >
+            <div
+              class="ai-panel expanded"
+            >
+              <div
+                class="panel-header"
+              >
+                <h3>
+                  AI 어시스턴트
+                </h3>
+                <div
+                  class="controls"
+                >
+                  <button>
+                    접기
+                  </button>
+                </div>
+              </div>
+              <div
+                class="panel-content"
+              >
+                <div
+                  class="conversation-history"
+                >
+                  <div />
+                </div>
+                <div
+                  class="input-area"
+                >
+                  <textarea
+                    placeholder="AI에게 질문하세요..."
+                  />
+                  <button
+                    disabled=""
+                  >
+                    전송
+                  </button>
+                </div>
+              </div>
+            </div>
+          </div>
+        </div>
+      </div>
+    </div>
+  </div>
+</DocumentFragment>
+`;
+
+exports[`App Component Snapshots 반응형 레이아웃 스냅샷 (모바일): app-mobile-layout 1`] = `
+<DocumentFragment>
+  <div
+    class="h-screen flex flex-col bg-gray-100"
+  >
+    <header
+      class="p-4 bg-blue-500 text-white "
+    >
+      <div
+        class="container mx-auto flex justify-between items-center"
+      >
+        <h1
+          class="text-xl font-bold"
+        >
+          Miki Editor v7 AI 연동
+        </h1>
+      </div>
+    </header>
+    <div
+      class="flex-grow p-4 overflow-hidden"
+    >
+      <div
+        class="flex h-full"
+        style="flex-direction: column;"
+      >
+        <div
+          class="bg-white rounded shadow flex flex-col block flex-grow"
+          style="display: flex;"
+        >
+          <div
+            class="flex justify-between items-center p-3 border-b"
+          >
+            <h2
+              class="text-lg font-bold"
+            >
+              문서 목록
+            </h2>
+            <div
+              class="flex items-center"
+            >
+              <span
+                class="text-sm text-gray-500 mr-2"
+              >
+                0개의 문서
+              </span>
+              <button
+                class="p-1 text-gray-600 hover:text-gray-900 rounded mr-1"
+                title="새로고침"
+              >
+                <svg
+                  class="w-5 h-5"
+                  fill="none"
+                  stroke="currentColor"
+                  viewBox="0 0 24 24"
+                >
+                  <path
+                    d="M4 4v5h.582m15.356 2A8.001 8.001 0 004.582 9m0 0H9m11 11v-5h-.581m0 0a8.003 8.003 0 01-15.357-2m15.357 2H15"
+                    stroke-linecap="round"
+                    stroke-linejoin="round"
+                    stroke-width="2"
+                  />
+                </svg>
+              </button>
+              <button
+                class="p-1 text-gray-600 hover:text-red-600 rounded mr-1"
+                title="로컬 스토리지 정리"
+              >
+                <svg
+                  class="w-5 h-5"
+                  fill="none"
+                  stroke="currentColor"
+                  viewBox="0 0 24 24"
+                >
+                  <path
+                    d="M19 7l-.867 12.142A2 2 0 0116.138 21H7.862a2 2 0 01-1.995-1.858L5 7m5 4v6m4-6v6m1-10V4a1 1 0 00-1-1h-4a1 1 0 00-1 1v3M4 7h16"
+                    stroke-linecap="round"
+                    stroke-linejoin="round"
+                    stroke-width="2"
+                  />
+                </svg>
+              </button>
+              <button
+                class="px-3 py-1 text-sm bg-blue-600 hover:bg-blue-700 rounded flex items-center ml-1"
+                title="에디터로 이동"
+              >
+                <svg
+                  class="h-4 w-4 mr-1"
+                  fill="none"
+                  stroke="currentColor"
+                  viewBox="0 0 24 24"
+                  xmlns="http://www.w3.org/2000/svg"
+                >
+                  <path
+                    d="M14 5l7 7-7 7"
+                    stroke-linecap="round"
+                    stroke-linejoin="round"
+                    stroke-width="2"
+                  />
+                </svg>
+                에디터
+              </button>
+            </div>
+          </div>
+          <div
+            class="p-3 border-b"
+          >
+            <div
+              class="relative"
+            >
+              <input
+                class="w-full px-3 py-2 border rounded-md pr-10 focus:outline-none focus:ring-2 focus:ring-blue-300"
+                placeholder="문서 검색..."
+                type="text"
+                value=""
+              />
+              <svg
+                class="absolute right-3 top-2.5 h-5 w-5 text-gray-400"
+                fill="none"
+                stroke="currentColor"
+                viewBox="0 0 24 24"
+              >
+                <path
+                  d="M21 21l-6-6m2-5a7 7 0 11-14 0 7 7 0 0114 0z"
+                  stroke-linecap="round"
+                  stroke-linejoin="round"
+                  stroke-width="2"
+                />
+              </svg>
+            </div>
+          </div>
+          <div
+            class="flex-grow overflow-auto p-3"
+          >
+            <div
+              class="flex flex-col items-center justify-center h-40 text-gray-500"
+            >
+              <svg
+                class="w-12 h-12 mb-2 text-gray-300"
+                fill="none"
+                stroke="currentColor"
+                viewBox="0 0 24 24"
+              >
+                <path
+                  d="M9 12h6m-6 4h6m2 5H7a2 2 0 01-2-2V5a2 2 0 012-2h5.586a1 1 0 01.707.293l5.414 5.414a1 1 0 01.293.707V19a2 2 0 01-2 2z"
+                  stroke-linecap="round"
+                  stroke-linejoin="round"
+                  stroke-width="1.5"
+                />
+              </svg>
+              <p>
+                저장된 글이 없습니다
+              </p>
+              <button
+                class="mt-2 px-3 py-1 text-sm bg-blue-500 text-white rounded hover:bg-blue-600"
+              >
+                새 글 작성하기
+              </button>
+            </div>
+          </div>
+        </div>
+        <div
+          class="bg-white rounded shadow flex flex-col hidden flex-grow"
+          style="display: none;"
+        >
+          <div
+            class="mb-4 flex flex-col p-4 border-b"
+          >
+            <div
+              class="flex justify-between items-center mb-2"
+            >
+              <div
+                class="flex items-center"
+              >
+                <h2
+                  class="text-lg font-bold"
+                >
+                  에디터
+                </h2>
+                <span
+                  class="ml-4 text-xs px-2 py-1 rounded bg-green-100 text-green-700"
+                >
+                  저장됨
+                </span>
+              </div>
+              <div
+                class="flex items-center space-x-2"
+              >
+                <button
+                  class="px-3 py-1 text-sm rounded flex items-center bg-green-500 text-white hover:bg-green-600"
+                  title="새 글 작성 (Ctrl+N)"
+                >
+                  <svg
+                    class="w-4 h-4 mr-1"
+                    fill="none"
+                    stroke="currentColor"
+                    viewBox="0 0 24 24"
+                  >
+                    <path
+                      d="M12 6v6m0 0v6m0-6h6m-6 0H6"
+                      stroke-linecap="round"
+                      stroke-linejoin="round"
+                      stroke-width="2"
+                    />
+                  </svg>
+                  새 글
+                </button>
+                <button
+                  class="px-3 py-1 text-sm rounded flex items-center bg-gray-200 text-gray-500 cursor-not-allowed"
+                  disabled=""
+                  title="저장 (Ctrl+S)"
+                >
+                  <svg
+                    class="w-4 h-4 mr-1"
+                    fill="none"
+                    stroke="currentColor"
+                    viewBox="0 0 24 24"
+                  >
+                    <path
+                      d="M8 7H5a2 2 0 00-2 2v9a2 2 0 002 2h14a2 2 0 002-2V9a2 2 0 00-2-2h-3m-1 4l-3 3m0 0l-3-3m3 3V4"
+                      stroke-linecap="round"
+                      stroke-linejoin="round"
+                      stroke-width="2"
+                    />
+                  </svg>
+                  <span
+                    class="ml-1"
+                  >
+                    저장
+                  </span>
+                </button>
+                <button
+                  class="p-1 text-gray-600 hover:text-gray-900 rounded"
+                  title="전체화면 토글 (Ctrl+Enter)"
+                >
+                  <svg
+                    class="w-5 h-5"
+                    fill="none"
+                    stroke="currentColor"
+                    viewBox="0 0 24 24"
+                  >
+                    <path
+                      d="M4 8V4m0 0h4M4 4l5 5m11-1V4m0 0h-4m4 0l-5 5M4 16v4m0 0h4m-4 0l5-5m11 5v-4m0 4h-4m4 0l-5-5"
+                      stroke-linecap="round"
+                      stroke-linejoin="round"
+                      stroke-width="2"
+                    />
+                  </svg>
+                </button>
+                <button
+                  class="px-3 py-1 text-sm bg-blue-600 hover:bg-blue-700 rounded flex items-center ml-1"
+                  title="AI 패널로 이동"
+                >
+                  <svg
+                    class="h-4 w-4 mr-1"
+                    fill="none"
+                    stroke="currentColor"
+                    viewBox="0 0 24 24"
+                    xmlns="http://www.w3.org/2000/svg"
+                  >
+                    <path
+                      d="M13 7l5 5m0 0l-5 5m5-5H6"
+                      stroke-linecap="round"
+                      stroke-linejoin="round"
+                      stroke-width="2"
+                    />
+                  </svg>
+                  AI 패널
+                </button>
+              </div>
+            </div>
+            <input
+              class="w-full px-3 py-2 text-xl font-medium border-b border-gray-200 focus:outline-none focus:border-blue-500 mb-2 bg-transparent"
+              placeholder="문서 제목을 입력하세요 (편집기 첫 줄 텍스트가 자동으로 제목이 됩니다)"
+              type="text"
+              value=""
+            />
+          </div>
+          <div
+            class="flex-grow border rounded relative"
+          >
+            <div
+              class="miki-editor-container flex-grow"
+              style="position: relative; height: 100%; overflow: auto; display: flex; flex-direction: column;"
+            >
+              <div
+                style="height: 100%;"
+              >
+                <div
+                  class="toastui-editor-default toastui-editor-defaultUI"
+                >
+                  <div
+                    class="toastui-editor-toolbar"
+                  >
+                    <div
+                      class="toastui-editor-md-tab-container"
+                      style="display: none"
+                    >
+                      <div
+                        aria-role="tabpanel"
+                        class="toastui-editor-tabs"
+                      >
+                        <div
+                          aria-label="Write"
+                          aria-role="tab"
+                          aria-selected="true"
+                          class="tab-item active"
+                          tabindex="0"
+                        >
+                          Write
+                        </div>
+                        <div
+                          aria-label="Preview"
+                          aria-role="tab"
+                          aria-selected="false"
+                          class="tab-item"
+                          tabindex="-1"
+                        >
+                          Preview
+                        </div>
+                      </div>
+                    </div>
+                    <div
+                      class="toastui-editor-defaultUI-toolbar"
+                      style="border-top-left-radius: 0px;"
+                    >
+                      <div
+                        class="toastui-editor-toolbar-group"
+                      >
+                        <button
+                          aria-label="Headings"
+                          class="heading toastui-editor-toolbar-icons"
+                          type="button"
+                        />
+                        <button
+                          aria-label="Bold"
+                          class="bold toastui-editor-toolbar-icons"
+                          type="button"
+                        />
+                        <button
+                          aria-label="Italic"
+                          class="italic toastui-editor-toolbar-icons"
+                          type="button"
+                        />
+                        <button
+                          aria-label="Strike"
+                          class="strike toastui-editor-toolbar-icons"
+                          type="button"
+                        />
+                        <div
+                          class="toastui-editor-toolbar-divider"
+                        />
+                      </div>
+                      <div
+                        class="toastui-editor-toolbar-group"
+                      >
+                        <button
+                          aria-label="Line"
+                          class="hrline toastui-editor-toolbar-icons"
+                          type="button"
+                        />
+                        <button
+                          aria-label="Blockquote"
+                          class="quote toastui-editor-toolbar-icons"
+                          type="button"
+                        />
+                        <button
+                          aria-label="Unordered list"
+                          class="bullet-list toastui-editor-toolbar-icons"
+                          type="button"
+                        />
+                        <button
+                          aria-label="Ordered list"
+                          class="ordered-list toastui-editor-toolbar-icons"
+                          type="button"
+                        />
+                        <button
+                          aria-label="Task"
+                          class="task-list toastui-editor-toolbar-icons"
+                          type="button"
+                        />
+                        <div
+                          class="toastui-editor-toolbar-divider"
+                        />
+                      </div>
+                      <div
+                        class="toastui-editor-toolbar-group"
+                      >
+                        <button
+                          aria-label="Insert table"
+                          class="table toastui-editor-toolbar-icons"
+                          type="button"
+                        />
+                        <button
+                          aria-label="Insert image"
+                          class="image toastui-editor-toolbar-icons"
+                          type="button"
+                        />
+                        <button
+                          aria-label="Insert link"
+                          class="link toastui-editor-toolbar-icons"
+                          type="button"
+                        />
+                        <div
+                          class="toastui-editor-toolbar-divider"
+                        />
+                      </div>
+                      <div
+                        class="toastui-editor-toolbar-group"
+                      >
+                        <button
+                          aria-label="Inline code"
+                          class="code toastui-editor-toolbar-icons"
+                          type="button"
+                        />
+                        <button
+                          aria-label="Insert codeBlock"
+                          class="codeblock toastui-editor-toolbar-icons"
+                          type="button"
+                        />
+                        <div
+                          class="toastui-editor-toolbar-divider"
+                          style="display: none;"
+                        />
+                      </div>
+                      <div
+                        class="toastui-editor-toolbar-group"
+                        style="display: none;"
+                      >
+                        <button
+                          class="more toastui-editor-toolbar-icons"
+                          type="button"
+                        />
+                        <div
+                          class="toastui-editor-dropdown-toolbar"
+                          style="display: none;"
+                        />
+                      </div>
+                      <div
+                        class="toastui-editor-tooltip"
+                        style="display:none"
+                      >
+                        
+        
+                        <div
+                          class="arrow"
+                        />
+                        
+        
+                        <span
+                          class="text"
+                        />
+                        
+      
+                      </div>
+                    </div>
+                    <div
+                      aria-role="dialog"
+                      class="toastui-editor-popup "
+                      style="display: none;"
+                    >
+                      <div
+                        class="toastui-editor-popup-body"
+                      />
+                    </div>
+                  </div>
+                  <div
+                    class="toastui-editor-main toastui-editor-ww-mode"
+                  >
+                    <div
+                      class="toastui-editor-main-container"
+                    >
+                      <div
+                        class="toastui-editor-md-container toastui-editor-md-tab-style"
+                      >
+                        <div
+                          class="toastui-editor md-mode active"
+                          style="min-height: 25px;"
+                        >
+                          <textarea
+                            class="toastui-editor-pseudo-clipboard"
+                          />
+                          <div
+                            class="ProseMirror"
+                            contenteditable="true"
+                            translate="no"
+                          >
+                            <div>
+                              <br
+                                class="ProseMirror-trailingBreak"
+                              />
+                            </div>
+                          </div>
+                        </div>
+                        <div
+                          class="toastui-editor-md-splitter"
+                        />
+                        <div
+                          class="toastui-editor-md-preview"
+                          style="min-height: 25px;"
+                        >
+                          <div
+                            class="toastui-editor-contents"
+                          />
+                        </div>
+                      </div>
+                      <div
+                        class="toastui-editor-ww-container"
+                      >
+                        <div
+                          class="toastui-editor ww-mode"
+                          style="min-height: 25px;"
+                        >
+                          <div
+                            class="ProseMirror toastui-editor-contents"
+                            contenteditable="true"
+                            translate="no"
+                          >
+                            <p>
+                              <br
+                                class="ProseMirror-trailingBreak"
+                              />
+                            </p>
+                          </div>
+                        </div>
+                      </div>
+                    </div>
+                  </div>
+                  <div
+                    class="toastui-editor-mode-switch"
+                    style="display: block"
+                  >
+                    <div
+                      class="tab-item"
+                    >
+                      Markdown
+                    </div>
+                    <div
+                      class="tab-item active"
+                    >
+                      WYSIWYG
+                    </div>
+                  </div>
+                  <div
+                    aria-role="menu"
+                    class="toastui-editor-context-menu"
+                    style="display: none;"
+                  />
+                </div>
+              </div>
+            </div>
+          </div>
+        </div>
+        <div
+          class="bg-white rounded shadow overflow-hidden flex flex-col hidden flex-grow"
+          style="display: none; flex-direction: column; height: 100%; position: relative;"
+        >
+          <div
+            class="p-3 border-b flex justify-between items-center"
+            style="flex-shrink: 0;"
+          >
+            <h2
+              class="text-lg font-bold"
+            >
+              AI 패널
+            </h2>
+            <button
+              class="px-3 py-1 text-sm bg-blue-600 hover:bg-blue-700 rounded flex items-center"
+              title="에디터로 이동"
+            >
+              <svg
+                class="h-4 w-4 mr-1"
+                fill="none"
+                stroke="currentColor"
+                viewBox="0 0 24 24"
+                xmlns="http://www.w3.org/2000/svg"
+              >
+                <path
+                  d="M10 19l-7-7m0 0l7-7m-7 7h18"
+                  stroke-linecap="round"
+                  stroke-linejoin="round"
+                  stroke-width="2"
+                />
+              </svg>
+              에디터
+            </button>
+          </div>
+          <div
+            class="flex-grow relative"
+          >
+            <div
+              class="ai-panel expanded"
+            >
+              <div
+                class="panel-header"
+              >
+                <h3>
+                  AI 어시스턴트
+                </h3>
+                <div
+                  class="controls"
+                >
+                  <button>
+                    접기
+                  </button>
+                </div>
+              </div>
+              <div
+                class="panel-content"
+              >
+                <div
+                  class="conversation-history"
+                >
+                  <div />
+                </div>
+                <div
+                  class="input-area"
+                >
+                  <textarea
+                    placeholder="AI에게 질문하세요..."
+                  />
+                  <button
+                    disabled=""
+                  >
+                    전송
+                  </button>
+                </div>
+              </div>
+            </div>
+          </div>
+        </div>
+      </div>
+    </div>
+  </div>
+</DocumentFragment>
+`;
+
+exports[`Critical UI Components Snapshots AiPanel 컴포넌트 스냅샷: ai-panel-component 1`] = `
+<DocumentFragment>
+  <div
+    class="ai-panel expanded"
+  >
+    <div
+      class="panel-header"
+    >
+      <h3>
+        AI 어시스턴트
+      </h3>
+      <div
+        class="controls"
+      >
+        <button>
+          접기
+        </button>
+      </div>
+    </div>
+    <div
+      class="panel-content"
+    >
+      <div
+        class="conversation-history"
+      >
+        <div />
+      </div>
+      <div
+        class="input-area"
+      >
+        <textarea
+          placeholder="AI에게 질문하세요..."
+        />
+        <button
+          disabled=""
+        >
+          전송
+        </button>
+      </div>
+    </div>
+  </div>
+</DocumentFragment>
+`;
+
+exports[`Critical UI Components Snapshots MikiEditor 컴포넌트 스냅샷: miki-editor-component 1`] = `
+<DocumentFragment>
+  <div
+    class="miki-editor-container flex-grow"
+    style="position: relative; height: 100%; overflow: auto; display: flex; flex-direction: column;"
+  >
+    <div
+      style="height: 100%;"
+    >
+      <div
+        class="toastui-editor-default toastui-editor-defaultUI"
+      >
+        <div
+          class="toastui-editor-toolbar"
+        >
+          <div
+            class="toastui-editor-md-tab-container"
+            style="display: none"
+          >
+            <div
+              aria-role="tabpanel"
+              class="toastui-editor-tabs"
+            >
+              <div
+                aria-label="Write"
+                aria-role="tab"
+                aria-selected="true"
+                class="tab-item active"
+                tabindex="0"
+              >
+                Write
+              </div>
+              <div
+                aria-label="Preview"
+                aria-role="tab"
+                aria-selected="false"
+                class="tab-item"
+                tabindex="-1"
+              >
+                Preview
+              </div>
+            </div>
+          </div>
+          <div
+            class="toastui-editor-defaultUI-toolbar"
+          >
+            <div
+              class="toastui-editor-toolbar-group"
+            >
+              <button
+                aria-label="Headings"
+                class="heading toastui-editor-toolbar-icons"
+                type="button"
+              />
+              <button
+                aria-label="Bold"
+                class="bold toastui-editor-toolbar-icons"
+                type="button"
+              />
+              <button
+                aria-label="Italic"
+                class="italic toastui-editor-toolbar-icons"
+                type="button"
+              />
+              <button
+                aria-label="Strike"
+                class="strike toastui-editor-toolbar-icons"
+                type="button"
+              />
+              <div
+                class="toastui-editor-toolbar-divider"
+              />
+            </div>
+            <div
+              class="toastui-editor-toolbar-group"
+            >
+              <button
+                aria-label="Line"
+                class="hrline toastui-editor-toolbar-icons"
+                type="button"
+              />
+              <button
+                aria-label="Blockquote"
+                class="quote toastui-editor-toolbar-icons"
+                type="button"
+              />
+              <button
+                aria-label="Unordered list"
+                class="bullet-list toastui-editor-toolbar-icons"
+                type="button"
+              />
+              <button
+                aria-label="Ordered list"
+                class="ordered-list toastui-editor-toolbar-icons"
+                type="button"
+              />
+              <button
+                aria-label="Task"
+                class="task-list toastui-editor-toolbar-icons"
+                type="button"
+              />
+              <div
+                class="toastui-editor-toolbar-divider"
+              />
+            </div>
+            <div
+              class="toastui-editor-toolbar-group"
+            >
+              <button
+                aria-label="Insert table"
+                class="table toastui-editor-toolbar-icons"
+                type="button"
+              />
+              <button
+                aria-label="Insert image"
+                class="image toastui-editor-toolbar-icons"
+                type="button"
+              />
+              <button
+                aria-label="Insert link"
+                class="link toastui-editor-toolbar-icons"
+                type="button"
+              />
+              <div
+                class="toastui-editor-toolbar-divider"
+              />
+            </div>
+            <div
+              class="toastui-editor-toolbar-group"
+            >
+              <button
+                aria-label="Inline code"
+                class="code toastui-editor-toolbar-icons"
+                type="button"
+              />
+              <button
+                aria-label="Insert codeBlock"
+                class="codeblock toastui-editor-toolbar-icons"
+                type="button"
+              />
+              <div
+                class="toastui-editor-toolbar-divider"
+                style="display: none;"
+              />
+            </div>
+            <div
+              class="toastui-editor-toolbar-group"
+              style="display: none;"
+            >
+              <button
+                class="more toastui-editor-toolbar-icons"
+                type="button"
+              />
+              <div
+                class="toastui-editor-dropdown-toolbar"
+                style="display: none;"
+              />
+            </div>
+            <div
+              class="toastui-editor-tooltip"
+              style="display:none"
+            >
+              
+        
+              <div
+                class="arrow"
+              />
+              
+        
+              <span
+                class="text"
+              />
+              
+      
+            </div>
+          </div>
+          <div
+            aria-role="dialog"
+            class="toastui-editor-popup "
+            style="display: none;"
+          >
+            <div
+              class="toastui-editor-popup-body"
+            />
+          </div>
+        </div>
+        <div
+          class="toastui-editor-main toastui-editor-ww-mode"
+        >
+          <div
+            class="toastui-editor-main-container"
+          >
+            <div
+              class="toastui-editor-md-container toastui-editor-md-vertical-style"
+            >
+              <div
+                class="toastui-editor md-mode"
+                style="min-height: 25px;"
+              >
+                <textarea
+                  class="toastui-editor-pseudo-clipboard"
+                />
+                <div
+                  class="ProseMirror"
+                  contenteditable="true"
+                  translate="no"
+                >
+                  <div>
+                    <br
+                      class="ProseMirror-trailingBreak"
+                    />
+                  </div>
+                </div>
+              </div>
+              <div
+                class="toastui-editor-md-splitter"
+              />
+              <div
+                class="toastui-editor-md-preview"
+                style="min-height: 25px;"
+              >
+                <div
+                  class="toastui-editor-contents"
+                />
+              </div>
+            </div>
+            <div
+              class="toastui-editor-ww-container"
+            >
+              <div
+                class="toastui-editor ww-mode"
+                style="min-height: 25px;"
+              >
+                <div
+                  class="ProseMirror toastui-editor-contents"
+                  contenteditable="true"
+                  translate="no"
+                >
+                  <p>
+                    <br
+                      class="ProseMirror-trailingBreak"
+                    />
+                  </p>
+                </div>
+              </div>
+            </div>
+          </div>
+        </div>
+        <div
+          class="toastui-editor-mode-switch"
+          style="display: block"
+        >
+          <div
+            class="tab-item"
+          >
+            Markdown
+          </div>
+          <div
+            class="tab-item active"
+          >
+            WYSIWYG
+          </div>
+        </div>
+        <div
+          aria-role="menu"
+          class="toastui-editor-context-menu"
+          style="display: none;"
+        />
+      </div>
+    </div>
+  </div>
+</DocumentFragment>
+`;

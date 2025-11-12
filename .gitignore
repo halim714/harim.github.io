@@ -1,0 +1,14 @@
+_site
+.sass-cache
+.jekyll-cache
+.jekyll-metadata
+vendor
+miki-editor/.env 
+
+# Ignore all .env files
+*.env
+.env
+node_modules
+
+# Ignore the miki-wiki content repository
+miki-wiki/

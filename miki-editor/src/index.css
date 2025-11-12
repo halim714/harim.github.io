@@ -1,0 +1,442 @@
+/* 기본 CSS 스타일 */
+:root {
+  /* Variable 우선, 그 다음 Static Pretendard */
+  --miki-font-ui: 'Pretendard Variable', 'Pretendard', -apple-system, BlinkMacSystemFont, 'Segoe UI', 'Roboto', 'Oxygen',
+    'Ubuntu', 'Cantarell', 'Fira Sans', 'Droid Sans', 'Helvetica Neue', system-ui, Arial, sans-serif;
+  /* 에디터 기본 본문 폰트 크기 (pt). 사용자 요구: 12pt */
+  --miki-editor-font-size: 12pt;
+}
+html, body {
+  margin: 0;
+  height: 100vh;
+  font-family: var(--miki-font-ui) !important;
+  /* 시스템 합성 Bold/Italic 방지로 폰트 일관성 확보 */
+  font-synthesis: none;
+  -webkit-font-smoothing: antialiased;
+  -moz-osx-font-smoothing: grayscale;
+  /* 앱은 내부 패널에서만 스크롤 → 전역 스크롤 제거 (우측 이중 스크롤 방지) */
+  overflow: hidden;
+}
+
+/* 루트 컨테이너까지 스크롤 완전 차단 (이중 스크롤 방지) */
+#root,
+.miki-root {
+  height: 100vh;
+  overflow: hidden;
+}
+
+/* 혹시 남는 전역 스크롤바가 보이는 환경에서 숨김 처리 (폴백) */
+body::-webkit-scrollbar,
+html::-webkit-scrollbar {
+  width: 0px;
+  height: 0px;
+}
+
+/* Body 클래스 프리셋 (집중 모드/도움말 오픈 등) */
+body.miki-focus-mode {
+  background-color: #fafafa;
+}
+body.miki-help-open {
+  overflow: hidden; /* 도움말 오버레이 시 스크롤 잠금 */
+}
+
+code {
+  font-family: source-code-pro, Menlo, Monaco, Consolas, 'Courier New',
+    monospace;
+}
+
+/* 에디터 기본 상단 툴바 숨김 (플로팅 툴바 사용) */
+.miki-editor-container .toastui-editor-toolbar { display: none !important; }
+.miki-editor-container .toastui-editor-mode-switch { display: none !important; }
+
+/* 플로팅 툴바 스타일 */
+.miki-floating-toolbar {
+  position: fixed;
+  left: 50%;
+  bottom: 24px;
+  transform: translateX(-50%);
+  z-index: 2000;
+  background: rgba(255, 255, 255, 0.95);
+  backdrop-filter: saturate(120%) blur(6px);
+  border: 1px solid #e5e7eb;
+  box-shadow: 0 8px 24px rgba(0,0,0,0.12);
+  border-radius: 12px;
+  padding: 6px;
+}
+
+.miki-floating-toolbar button {
+  width: 48px; /* 1.4배 확대 */
+  height: 48px; /* 1.4배 확대 */
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  border-radius: 10px;
+  border: none;
+  background: transparent;
+  color: #374151;
+  margin: 0 2px;
+  cursor: pointer;
+  font-size: 16px;
+}
+
+.miki-floating-toolbar button:hover {
+  background: #f3f4f6;
+}
+
+.miki-floating-toolbar .divider {
+  width: 1px;
+  height: 22px;
+  background: #e5e7eb;
+  display: inline-block;
+  margin: 0 4px;
+}
+
+/* 🔥 NEW: Phantom Document 시각적 구분 스타일 */
+.phantom-temporary {
+  opacity: 0.8;
+  border-left: 3px solid #fbbf24 !important; /* 노란색 - 임시 상태 */
+  background-color: #fefce8; /* 연한 노란색 배경 */
+}
+
+.phantom-saving {
+  opacity: 0.9;
+  border-left: 3px solid #3b82f6 !important; /* 파란색 - 저장 중 */
+  background-color: #eff6ff; /* 연한 파란색 배경 */
+}
+
+.phantom-error {
+  opacity: 0.7;
+  border-left: 3px solid #ef4444 !important; /* 빨간색 - 오류 상태 */
+  background-color: #fef2f2; /* 연한 빨간색 배경 */
+}
+
+.phantom-temporary::before {
+  content: "💭";
+  position: absolute;
+  left: 8px;
+  top: 12px;
+  font-size: 12px;
+}
+
+.phantom-saving::before {
+  content: "💾";
+  position: absolute;
+  left: 8px;
+  top: 12px;
+  font-size: 12px;
+  animation: pulse 2s infinite;
+}
+
+.phantom-error::before {
+  content: "⚠️";
+  position: absolute;
+  left: 8px;
+  top: 12px;
+  font-size: 12px;
+  animation: bounce 1s infinite;
+}
+
+/* 단축키 도움말 오버레이 */
+.miki-help-overlay {
+  position: fixed;
+  inset: 0;
+  z-index: 3000;
+  background: rgba(17, 24, 39, 0.6);
+  display: flex;
+  align-items: center;
+  justify-content: center;
+}
+.miki-help-modal {
+  width: min(720px, 92vw);
+  background: #fff;
+  border-radius: 12px;
+  box-shadow: 0 20px 48px rgba(0, 0, 0, 0.25);
+  overflow: hidden;
+}
+.miki-help-modal header {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  padding: 14px 18px;
+  border-bottom: 1px solid #e5e7eb;
+  background: #f9fafb;
+}
+.miki-help-modal .miki-help-content {
+  padding: 16px 18px;
+  max-height: 70vh;
+  overflow: auto;
+}
+.miki-kbd {
+  display: inline-block;
+  min-width: 1.75em;
+  text-align: center;
+  padding: 2px 6px;
+  margin: 0 2px;
+  border: 1px solid #d1d5db;
+  border-bottom-width: 2px;
+  border-radius: 6px;
+  font-weight: 600;
+  background: #fff;
+  box-shadow: inset 0 -1px 0 rgba(0, 0, 0, 0.06);
+}
+
+/* Toast UI Editor 번들 폰트 강제 오버라이드 */
+.miki-root,
+.miki-root * {
+  font-family: var(--miki-font-ui) !important;
+  font-synthesis: none;
+}
+.miki-root .toastui-editor-defaultUI,
+.miki-root .toastui-editor-contents,
+.miki-root .toastui-editor-defaultUI *,
+.miki-root .ProseMirror,
+.miki-root .toastui-editor-popup,
+.miki-root .toastui-editor-tooltip,
+.miki-root .toastui-editor-mode-switch,
+.miki-root .toastui-editor-defaultUI-toolbar,
+.miki-root .toastui-editor-defaultUI-toolbar * {
+  font-family: var(--miki-font-ui) !important;
+}
+
+/* 에디터 뷰어/에디터 영역 모두 일괄 적용 */
+.miki-root .toastui-editor-ww-container .toastui-editor-contents,
+.miki-root .toastui-editor-md-container .toastui-editor,
+.miki-root .toastui-editor-ww-container .toastui-editor,
+.miki-root .toastui-editor-contents * {
+  font-family: var(--miki-font-ui) !important;
+}
+
+/* 보다 강한 특이성으로 재오버라이드 (번들 CSS가 동일하게 !important일 때 대비) */
+.miki-root .toastui-editor-defaultUI.toastui-editor-defaultUI,
+.miki-root .toastui-editor-defaultUI.toastui-editor-defaultUI *,
+.miki-root .toastui-editor-contents.toastui-editor-contents,
+.miki-root .toastui-editor-contents.toastui-editor-contents *,
+.miki-root .ProseMirror.ProseMirror,
+.miki-root .ProseMirror.ProseMirror * {
+  font-family: var(--miki-font-ui) !important;
+}
+
+/* 루트 컨테이너 보강 */
+#root, #root * {
+  font-family: var(--miki-font-ui) !important;
+}
+
+/* 패널 제목/헤더 폰트 강제 적용 (사이드바/에디터/AI 패널) */
+.miki-root header,
+.miki-root header *,
+.miki-root .panel-header,
+.miki-root .panel-header *,
+.miki-root .doc-title,
+.miki-root .document-title,
+.miki-root h1,
+.miki-root h2,
+.miki-root h3,
+.miki-root h4,
+.miki-root h5,
+.miki-root h6,
+.miki-root .text-lg,
+.miki-root .text-xl,
+.miki-root .text-2xl {
+  font-family: var(--miki-font-ui) !important;
+}
+
+/* 패널 헤더도 동일 폰트 강제 */
+.miki-root h1, .miki-root h2, .miki-root h3, .miki-root h4, .miki-root h5, .miki-root h6 {
+  font-family: var(--miki-font-ui) !important;
+}
+
+
+/* 에디터 본문을 중앙 정렬하고 여백을 넉넉하게 부여 */
+.miki-root .toastui-editor-ww-container .toastui-editor-contents,
+.miki-root .toastui-editor-md-container .toastui-editor-contents,
+.miki-root .toastui-editor-contents,
+.miki-root .ProseMirror {
+  max-width: 720px;
+  margin-left: auto;
+  margin-right: auto;
+  padding-left: 36px;
+  padding-right: 36px;
+  padding-top: 72px; /* 입력 텍스트가 상단에 붙지 않도록 상단 여백 강화 */
+  padding-bottom: 40px;
+  box-sizing: border-box;
+  font-size: var(--miki-editor-font-size) !important;
+}
+
+/* WYSIWYG 모드에서 실제 편집 영역 최상단에 여백이 적용되도록 보강 */
+.miki-root .ProseMirror {
+  padding-top: 72px !important;
+}
+
+/* 번들 기본 스타일이 덮어쓰는 경우를 위한 강한 특이성 보강 */
+.miki-root .toastui-editor-contents.toastui-editor-contents,
+.miki-root .ProseMirror.ProseMirror {
+  font-size: var(--miki-editor-font-size) !important;
+}
+
+/* WYSIWYG에서 실제 타이핑되는 p 노드까지 강제 적용 (특이성 강화) */
+.miki-root .toastui-editor-ww-container .ProseMirror,
+.miki-root .toastui-editor-ww-container .ProseMirror p,
+.miki-root .toastui-editor-contents,
+.miki-root .toastui-editor-contents p {
+  font-size: var(--miki-editor-font-size) !important;
+}
+
+/* 더욱 강한 특이성: 에디터 컨테이너 기준으로 재강제 */
+.miki-editor-container .toastui-editor-ww-container .ProseMirror,
+.miki-editor-container .toastui-editor-ww-container .ProseMirror *,
+.miki-editor-container .toastui-editor-contents,
+.miki-editor-container .toastui-editor-contents * {
+  font-size: var(--miki-editor-font-size) !important;
+  line-height: 1.6;
+}
+
+/* 본문 내 목록/테이블/코드 블록도 동일한 폰트 크기로 통일 */
+.miki-root .toastui-editor-contents li,
+.miki-root .toastui-editor-contents td,
+.miki-root .toastui-editor-contents th,
+.miki-root .toastui-editor-contents ol,
+.miki-root .toastui-editor-contents ul,
+.miki-root .toastui-editor-contents pre,
+.miki-root .toastui-editor-contents code,
+.miki-root .ProseMirror li,
+.miki-root .ProseMirror td,
+.miki-root .ProseMirror th,
+.miki-root .ProseMirror ol,
+.miki-root .ProseMirror ul,
+.miki-root .ProseMirror pre,
+.miki-root .ProseMirror code {
+  font-size: var(--miki-editor-font-size) !important;
+}
+
+/* 입력 영역 자체가 넉넉해 보이도록 최소 높이 보강 */
+.miki-root .ProseMirror {
+  min-height: 65vh;
+  /* 내부 컨텐츠에 스크롤이 생겨도 본문 너비/정렬이 흔들리지 않도록 */
+  overflow: visible !important; /* 스크롤 책임은 외부 래퍼 */
+}
+
+/* 에디터 외부 래퍼 스크롤바를 마진 바깥에 표시하기 위한 보강 */
+.miki-root .editor-outer-scroll {
+  overflow-y: auto;
+  overflow-x: hidden;
+  scrollbar-gutter: stable; /* 스크롤 유무에 따라 레이아웃 점프 방지 */
+  /* 내부/외부 래퍼 정렬 일치: 컨테이너 스트레치 */
+  display: flex;
+  flex-direction: column;
+  align-items: stretch;
+}
+
+/* 외부/내부 래퍼 크기와 정렬을 1:1로 맞춤 */
+.miki-root .editor-outer-scroll > .miki-editor-container,
+.miki-root .editor-outer-scroll .toastui-editor-defaultUI {
+  width: 100% !important;
+  height: auto !important;      /* 콘텐츠 높이에 맞춰 확장 */
+  min-height: 100% !important;  /* 컨테이너보다 작을 땐 채우기 */
+  margin: 0 !important;
+  padding: 0 !important;
+}
+
+/* 내부 래퍼 및 본문에서 보더/아웃라인/쉐도우 제거로 시각적 테두리 완전 제거 */
+.miki-root .editor-outer-scroll,
+.miki-root .miki-editor-container,
+.miki-root .toastui-editor-defaultUI,
+.miki-root .toastui-editor-main,
+.miki-root .toastui-editor-contents,
+.miki-root .ProseMirror,
+.miki-root .ProseMirror:focus {
+  border: none !important;
+  outline: none !important;
+  box-shadow: none !important;
+}
+
+/* Toast UI 기본 배경 라인/테두리 제거 및 투명화 */
+.miki-root .toastui-editor-defaultUI,
+.miki-root .toastui-editor-main {
+  background: transparent !important;
+}
+
+
+.miki-floating-toolbar .divider {
+  width: 1px;
+  height: 22px;
+  background: #e5e7eb;
+  display: inline-block;
+  margin: 0 4px;
+}
+
+/* 🔥 NEW: Phantom Document 시각적 구분 스타일 */
+.phantom-temporary {
+  opacity: 0.8;
+  border-left: 3px solid #fbbf24 !important; /* 노란색 - 임시 상태 */
+  background-color: #fefce8; /* 연한 노란색 배경 */
+}
+
+.phantom-saving {
+  opacity: 0.9;
+  border-left: 3px solid #3b82f6 !important; /* 파란색 - 저장 중 */
+  background-color: #eff6ff; /* 연한 파란색 배경 */
+}
+
+.phantom-error {
+  opacity: 0.7;
+  border-left: 3px solid #ef4444 !important; /* 빨간색 - 오류 상태 */
+  background-color: #fef2f2; /* 연한 빨간색 배경 */
+}
+
+.phantom-temporary::before {
+  content: "💭";
+  position: absolute;
+  left: 8px;
+  top: 12px;
+  font-size: 12px;
+}
+
+.phantom-saving::before {
+  content: "💾";
+  position: absolute;
+  left: 8px;
+  top: 12px;
+  font-size: 12px;
+  animation: pulse 2s infinite;
+}
+
+.phantom-error::before {
+  content: "⚠️";
+  position: absolute;
+  left: 8px;
+  top: 12px;
+  font-size: 12px;
+  animation: bounce 1s infinite;
+}
+
+/* 단축키 도움말 오버레이 */
+.miki-help-overlay {
+  position: fixed;
+  inset: 0;
+  z-index: 3000;
+  background: rgba(17, 24, 39, 0.6);
+  display: flex;
+  align-items: center;
+  justify-content: center;
+}
+.miki-help-modal {
+  width: min(720px, 92vw);
+  background: #fff;
+  border-radius: 12px;
+  box-shadow: 0 20px 48px rgba(0, 0, 0, 0.25);
+  overflow: hidden;
+}
+.miki-help-modal header {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  padding: 14px 18px;
+  border-bottom: 1px solid #e5e7eb;
+  background: #f9fafb;
+}
+.miki-help-modal .miki-help-content {
+  padding: 16px 18px;
+  max-height: 70vh;
+  overflow: auto;
+}
+/* 중복/불필요 블록 정리 (위에서 이미 선언됨) */
