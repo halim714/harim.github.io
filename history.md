@@ -55,15 +55,29 @@ permalink: /history/
     
     <div id="recent-changes">
       <h3>최근 수정된 문서</h3>
-      <ul class="recent-notes">
-        {% assign sorted_notes = site.notes | sort: 'last_modified_at' | reverse %}
-        {% for note in sorted_notes limit:10 %}
-          <li>
-            <a href="{{ note.url | relative_url }}">{{ note.title }}</a>
-            <span class="note-date">{{ note.last_modified_at | date: "%Y-%m-%d" }}</span>
-          </li>
-        {% endfor %}
-      </ul>
+      1       <ul class="recent-notes">
+    2         {% if site.notes and 
+      site.notes.size > 0 %}
+    3           {% assign sorted_notes = 
+      site.notes | sort: 
+      'last_modified_at' | reverse %}
+    4           {% for note in 
+      sorted_notes limit:10 %}
+    5             <li>
+    6               <a href="{{ note.url|
+      relative_url }}">{{ note.title }}<a
+      >
+    7               <span class=
+      "note-date">
+    8   {{ note.last_modified_at | date: 
+      "%Y-%m-%d" }}</span>
+    9             </li>
+   10           {% endfor %}
+   11         {% else %}
+   12           <li>최근 변경된 문서가 
+      없습니다.</li>
+   13         {% endif %}
+   14       </ul>
     </div>
     
     <h2>Jekyll에서 문서 변경 이력 표시</h2>
