@@ -1,8 +1,66 @@
+# "미키" 위키 설정
+title: 미키 (Miki) - 당신의 AI 기반 위키
+email: your-email@example.com
+description: >-
+  AI가 도와주는 개인 위키형 일기/기록 서비스입니다. 복잡한 문법 없이 글쓰기에만 집중하세요.
+baseurl: "/miki-wiki"
 url: "https://halim714.github.io"
+github_username: halim714 # 실제 GitHub 사용자명
+timezone: "Asia/Seoul"
+future: true
 
-baseurl: "/harim.github.io"
+# 빌드 설정
+theme: minima # 기본 테마, 추후 커스텀 테마로 변경하거나 스타일 직접 관리
+plugins:
+  - jekyll-feed
+  - jekyll-sitemap
+  - jekyll-seo-tag
+  # - jekyll-paginate # 페이지네이션은 SPA에서 다르게 처리될 수 있음
+  - jekyll-relative-links
 
+# "미키" 위키 커스텀 설정
 permalink: "/doc/:title/"
 
-timezone: "Asia/Seoul"
-repository: harim/harim.github.io
+# 기본 레이아웃/값
+defaults:
+  - scope:
+      path: ""
+      type: "posts"
+    values:
+      layout: post
+      # updatedAt이 Front Matter에 있으면 홈에서 최근 편집에 사용
+      updatedAt: null
+collections:
+  notes:
+    output: true
+    permalink: /notes/:title/
+
+# 태그 설정 (AI가 관리하므로 Jekyll 기본 기능은 최소화)
+tag_page_layout: tag_page
+tag_page_dir: tag
+
+# 최근 수정/생성 시간은 Front Matter에서 관리 (AI가 자동 생성)
+
+# 계층 구조는 Front Matter의 'parent' 속성으로 관리 (AI가 제안)
+
+# 검색은 SPA 내에서 또는 외부 서비스 연동으로 구현
+
+# 에디터 SPA 관련 파일 제외
+exclude:
+  - .sass-cache/
+  - .jekyll-cache/
+  - gemfiles/
+  - Gemfile
+  - Gemfile.lock
+  - node_modules/
+  - vendor/
+  - miki-editor/ # React 에디터 소스 디렉토리 (빌드 결과만 포함하거나 별도 배포)
+  - README.md
+  - LICENSE
+
+# 빌드 옵션 안정화
+markdown: kramdown
+kramdown:
+  input: GFM
+  hard_wrap: false
+
