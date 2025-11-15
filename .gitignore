@@ -11,4 +11,5 @@ miki-editor/.env
 node_modules
 
 # Ignore the miki-wiki content repository
+
 miki-wiki/
