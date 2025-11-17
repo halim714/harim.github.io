@@ -677,17 +677,27 @@ app.post('/api/posts', async (req, res) => {
       return res.status(400).json({ error: 'Title and content are required' });
     }
     
-    // Generate ID for file name (based on title)
-    const id = title
+    // Generate initial ID from title
+    let id = title
       .toLowerCase()
       .replace(/[^a-z0-9가-힣]/g, '-')
       .replace(/-+/g, '-')
       .replace(/^-|-$/g, '') || 
       `post-${Date.now()}`;
     
-    const filePath = path.join(POSTS_DIR, `${id}.md`);
-    
-    // 🎯 Front Matter format for file creation
+    // Step 1 (Check Existence): Check if a post with this ID already exists on GitHub
+    try {
+      await storage.getPost(`${id}.md`);
+      // If getPost succeeds, the file exists. Generate a new ID.
+      console.log(`📝 [POST-API] Post with id "${id}" already exists. Generating new ID.`);
+      id = `${id}-${Date.now()}`;
+    } catch (error) {
+      // If getPost fails (throws an error, likely 404), the file does not exist.
+      // We can proceed with the original ID.
+      console.log(`📝 [POST-API] Post with id "${id}" does not exist. Creating new post.`);
+    }
+
+    // Step 2 (Prepare): Construct the new content and front matter
     const now = new Date().toISOString();
     const frontMatter = `---
 docId: "${id}"
@@ -698,26 +708,14 @@ updatedAt: "${now}"
 permalink: "/doc/${id}/"
 ---
 `;
-    
     const fullContent = frontMatter + content;
     
-    // Check if file already exists
-    try {
-      await fs.access(filePath);
-      // If exists, create new ID with timestamp
-      const newId = `${id}-${Date.now()}`;
-      const newFilePath = path.join(POSTS_DIR, `${newId}.md`);
-      await fs.writeFile(newFilePath, fullContent, 'utf8');
-      
-      console.log(`✅ New document created: ${newId} | Title: ${title} | Mode: ${titleMode}`);
-      res.status(201).json({ id: newId, title, titleMode, success: true });
-    } catch (accessError) {
-      // If not exists, save directly
-      await fs.writeFile(filePath, fullContent, 'utf8');
-      
-      console.log(`✅ New document created: ${id} | Title: ${title} | Mode: ${titleMode}`);
-      res.status(201).json({ id, title, titleMode, success: true });
-    }
+    // Step 3 (Write): Create the new post in GitHub (sha is null)
+    await storage.updatePost(`${id}.md`, fullContent, null);
+
+    console.log(`✅ New document created: ${id} | Title: ${title} | Mode: ${titleMode}`);
+    res.status(201).json({ id, title, titleMode, success: true });
+
   } catch (error) {
     console.error('Post saving error:', error);
     res.status(500).json({ error: 'Error saving post' });
@@ -735,6 +733,7 @@ app.put('/api/posts/:id', async (req, res) => {
     let existingCreatedAt = new Date().toISOString();
     try {
       const existingPost = await storage.getPost(`${id}.md`);
+      console.log('[DEBUG] Existing Post Data:', existingPost); // DEBUG LOG
       existingSha = existingPost.sha;
       if (existingPost.frontMatter.createdAt) {
         existingCreatedAt = new Date(existingPost.frontMatter.createdAt).toISOString();
@@ -743,6 +742,7 @@ app.put('/api/posts/:id', async (req, res) => {
       // If post doesn't exist, it will be created. sha remains null.
       console.log(`📝 [PUT-API] No existing post found for "${id}". A new post will be created.`);
     }
+    console.log('[DEBUG] Existing SHA:', existingSha); // DEBUG LOG
 
     // Step 2 (Prepare): Construct the new content and front matter
     let finalTitle = title;
@@ -765,9 +765,11 @@ permalink: "/doc/${id}/"
 ---
 `;
     const fullContent = frontMatter + content;
+    console.log('[DEBUG] Full Content to be sent:', fullContent); // DEBUG LOG
 
     // Step 3 (Write): Update the post in GitHub
-    await storage.updatePost(`${id}.md`, fullContent, existingSha);
+    const updateResponse = await storage.updatePost(`${id}.md`, fullContent, existingSha);
+    console.log('[DEBUG] GitHub Update Response:', updateResponse); // DEBUG LOG
 
     console.log(`✅ [PUT-API] Document saved: ${id} | Title: ${finalTitle} | Mode: ${finalTitleMode}`);
     
