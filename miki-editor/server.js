@@ -642,50 +642,25 @@ app.get('/api/posts', async (req, res) => {
 app.get('/api/posts/:id', async (req, res) => {
   try {
     const { id } = req.params;
-    const filePath = path.join(POSTS_DIR, `${id}.md`);
-    
-    const fullContent = await fs.readFile(filePath, 'utf8');
-    const stats = await fs.stat(filePath);
-    
-    // 🎯 Front Matter parsing
-    let title = null;
-    let titleMode = 'auto';
-    let content = fullContent;
-    let createdAt = stats.birthtime;
-    let updatedAt = stats.mtime;
-    
-    const frontMatterMatch = fullContent.match(/^---\n([\s\S]*?)\n---\n([\s\S]*)$/);
-    if (frontMatterMatch) {
-      const metaData = frontMatterMatch[1];
-      content = frontMatterMatch[2];
-      
-      // Metadata parsing
-      const titleMatch = metaData.match(/title:\s*"([^"]+)"/);
-      const titleModeMatch = metaData.match(/titleMode:\s*"([^"]+)"/);
-      const createdAtMatch = metaData.match(/createdAt:\s*"([^"]+)"/);
-      const updatedAtMatch = metaData.match(/updatedAt:\s*"([^"]+)"/);
-      
-      if (titleMatch) title = titleMatch[1];
-      if (titleModeMatch) titleMode = titleModeMatch[1];
-      if (createdAtMatch) createdAt = new Date(createdAtMatch[1]);
-      if (updatedAtMatch) updatedAt = new Date(updatedAtMatch[1]);
-    }
-    
-    // Front Matter not found, old file processing (backward compatibility)
-    if (!title) {
-      title = extractTitleFromContent(content);
-      titleMode = 'auto';
-    }
-    
+    const postData = await storage.getPost(`${id}.md`);
+
+    const { frontMatter, content } = postData;
+
+    // Use front matter data, with fallbacks for robustness
+    const title = frontMatter.title || extractTitleFromContent(content);
+    const titleMode = frontMatter.titleMode || 'auto';
+    const createdAt = frontMatter.createdAt ? new Date(frontMatter.createdAt) : new Date();
+    const updatedAt = frontMatter.updatedAt ? new Date(frontMatter.updatedAt) : new Date();
+
     console.log(`📖 Document loaded: ${id} | Title: ${title} | Mode: ${titleMode}`);
-    
+
     res.json({
       id,
       title,
       titleMode,
       content,
       updatedAt,
-      createdAt
+      createdAt,
     });
   } catch (error) {
     console.error(`Post retrieval error (ID: ${req.params.id}):`, error);
