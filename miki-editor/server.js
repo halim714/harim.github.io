@@ -729,67 +729,32 @@ app.put('/api/posts/:id', async (req, res) => {
   try {
     const { id } = req.params;
     const { content = '', title, titleMode = 'auto' } = req.body;
-    
-    console.log(`🔍 [PUT-API] Request received: ${id}`);
-    console.log(`📋 [PUT-API] Request data:`, {
-      id,
-      title,
-      titleMode,
-      contentLength: content?.length || 0,
-      hasTitle: !!title,
-      hasTitleMode: !!titleMode
-    });
-    
-    // null or undefined check only, empty string is valid content
-    if (content === null || content === undefined) {
-      console.log(`❌ [PUT-API] Content validation failed: ${id}`);
-      return res.status(400).json({ error: 'Content is required' });
-    }
-    
-    const filePath = path.join(POSTS_DIR, `${id}.md`);
-    console.log(`📁 [PUT-API] File path: ${filePath}`);
-    
-    // 🎯 Metadata extraction function
-    // This function is now imported from utils.js
-    
-    // 🎯 Title decision logic
-    let finalTitle = title;
-    let finalTitleMode = titleMode;
-    
-    if (!title || title.trim() === '') {
-      // If no title, auto extract
-      finalTitle = extractTitleFromContent(content);
-      finalTitleMode = 'auto';
-      console.log(`🤖 [PUT-API] Auto title extraction: "${finalTitle}"`);
-    } else {
-      // If title exists, use user title
-      finalTitleMode = titleMode || 'manual';
-      console.log(`👤 [PUT-API] User title used: "${finalTitle}" (Mode: ${finalTitleMode})`);
-    }
-    
-    // 🎯 Front Matter format for file creation
-    const now = new Date().toISOString();
-    let existingCreatedAt = now;
-    
-    // Existing file, keep createdAt
+
+    // Step 1 (Read): Get current post data to retrieve SHA and preserve createdAt
+    let existingSha = null;
+    let existingCreatedAt = new Date().toISOString();
     try {
-      const existingContent = await fs.readFile(filePath, 'utf8');
-      console.log(`📖 [PUT-API] Existing file found: ${id}`);
-      
-      const frontMatterMatch = existingContent.match(/^---\n([\s\S]*?)\n---\n/);
-      if (frontMatterMatch) {
-        const existingMeta = frontMatterMatch[1];
-        const createdAtMatch = existingMeta.match(/createdAt:\s*"([^"]+)"/);
-        if (createdAtMatch) {
-          existingCreatedAt = createdAtMatch[1];
-          console.log(`📅 [PUT-API] Existing createdAt kept: ${existingCreatedAt}`);
-        }
+      const existingPost = await storage.getPost(`${id}.md`);
+      existingSha = existingPost.sha;
+      if (existingPost.frontMatter.createdAt) {
+        existingCreatedAt = new Date(existingPost.frontMatter.createdAt).toISOString();
       }
     } catch (error) {
-      // If no file, create new
-      console.log(`📝 [PUT-API] New file created: ${id}`);
+      // If post doesn't exist, it will be created. sha remains null.
+      console.log(`📝 [PUT-API] No existing post found for "${id}". A new post will be created.`);
     }
-    
+
+    // Step 2 (Prepare): Construct the new content and front matter
+    let finalTitle = title;
+    let finalTitleMode = titleMode;
+    if (!title || title.trim() === '') {
+      finalTitle = extractTitleFromContent(content);
+      finalTitleMode = 'auto';
+    } else {
+      finalTitleMode = titleMode || 'manual';
+    }
+
+    const now = new Date().toISOString();
     const frontMatter = `---
 docId: "${id}"
 title: "${finalTitle}"
@@ -799,22 +764,12 @@ updatedAt: "${now}"
 permalink: "/doc/${id}/"
 ---
 `;
-    
     const fullContent = frontMatter + content;
-    
-    console.log(`💾 [PUT-API] Front Matter created:`, {
-      title: finalTitle,
-      titleMode: finalTitleMode,
-      createdAt: existingCreatedAt,
-      updatedAt: now,
-      frontMatterLength: frontMatter.length,
-      totalContentLength: fullContent.length
-    });
-    
-    await fs.writeFile(filePath, fullContent, 'utf8');
-    
+
+    // Step 3 (Write): Update the post in GitHub
+    await storage.updatePost(`${id}.md`, fullContent, existingSha);
+
     console.log(`✅ [PUT-API] Document saved: ${id} | Title: ${finalTitle} | Mode: ${finalTitleMode}`);
-    console.log(`📁 [PUT-API] Saved file size: ${fullContent.length} bytes`);
     
     res.json({ 
       id, 
@@ -824,11 +779,6 @@ permalink: "/doc/${id}/"
     });
   } catch (error) {
     console.error(`❌ [PUT-API] Post update error (ID: ${req.params.id}):`, error);
-    console.error(`🔍 [PUT-API] Error details:`, {
-      message: error.message,
-      stack: error.stack,
-      requestBody: req.body
-    });
     res.status(500).json({ error: 'Error updating post' });
   }
 });
