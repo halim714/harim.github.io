@@ -8,6 +8,8 @@ const fs = require('fs').promises;
 const { exec } = require('child_process');
 const { promisify } = require('util');
 const execAsync = promisify(exec);
+const storage = require('./server/storage');
+const { extractTitleFromContent } = require('./server/utils');
 
 // Load environment variables - prefer server-local secrets
 dotenv.config({ path: path.resolve(__dirname, '.server.env') });
@@ -628,88 +630,7 @@ app.post('/api/publish', async (req, res) => {
 // Get post list
 app.get('/api/posts', async (req, res) => {
   try {
-    const files = await fs.readdir(POSTS_DIR);
-    const postList = [];
-    
-    // Title extraction function (same as client)
-    const extractTitleFromContent = (content) => {
-      // 🎯 Log optimization: Only print important information
-      if (!content || content.trim() === '') {
-        return 'New memo';
-      }
-      
-      // Server and client same logic: First search for # header
-      const titleMatch = content.match(/^#\s+(.+)$/m);
-      if (titleMatch) {
-        return titleMatch[1].trim();
-      }
-      
-      // If no # header, use first line (50 character limit)
-      const lines = content.split('\n');
-      const firstLine = lines[0]?.trim() || '';
-      
-      if (firstLine === '') {
-        return 'New memo';
-      }
-      
-      // Remove markdown formatting and limit to 50 characters
-      const cleanTitle = firstLine
-        .replace(/^#+\s*/, '') // Remove header marker
-        .replace(/\*\*(.*?)\*\*/g, '$1') // Remove bold
-        .replace(/\*(.*?)\*/g, '$1') // Remove italic
-        .replace(/`(.*?)`/g, '$1') // Remove inline code
-        .replace(/\[(.*?)\]\(.*?\)/g, '$1') // Remove link
-        .trim()
-        .slice(0, 50); // Limit to 50 characters
-      
-      return cleanTitle || 'New memo';
-    };
-    
-    for (const file of files) {
-      if (file.endsWith('.md')) {
-        const filePath = path.join(POSTS_DIR, file);
-        const stats = await fs.stat(filePath);
-        const fullContent = await fs.readFile(filePath, 'utf8');
-        
-        // 🎯 Front Matter parsing for title extraction
-        let title = null;
-        let titleMode = 'auto';
-        let content = fullContent;
-        
-        const frontMatterMatch = fullContent.match(/^---\n([\s\S]*?)\n---\n([\s\S]*)$/);
-        if (frontMatterMatch) {
-          const metaData = frontMatterMatch[1];
-          content = frontMatterMatch[2];
-          
-          const titleMatch = metaData.match(/title:\s*"([^"]+)"/);
-          const titleModeMatch = metaData.match(/titleMode:\s*"([^"]+)"/);
-          
-          if (titleMatch) title = titleMatch[1];
-          if (titleModeMatch) titleMode = titleModeMatch[1];
-        }
-        
-        // Front Matter not found, old file processing (backward compatibility)
-        if (!title) {
-          title = extractTitleFromContent(content);
-          titleMode = 'auto';
-        }
-        
-        postList.push({
-          id: file.replace('.md', ''),
-          title: title,
-          titleMode: titleMode,
-          filename: file,
-          createdAt: stats.birthtime,
-          updatedAt: stats.mtime,
-          size: stats.size,
-          preview: content.substring(0, 150) + (content.length > 150 ? '...' : '')
-        });
-      }
-    }
-    
-    // Sort from latest post
-    postList.sort((a, b) => new Date(b.updatedAt) - new Date(a.updatedAt));
-    
+    const postList = await storage.getPostList();
     res.json(postList);
   } catch (error) {
     console.error('Post list retrieval error:', error);
@@ -752,27 +673,6 @@ app.get('/api/posts/:id', async (req, res) => {
     
     // Front Matter not found, old file processing (backward compatibility)
     if (!title) {
-      // Client and server same title extraction logic
-      const extractTitleFromContent = (content) => {
-        if (!content || content.trim() === '') return 'New memo';
-        
-        const titleMatch = content.match(/^#\s+(.+)$/m);
-        if (titleMatch) return titleMatch[1].trim();
-        
-        const lines = content.split('\n');
-        const firstLine = lines[0]?.trim() || '';
-        if (firstLine === '') return 'New memo';
-        
-        return firstLine
-          .replace(/^#+\s*/, '')
-          .replace(/\*\*(.*?)\*\*/g, '$1')
-          .replace(/\*(.*?)\*/g, '$1')
-          .replace(/`(.*?)`/g, '$1')
-          .replace(/\[(.*?)\]\(.*?\)/g, '$1')
-          .trim()
-          .slice(0, 50) || 'New memo';
-      };
-      
       title = extractTitleFromContent(content);
       titleMode = 'auto';
     }
@@ -875,27 +775,7 @@ app.put('/api/posts/:id', async (req, res) => {
     console.log(`📁 [PUT-API] File path: ${filePath}`);
     
     // 🎯 Metadata extraction function
-    const extractTitleFromContent = (content) => {
-      if (!content || content.trim() === '') return 'New memo';
-      
-      // First search for # header
-      const titleMatch = content.match(/^#\s+(.+)$/m);
-      if (titleMatch) return titleMatch[1].trim();
-      
-      // If no # header, use first line (50 character limit)
-      const lines = content.split('\n');
-      const firstLine = lines[0]?.trim() || '';
-      if (firstLine === '') return 'New memo';
-      
-      return firstLine
-        .replace(/^#+\s*/, '')
-        .replace(/\*\*(.*?)\*\*/g, '$1')
-        .replace(/\*(.*?)\*/g, '$1')
-        .replace(/`(.*?)`/g, '$1')
-        .replace(/\[(.*?)\]\(.*?\)/g, '$1')
-        .trim()
-        .slice(0, 50) || 'New memo';
-    };
+    // This function is now imported from utils.js
     
     // 🎯 Title decision logic
     let finalTitle = title;
