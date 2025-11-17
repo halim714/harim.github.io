@@ -789,9 +789,22 @@ permalink: "/doc/${id}/"
 app.delete('/api/posts/:id', async (req, res) => {
   try {
     const { id } = req.params;
-    const filePath = path.join(POSTS_DIR, `${id}.md`);
     
-    await fs.unlink(filePath);
+    // Step 1 (Read): Get current post data to retrieve SHA
+    let existingSha = null;
+    try {
+      const existingPost = await storage.getPost(`${id}.md`);
+      existingSha = existingPost.sha;
+    } catch (error) {
+      // If getPost fails, the file likely doesn't exist on GitHub.
+      // We can consider the deletion successful.
+      console.log(`📝 [DELETE-API] Post with id "${id}" not found on GitHub. Assuming already deleted.`);
+      return res.json({ success: true });
+    }
+
+    // Step 2 (Delete): Delete the post from GitHub
+    await storage.deletePost(`${id}.md`, existingSha);
+
     res.json({ success: true });
   } catch (error) {
     console.error(`Post deletion error (ID: ${req.params.id}):`, error);
