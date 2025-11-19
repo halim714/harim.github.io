@@ -24,16 +24,30 @@ function extractTitleFromContent(content) {
   // Remove markdown formatting and limit to 50 characters
   const cleanTitle = firstLine
     .replace(/^#+\s*/, '') // Remove header marker
-    .replace(/\*\*(.*?)\*\*/g, '$1') // Remove bold
-    .replace(/\*(.*?)\*/g, '$1') // Remove italic
-    .replace(/`(.*?)`/g, '$1') // Remove inline code
-    .replace(/\.*\s*\[(.*?)](.*?)\)/g, '$1') // Remove link
+    .replace(/\*\*(.*?)\*\*/g, '') // Remove bold
+    .replace(/\*(.*?)\*/g, '') // Remove italic
+    .replace(/`(.*?)`/g, '') // Remove inline code
+    .replace(/\[(.*?)\]\(.*?\)/g, '') // Remove link
     .trim()
     .slice(0, 50); // Limit to 50 characters
 
   return cleanTitle || 'New memo';
 }
 
+/**
+ * Sanitizes a string to be used as a file name.
+ * @param {string} input - The string to sanitize.
+ * @returns {string} The sanitized string.
+ */
+function sanitizeForFileName(input) {
+  return String(input || 'post')
+    .toLowerCase()
+    .replace(/[^a-z0-9가-힣]/g, '-')
+    .replace(/-+/g, '-')
+    .replace(/^-|-$/g, '');
+}
+
 module.exports = {
   extractTitleFromContent,
+  sanitizeForFileName,
 };
