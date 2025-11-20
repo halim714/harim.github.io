@@ -10,6 +10,9 @@ const { promisify } = require('util');
 const execAsync = promisify(exec);
 const storage = require('./server/storage');
 const { extractTitleFromContent, sanitizeForFileName } = require('./server/utils');
+const passport = require('passport');
+const GitHubStrategy = require('passport-github2').Strategy;
+const session = require('express-session');
 
 // Load environment variables - prefer server-local secrets
 dotenv.config({ path: path.resolve(__dirname, '.server.env') });
@@ -17,9 +20,105 @@ dotenv.config({ path: path.resolve(__dirname, '.env') });
 
 const app = express();
 const port = process.env.PORT || 3003;
+
+// Request body parsing configuration
 app.use(bodyParser.json({ limit: '10mb' }));
 app.use(bodyParser.urlencoded({ extended: true }));
-app.use(cors());
+
+// CORS configuration - more clearly configured
+app.use(cors({
+  origin: ['http://localhost:3020'], // Updated to http://localhost:3020
+  methods: ['GET', 'POST', 'OPTIONS', 'PUT', 'DELETE'],
+  allowedHeaders: ['Content-Type', 'Authorization'],
+  credentials: true
+}));
+
+// Session Middleware
+app.use(session({
+  secret: process.env.SESSION_SECRET || 'your_secret_key', // Use a strong secret from .env
+  resave: false,
+  saveUninitialized: false,
+  cookie: {
+    maxAge: 24 * 60 * 60 * 1000, // 24 hours
+    secure: process.env.NODE_ENV === 'production', // Use secure cookies in production
+    httpOnly: true,
+    sameSite: 'lax',
+  }
+}));
+
+// Passport Initialization
+app.use(passport.initialize());
+app.use(passport.session());
+
+// Passport GitHub Strategy
+passport.use(new GitHubStrategy({
+    clientID: process.env.GITHUB_CLIENT_ID,
+    clientSecret: process.env.GITHUB_CLIENT_SECRET,
+    callbackURL: "http://localhost:3003/api/auth/github/callback",
+    scope: ['repo', 'user:email'] // Request 'repo' scope for file operations and 'user:email' for user info
+  },
+  function(accessToken, refreshToken, profile, done) {
+    // In a real application, you would save the user profile and accessToken to a database.
+    // For now, we'll just pass the profile and accessToken.
+    // The accessToken is crucial for making GitHub API calls on behalf of the user.
+    const user = {
+      id: profile.id,
+      username: profile.username,
+      displayName: profile.displayName,
+      profileUrl: profile.profileUrl,
+      photos: profile.photos,
+      emails: profile.emails,
+      accessToken: accessToken // Store accessToken for later GitHub API calls
+    };
+    return done(null, user);
+  }
+));
+
+// Passport Serialization/Deserialization
+passport.serializeUser(function(user, done) {
+  done(null, user);
+});
+
+passport.deserializeUser(function(user, done) {
+  done(null, user);
+});
+
+// ===== GitHub OAuth Routes =====
+app.get('/api/auth/github',
+  passport.authenticate('github', { scope: ['repo', 'user:email'] }));
+
+app.get('/api/auth/github/callback',
+  passport.authenticate('github', { failureRedirect: 'http://localhost:3020/login' }), // Redirect to frontend login page on failure
+  function(req, res) {
+    // Successful authentication, redirect home.
+    res.redirect('http://localhost:3020/'); // Redirect to frontend home page on success
+  });
+
+app.get('/api/auth/logout', function(req, res, next) {
+  req.logout(function(err) {
+    if (err) { return next(err); }
+    res.redirect('http://localhost:3020/login'); // Redirect to frontend login page after logout
+  });
+});
+
+app.get('/api/user/me', (req, res) => {
+  if (req.isAuthenticated()) {
+    res.json({
+      isAuthenticated: true,
+      user: {
+        id: req.user.id,
+        username: req.user.username,
+        displayName: req.user.displayName,
+        profileUrl: req.user.profileUrl,
+        photos: req.user.photos,
+        emails: req.user.emails,
+        // Do NOT send accessToken to frontend for security reasons
+      }
+    });
+  } else {
+    res.json({ isAuthenticated: false });
+  }
+});
 
 // Posts directory path (editor local)
 const POSTS_DIR = path.join(__dirname, 'posts');
@@ -362,4 +461,4 @@ app.listen(port, () => {
   console.log(`서버가 포트 ${port}에서 실행 중입니다.`);
   console.log(`API 엔드포인트: http://localhost:${port}/api/claude`);
   console.log(`글 관리 API: http://localhost:${port}/api/posts`);
-}); 
+});
