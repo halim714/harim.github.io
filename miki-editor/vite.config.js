@@ -5,7 +5,7 @@ import { resolve } from 'path';
 export default defineConfig(({ mode }) => {
   // .env 파일 로드
   const env = loadEnv(mode, process.cwd(), '');
-  
+
   return {
     plugins: [react()],
     define: {
@@ -25,7 +25,7 @@ export default defineConfig(({ mode }) => {
       open: true,
       proxy: {
         '/api': {
-          target:'http://127.0.0.1:3003',
+          target: 'http://127.0.0.1:3003',
           changeOrigin: true,
           onError: (err, req, res) => {
             console.log('프록시 오류:', err);

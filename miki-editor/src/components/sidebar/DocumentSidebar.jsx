@@ -26,25 +26,25 @@ const removeMarkdownFormatting = (text) => {
     .trim();
 };
 
-const DocumentSidebar = ({ 
-  currentDocument, 
-  searchQuery, 
+const DocumentSidebar = ({
+  currentDocument,
+  searchQuery,
   setSearchQuery,
   searchInputRef,
-  onLoadPost, 
+  onLoadPost,
   onNewPost,
   onDeletePost,
   onPublish,
   isPublishing,
-  isMobile, 
-  activeMobilePanel, 
+  isMobile,
+  activeMobilePanel,
   setActiveMobilePanel,
   setMessage,
   content // 🔥 NEW: Phantom Document 미리보기를 위한 content prop 추가
 }) => {
   const queryClient = useQueryClient();
   const { data: documentsData, isLoading, error, refetch } = useDocuments();
-  
+
   // 🎯 성능 측정을 위한 ref 생성
   const documentListRef = useRef(null);
 
@@ -62,7 +62,7 @@ const DocumentSidebar = ({
   useEffect(() => {
     if (documentsData && documentsData.length > 0) {
       logger.info(`📊 [DATA-BRIDGE] documentsData → searchManager 주입: ${documentsData.length}개 문서`);
-      
+
       // 서버 문서를 searchManager가 사용할 수 있는 형태로 변환
       const serverDocuments = documentsData.map(doc => ({
         id: doc.id,
@@ -72,7 +72,7 @@ const DocumentSidebar = ({
         isFromServer: true,
         serverData: doc // 원본 서버 데이터 보존
       }));
-      
+
       // DocumentSearchManager에 서버 문서 데이터 주입
       if (searchManager.setServerDocuments) {
         searchManager.setServerDocuments(serverDocuments);
@@ -104,16 +104,16 @@ const DocumentSidebar = ({
           setIsSearching(true);
           try {
             logger.info(`🔍 [SEARCH] 기본 키워드 검색만 사용 (AI 검색 비활성화): "${query}"`);
-            
+
             // 🔥 DISABLED: AI 검색 비활성화 - 토큰 절약
             // const results = await searchManager.searchDocuments(query);
-            
+
             // 기본 검색으로만 처리
             setSearchResults([]);
             setSearchMode('basic');
-            
+
             logger.info(`✅ [SEARCH] 기본 검색 모드로 전환됨`);
-            
+
           } catch (error) {
             logger.error('🚨 [SEARCH] 검색 오류:', error);
             setMessage({
@@ -143,18 +143,18 @@ const DocumentSidebar = ({
   // 🔥 ENHANCED: 검색 필터링된 문서 목록 (하이브리드 방식)
   const filteredPosts = useMemo(() => {
     if (!documentsData) return [];
-    
+
     if (!searchQuery.trim()) {
       // 🔥 NEW: 일반 모드에서도 고유 렌더링 키 추가
       let posts = documentsData.map(doc => ({
         ...doc,
         _renderKey: `normal-${doc.id}-${Date.now()}`
       }));
-      
+
       // 🔥 PHANTOM: currentDocument가 임시이고 목록에 없으면 맨 위에 추가
-      if (currentDocument?.isEmpty && 
-          !posts.find(p => p.id === currentDocument.id)) {
-        
+      if (currentDocument?.isEmpty &&
+        !posts.find(p => p.id === currentDocument.id)) {
+
         const phantomDoc = {
           ...currentDocument,
           preview: content ? content.substring(0, 100) + '...' : '새 메모를 작성하세요...',
@@ -162,11 +162,11 @@ const DocumentSidebar = ({
           _trustLevel: 'temporary',
           _renderKey: `phantom-${currentDocument.id}-${Date.now()}`
         };
-        
+
         posts.unshift(phantomDoc);
         logger.info(`🔮 [PHANTOM] 임시 문서를 목록에 추가: ${currentDocument.id}`);
       }
-      
+
       // 정렬 적용 (라이브러리와 동일한 정책)
       const sorted = [...posts];
       if (sort === 'title_asc') {
@@ -182,21 +182,21 @@ const DocumentSidebar = ({
     // 고급 검색 결과가 있으면 우선 사용
     if (searchMode !== 'basic' && searchResults.length > 0) {
       logger.info(`🎯 [FILTER] 고급 검색 모드: ${searchMode}, ${searchResults.length}개 결과 사용`);
-      
+
       // 🔥 NEW: Map을 사용한 중복 제거 및 정체성 보장 시스템
       const uniqueDocumentsMap = new Map();
-      
+
       // DocumentSearchManager 결과를 documentsData 형태로 변환하면서 중복 제거
       searchResults
         .filter(result => !result.isError && !result.isCreateNew)
         .forEach(result => {
           // 기존 documentsData에서 해당 문서 찾기
-          const existingDoc = documentsData.find(doc => 
-            doc.id === result.id || 
+          const existingDoc = documentsData.find(doc =>
+            doc.id === result.id ||
             doc.title === result.title ||
             doc.title.toLowerCase() === result.title.toLowerCase()
           );
-          
+
           let finalDoc;
           if (existingDoc) {
             finalDoc = {
@@ -227,21 +227,21 @@ const DocumentSidebar = ({
               _renderKey: `new-${result.id}-${searchMode}-${Date.now()}`
             };
           }
-          
+
           // Map에서 중복 제거: ID를 키로 사용하여 마지막 결과만 유지
           uniqueDocumentsMap.set(finalDoc.id, finalDoc);
         });
-      
+
       // Map을 배열로 변환하여 반환
       const finalResults = Array.from(uniqueDocumentsMap.values());
       logger.info(`🎯 [DEDUP] 중복 제거 완료: ${searchResults.length}개 → ${finalResults.length}개`);
-      
+
       return finalResults;
     }
 
     // 기본 필터링 (폴백)
     logger.info(`📋 [FILTER] 기본 필터링 모드 사용`);
-    return documentsData.filter(doc => 
+    return documentsData.filter(doc =>
       doc.title?.toLowerCase().includes(searchQuery.toLowerCase()) ||
       doc.preview?.toLowerCase().includes(searchQuery.toLowerCase())
     ).map(doc => ({
@@ -253,11 +253,11 @@ const DocumentSidebar = ({
   // 🎯 실시간 제목 변경 이벤트 리스너 등록
   useEffect(() => {
     const isDebugMode = process.env.NODE_ENV === 'development';
-    
+
     const handleTitleChange = (event) => {
       const { docId, newTitle } = event.detail;
       setRealtimeTitles(prev => new Map(prev.set(docId, newTitle)));
-      
+
       // 🎯 로그 최적화: 개발 환경에서만 상세 로그
       if (isDebugMode) {
         logger.info(`📝 [REAL-TIME] 문서목록 제목 실시간 업데이트: ${docId} → ${newTitle}`);
@@ -266,7 +266,7 @@ const DocumentSidebar = ({
 
     const handleReactSync = (event) => {
       const { docId, newTitle } = event.detail;
-      
+
       // 🎯 로그 최적화: 개발 환경에서만 로그
       if (isDebugMode) {
         logger.info(`🔄 [REACT-SYNC] 백그라운드 동기화 완료: ${docId}`);
@@ -289,7 +289,7 @@ const DocumentSidebar = ({
     if (!window.DocumentListPerfTracker) {
       // 🎯 로그 최적화: 개발 환경에서만 상세 로그
       const isDebugMode = process.env.NODE_ENV === 'development';
-      
+
       window.DocumentListPerfTracker = {
         markDataReceived: (timestamp) => {
           if (isDebugMode) {
@@ -319,7 +319,7 @@ const DocumentSidebar = ({
   const getDisplayTitle = (post) => {
     const realtimeTitle = realtimeTitles.get(post.id);
     const actualTitle = realtimeTitle || post.title;
-    
+
     // 제목이 비어있으면 문서 내용의 첫 줄을 표시
     if (!actualTitle || actualTitle.trim() === '') {
       const firstLine = (post.content || '').split('\n')[0].trim();
@@ -329,20 +329,20 @@ const DocumentSidebar = ({
       }
       return '(제목 없음)';
     }
-    
+
     return actualTitle;
   };
 
   const handleRefresh = () => {
     console.log('🔄 [MANUAL-REFRESH] 수동 새로고침 시작 - 사용자 요청');
     console.log('🎯 [LIBERATION] React Query 완전 해방 모드에서 유일한 리페치 방법');
-    
+
     // 🎯 완전 해방 모드에서는 수동 새로고침만이 유일한 리페치 방법
     queryClient.invalidateQueries({ queryKey: ['documents'] });
-    
+
     // 강제 리페치 (staleTime: Infinity를 무시하고 강제 실행)
     refetch();
-    
+
     setMessage({
       type: 'info',
       text: 'React Query 해방 모드: 수동 새로고침 실행됨'
@@ -354,7 +354,7 @@ const DocumentSidebar = ({
       const { default: DataSyncManager } = await import('../../utils/DataSyncManager.js');
       const syncManager = new DataSyncManager();
       const result = syncManager.immediateLocalCleanup(['제니', '로제', '먐시리', '블랙핑크']);
-      
+
       setMessage({
         type: 'success',
         text: `로컬 정리 완료: ${result.preservedDocuments}개 보존, ${result.deletedDocuments}개 삭제`
@@ -383,13 +383,13 @@ const DocumentSidebar = ({
       try {
         // 🔥 Phase 2: Optimistic Delete - 즉시 UI에서 제거
         console.log(`🚀 [DELETE] 삭제 시작: ${post.title}`);
-        
+
         const previousData = queryClient.getQueryData(['documents']);
         const optimisticData = previousData?.filter(doc => doc.id !== post.id);
-        
+
         // 즉시 캐시 업데이트 (UI에서 바로 사라짐)
         queryClient.setQueryData(['documents'], optimisticData);
-        
+
         // 서버 요청 시작
         const abortController = new AbortController();
         const response = await fetch(`http://localhost:3003/api/posts/${post.id}`, {
@@ -401,18 +401,18 @@ const DocumentSidebar = ({
           }
           throw err;
         });
-        
+
         if (!response) return; // 요청이 취소된 경우
-        
+
         if (response.ok) {
           // ✅ 서버 삭제 성공 - 로컬 스토리지 정리
           try {
             console.log(`✅ [DELETE] 삭제 완료: ${post.title}`);
-            
+
             // 1. 메인 문서 데이터 삭제
             localStorage.removeItem(`miki_document_${post.id}`);
             localStorage.removeItem(`miki_title_${post.id}`);
-            
+
             // 2. 최근 문서 목록에서 정확한 ID만 제거
             const recentDocsJson = localStorage.getItem('miki_recent_docs');
             if (recentDocsJson) {
@@ -420,47 +420,47 @@ const DocumentSidebar = ({
               const filteredDocs = recentDocs.filter(doc => doc.id !== post.id);
               localStorage.setItem('miki_recent_docs', JSON.stringify(filteredDocs));
             }
-            
+
             // 3. 현재 문서 처리 콜백
             onDeletePost(post);
-            
+
             // 4. 최종 캐시 검증 (서버와 동기화)
             setTimeout(() => {
               queryClient.invalidateQueries(['documents']);
             }, 1000);
-            
+
             setMessage({ type: 'success', text: '글이 삭제되었습니다.' });
-            
+
           } catch (localError) {
             console.error('❌ [DELETE] 로컬 스토리지 정리 오류:', localError);
             // 로컬 스토리지 오류는 심각하지 않으므로 계속 진행
           }
-          
+
         } else {
           // ❌ 서버 삭제 실패 - 원본 데이터 복원
           console.error(`❌ [DELETE] 서버 삭제 실패: ${response.status}`);
           queryClient.setQueryData(['documents'], previousData);
-          
-          setMessage({ 
-            type: 'error', 
-            text: `삭제 실패: 서버 오류 (${response.status})` 
+
+          setMessage({
+            type: 'error',
+            text: `삭제 실패: 서버 오류 (${response.status})`
           });
         }
-        
+
       } catch (error) {
         if (error.name === 'AbortError') {
           return;
         }
-        
+
         // ❌ 네트워크 오류 - 원본 데이터 복원
         console.error('❌ [DELETE] 네트워크 오류:', error);
         const previousData = queryClient.getQueryData(['documents']);
-        
+
         // 안전 장치: 삭제된 문서가 캐시에 없으면 서버에서 다시 가져오기
         if (!previousData?.find(doc => doc.id === post.id)) {
           queryClient.invalidateQueries(['documents']);
         }
-        
+
         setMessage({ type: 'error', text: '삭제 실패: ' + error.message });
       }
     }
@@ -468,34 +468,34 @@ const DocumentSidebar = ({
 
   // 🎯 성능 측정 강화: 데이터 변경 간격과 트리거 원인 추적 (최적화됨)
   const [lastDocumentsDataRef, setLastDocumentsDataRef] = useState(null);
-  
+
   // 🎯 성능 최적화: Throttled 데이터 변경 로깅
   const throttledDataLogger = useMemo(() => {
     let lastLogTime = 0;
     const LOG_INTERVAL = 1000; // 1초에 최대 1회만 로깅
     const isDebugMode = process.env.NODE_ENV === 'development';
-    
+
     return (documentsData, now) => {
       if (now - lastLogTime < LOG_INTERVAL) {
         return; // 로깅 생략
       }
-      
+
       lastLogTime = now;
-      
+
       if (window.DocumentListPerfTracker) {
         window.DocumentListPerfTracker.markDataReceived(now);
         window.DocumentListPerfTracker.dataChangeCount++;
-        
+
         // 🎯 로그 최적화: 중요한 정보만 출력
         if (isDebugMode) {
           console.log(`📊 [LIST-PERF] 총 데이터 변경 횟수: ${window.DocumentListPerfTracker.dataChangeCount}회`);
         }
-        
+
         // 🔥 삭제 작업 감지 로직 (중요한 정보이므로 항상 출력)
         if (lastDocumentsDataRef) {
           const prevLength = JSON.parse(lastDocumentsDataRef).length;
           const currentLength = documentsData?.length || 0;
-          
+
           if (currentLength < prevLength) {
             console.log(`🗑️ [DELETE-SYNC] 문서 삭제: ${prevLength} → ${currentLength}`);
             if (isDebugMode) {
@@ -509,20 +509,20 @@ const DocumentSidebar = ({
         } else if (isDebugMode) {
           console.log(`🔍 [LIST-PERF] 초기 데이터 로드`);
         }
-        
+
         if (isDebugMode) {
           console.log(`✅ [REAL-TIME] 에디터 ↔ 문서목록 실시간 동기화 정상 작동`);
-          
+
           // 캐시 상태 정보 (간소화)
           const cacheData = queryClient.getQueryData(['documents']);
           console.log(`💾 [CACHE-INFO] 캐시 데이터 존재: ${!!cacheData}`);
           console.log(`💾 [CACHE-INFO] 캐시 데이터 길이: ${cacheData?.length || 0}`);
-          
+
           // 데이터 변경 간격 측정 (간소화)
           if (window.DocumentListPerfTracker.lastDataTime) {
             const interval = now - window.DocumentListPerfTracker.lastDataTime;
             console.log(`📊 [LIST-PERF] 데이터 변경 간격: ${interval.toFixed(2)}ms`);
-            
+
             // 성능 요약 로그 (조건부)
             if (window.DocumentListPerfTracker.dataChangeCount >= 3) {
               console.log(`📝 [REAL-TIME] 실시간 동기화 활발히 작동 중: ${window.DocumentListPerfTracker.dataChangeCount}회 변경`);
@@ -530,12 +530,12 @@ const DocumentSidebar = ({
             }
           }
         }
-        
+
         window.DocumentListPerfTracker.lastDataTime = now;
       }
     };
   }, [queryClient, lastDocumentsDataRef]);
-  
+
   useEffect(() => {
     if (documentsData) {
       // 🎯 Phase 3: 실제 변경사항 확인 - 불필요한 리렌더링 방지
@@ -545,16 +545,16 @@ const DocumentSidebar = ({
         updatedAt: doc.updatedAt,
         contentLength: doc.content?.length || 0
       })));
-      
+
       if (lastDocumentsDataRef === currentDataString) {
         console.log('🎯 [RENDER-OPT] 동일한 데이터 - useEffect 건너뜀');
         return;
       }
-      
+
       setLastDocumentsDataRef(currentDataString);
-      
+
       const now = performance.now();
-      
+
       // 🎯 Throttled 로깅 적용
       throttledDataLogger(documentsData, now);
     }
@@ -564,14 +564,14 @@ const DocumentSidebar = ({
   const debouncedDOMLogger = useMemo(() => {
     let timeoutId = null;
     let updateCount = 0;
-    
+
     return (timestamp) => {
       updateCount++;
-      
+
       if (timeoutId) {
         clearTimeout(timeoutId);
       }
-      
+
       timeoutId = setTimeout(() => {
         if (updateCount > 1) {
           console.log(`📋 [LIST-PERF] 배치 DOM 업데이트 완료: ${updateCount}회 업데이트, 마지막: ${timestamp.toFixed(2)}ms`);
@@ -588,21 +588,21 @@ const DocumentSidebar = ({
     if (documentListRef.current) {
       const observer = new MutationObserver((mutations) => {
         const timestamp = performance.now();
-        
+
         // 🎯 의미있는 변경사항만 감지
         const hasSignificantChanges = mutations.some(mutation => {
-          return mutation.type === 'childList' && 
-                 (mutation.addedNodes.length > 0 || mutation.removedNodes.length > 0) &&
-                 Array.from(mutation.addedNodes).some(node => 
-                   node.nodeType === Node.ELEMENT_NODE && 
-                   node.classList && 
-                   (node.classList.contains('document-item') || node.querySelector('.document-item'))
-                 );
+          return mutation.type === 'childList' &&
+            (mutation.addedNodes.length > 0 || mutation.removedNodes.length > 0) &&
+            Array.from(mutation.addedNodes).some(node =>
+              node.nodeType === Node.ELEMENT_NODE &&
+              node.classList &&
+              (node.classList.contains('document-item') || node.querySelector('.document-item'))
+            );
         });
-        
+
         if (hasSignificantChanges) {
           debouncedDOMLogger(timestamp);
-          
+
           if (window.DocumentListPerfTracker) {
             window.DocumentListPerfTracker.markDOMUpdate(timestamp);
           }
@@ -621,10 +621,9 @@ const DocumentSidebar = ({
   }, [documentListRef.current, debouncedDOMLogger]);
 
   return (
-    <div 
-      className={`bg-white rounded shadow flex flex-col ${
-        isMobile ? (activeMobilePanel === 'list' ? 'block' : 'hidden') + ' flex-grow' : 'w-1/5 min-w-[280px] mr-2'
-      }`}
+    <div
+      className={`bg-white rounded shadow flex flex-col ${isMobile ? (activeMobilePanel === 'list' ? 'block' : 'hidden') + ' flex-grow' : 'w-1/5 min-w-[280px] mr-2'
+        }`}
       style={{ display: isMobile && activeMobilePanel !== 'list' ? 'none' : 'flex' }}
     >
       {/* 헤더 (라이브러리와 동일 레이아웃) */}
@@ -661,10 +660,10 @@ const DocumentSidebar = ({
         </div>
         {/* 검색 + 정렬 */}
         <div className="flex items-center space-x-2">
-          <input 
+          <input
             ref={searchInputRef}
-            type="text" 
-            placeholder="검색..." 
+            type="text"
+            placeholder="검색..."
             value={searchQuery}
             onChange={(e) => setSearchQuery(e.target.value)}
             className="px-3 py-2 border rounded-md pr-10 focus:outline-none focus:ring-2 focus:ring-blue-300 flex-grow"
@@ -684,10 +683,10 @@ const DocumentSidebar = ({
         </div>
         <div className="mt-1 text-xs text-gray-500 text-right">{(documentsData || []).length}개의 문서</div>
       </div>
- 
+
       {/* 검색 입력 */}
       {/* 기존 검색 블록은 헤더로 이동하여 통합됨 */}
- 
+
       {/* 문서 목록 */}
       <div className="flex-1 overflow-auto p-2">
         {isLoading ? (
@@ -695,7 +694,7 @@ const DocumentSidebar = ({
         ) : error ? (
           <div className="text-center py-4">
             <div className="text-red-500 mb-2">문서 목록을 불러오는 중 오류가 발생했습니다.</div>
-            <button 
+            <button
               onClick={() => refetch()}
               className="px-3 py-1 bg-blue-500 text-white rounded hover:bg-blue-600"
             >
@@ -712,23 +711,23 @@ const DocumentSidebar = ({
           <ul className="divide-y">
             {filteredPosts.map(post => {
               const phantomClass = post._isPhantom ? (getPhantomClass(post.id) || 'phantom-temporary') : '';
-              const selectedClass = currentDocument?.id === post.id 
-                ? 'bg-gray-50 border-l-4 border-l-gray-400' 
+              const selectedClass = currentDocument?.id === post.id
+                ? 'bg-gray-50 border-l-4 border-l-gray-400'
                 : 'border-l-4 border-l-transparent';
-              
+
               const formatDay = (iso) => {
                 try { return new Date(iso).toLocaleDateString('ko-KR', { year: 'numeric', month: '2-digit', day: '2-digit' }); } catch { return ''; }
               };
               const formatTime = (iso) => {
                 try { return new Date(iso).toLocaleTimeString('ko-KR', { hour: '2-digit', minute: '2-digit', hour12: true }); } catch { return ''; }
               };
-              
+
               return (
-                <li 
-                  key={post._renderKey || post.id} 
+                <li
+                  key={post._renderKey || post.id}
                   className={`py-3 px-3 hover:bg-gray-50 focus:outline-none focus:bg-gray-50 transition-colors duration-150 border-b last:border-b-0 leading-tight ${selectedClass} ${phantomClass}`}
                 >
-                  <button 
+                  <button
                     onClick={() => handleDocumentClick(post)}
                     className="text-left w-full"
                   >
@@ -767,10 +766,10 @@ const DocumentSidebar = ({
                       <span className="ml-2 inline-block w-1.5 h-1.5 rounded-full bg-gray-400"></span>
                     </div>
                   </button>
-                  
+
                   {/* 삭제 버튼 (옵션) */}
                   <div className="mt-2 flex justify-end">
-                    <button 
+                    <button
                       onClick={(e) => {
                         e.stopPropagation();
                         handleDeleteDocument(post);

@@ -1,0 +1,23 @@
+{
+  "username": "halim714",
+  "displayName": null,
+  "profileUrl": "https://github.com/halim714",
+  "emails": [
+    {
+      "value": "halim714@icloud.com"
+    }
+  ],
+  "encryptedAccessToken": "2fd8955d97844f1f05a4af317da44850:82d27f52e9ca16e3ab371405dfb9e044d33138d7141e39423cf0cdbfd7042a3cd8f5f58b379d30132a91dbccf5c71d30",
+  "updatedAt": "2025-11-24T07:58:57.557Z",
+  "userId": "60678571",
+  "dataRepo": {
+    "owner": "halim714",
+    "name": "miki-data"
+  },
+  "pagesRepo": {
+    "owner": "halim714",
+    "name": "halim714.github.io"
+  },
+  "pagesUrl": "https://halim714.github.io",
+  "createdAt": "2025-11-24T03:40:34.749Z"
+}

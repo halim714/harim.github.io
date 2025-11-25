@@ -1,5 +1,5 @@
 import React from 'react';
-import ReactDOM from 'react-dom';
+import ReactDOM from 'react-dom'; // 'react-dom/client' 대신 'react-dom'을 사용
 
 import './index.css';
 import App from './App';
@@ -21,4 +21,3 @@ ReactDOM.render(
 
 logger.info('렌더링 완료, React 마운트 되었습니다.');
 console.log('렌더링 완료, React 마운트 되었습니다.');
-
