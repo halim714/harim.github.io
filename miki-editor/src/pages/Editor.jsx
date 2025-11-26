@@ -27,6 +27,7 @@ import { queryClient, queryKeys } from '../config/queryClient';
 import { logError } from '../utils/errorHandler';
 import realTimeDocSync from '../utils/RealTimeDocumentSync';
 import { storage } from '../utils/storage-client'; // storage 임포트
+import { usePublish } from '../hooks/usePublish'; // ✅ Publish 훅 임포트
 
 // 유틸리티 함수들
 const slugify = (str) => {
@@ -40,19 +41,19 @@ const slugify = (str) => {
 
 const extractTitleFromContent = (content) => {
   if (!content || content.trim() === '') return '새 메모';
-  
+
   // 서버와 동일한 로직: 첫 번째 # 헤더 우선 검색
   const titleMatch = content.match(/^#\s+(.+)$/m);
   if (titleMatch) {
     return titleMatch[1].trim();
   }
-  
+
   // # 헤더가 없으면 첫 줄 사용 (50자 제한)
   const lines = content.split('\n');
   const firstLine = lines[0]?.trim() || '';
-  
+
   if (firstLine === '') return '새 메모';
-  
+
   // 마크다운 포맷팅 제거하고 50자로 제한
   const cleanTitle = firstLine
     .replace(/^#+\s*/, '') // 헤더 마커 제거
@@ -62,7 +63,7 @@ const extractTitleFromContent = (content) => {
     .replace(/\[(.*?)\]\((.*?)\)/g, '$1') // 링크 제거
     .trim()
     .slice(0, 50); // 50자 제한
-  
+
   return cleanTitle || '새 메모';
 };
 
@@ -87,13 +88,13 @@ function AppContent() {
   const [content, setContent] = useState('');
   const [editorContext, setEditorContext] = useState(null);
   const [error, setError] = useState(null);
-  const [isPublishing, setIsPublishing] = useState(false);
-  
+  // isPublishing state removed (handled by usePublish hook)
+
   // 🎯 제목 관리 개선: 사용자 의도 추적
   const [titleMode, setTitleMode] = useState('auto'); // 'auto' | 'manual'
   const titleModeRef = useRef('auto'); // 성능 최적화용
   const lastAutoTitleRef = useRef(''); // 마지막 자동 추출 제목 추적
-  
+
   // Refs
   const editorRef = useRef(null);
   const aiPanelRef = useRef(null);
@@ -105,7 +106,7 @@ function AppContent() {
   const { data: documentsData, isLoading: isLoadingDocuments, error: documentsError, refetch: refetchDocuments } = useDocuments();
   const { currentDocument, setCurrentDocument, addDocument } = useDocumentStore();
   const queryClient = useQueryClient();
-  
+
   // 🔥 NEW: Phantom Document 상태 관리
   const { setPhantomTrustLevel, removePhantom } = usePhantomDocument();
 
@@ -141,10 +142,10 @@ function AppContent() {
     },
     onSaveSuccess: (savedDocument) => {
       setMessage({ type: 'success', text: '저장되었습니다.' });
-      
+
       // 🎯 간단한 캐시 갱신 (비판 반영)
       queryClient.invalidateQueries(['documents']);
-      
+
       // 🔥 NEW: 저장 성공 시 Phantom Document 제거하고 React Query 캐시 업데이트
       if (currentDocument?.isEmpty && savedDocument?.id) {
         removePhantom(currentDocument.id);
@@ -234,7 +235,7 @@ function AppContent() {
   const handleTitleChange = useCallback((e) => {
     const newTitle = e.target.value;
     setTitle(newTitle);
-    
+
     // 🎯 사용자 의도 존중: 제목을 지우면 지워진 상태 유지
     if (newTitle.trim() === '') {
       // 빈 제목이어도 수동 모드 유지 (사용자가 의도적으로 지웠을 수 있음)
@@ -243,7 +244,7 @@ function AppContent() {
         const autoTitle = extractTitleFromContent(content);
         setTitle(autoTitle);
         lastAutoTitleRef.current = autoTitle;
-        
+
         // 실시간 동기화
         if (currentDocument && currentDocument.id) {
           realTimeDocSync.updateTitleImmediate(currentDocument.id, autoTitle);
@@ -253,7 +254,7 @@ function AppContent() {
         // 수동 모드였다면 빈 제목 그대로 유지
         setTitleMode('manual');
         titleModeRef.current = 'manual';
-        
+
         // 실시간 동기화 (빈 제목으로)
         if (currentDocument && currentDocument.id) {
           realTimeDocSync.updateTitleImmediate(currentDocument.id, '');
@@ -264,7 +265,7 @@ function AppContent() {
       // 뭔가 입력하면 수동 모드 전환
       setTitleMode('manual');
       titleModeRef.current = 'manual';
-      
+
       // 실시간 동기화
       if (currentDocument && currentDocument.id) {
         realTimeDocSync.updateTitleImmediate(currentDocument.id, newTitle);
@@ -281,16 +282,16 @@ function AppContent() {
   // 에디터 내용 변경 핸들러
   const handleEditorChange = useCallback((newContent) => {
     setContent(newContent);
-    
+
     // 🎯 핵심 개선: 자동 모드일 때만 제목 추출
     if (titleModeRef.current === 'auto') {
       const extractedTitle = extractTitleFromContent(newContent);
-      
+
       // 성능 최적화: 실제로 변경된 경우만 업데이트
       if (extractedTitle !== lastAutoTitleRef.current) {
         setTitle(extractedTitle);
         lastAutoTitleRef.current = extractedTitle;
-        
+
         // 실시간 동기화
         if (currentDocument && currentDocument.id) {
           realTimeDocSync.updateTitleImmediate(currentDocument.id, extractedTitle);
@@ -303,6 +304,9 @@ function AppContent() {
     }
   }, [currentDocument]);
 
+  // ✅ Publish 훅 추가
+  const { publish, unpublish, isPublishing, isUnpublishing } = usePublish();
+
   // 배포 핸들러
   const handlePublish = useCallback(async () => {
     try {
@@ -311,88 +315,62 @@ function AppContent() {
         return;
       }
       if (isPublishing) return;
-      setIsPublishing(true);
-      window.dispatchEvent(new Event('miki:publish:started'));
-      setMessage({ type: 'info', text: '배포 사전 검사 중...' });
 
-      // 🔄 라이브 업데이트: 현재 문서 isPublishing=true 표시 (라이브러리/목록 초록 배지)
+      window.dispatchEvent(new Event('miki:publish:started'));
+      setMessage({ type: 'info', text: '배포 중... (GitHub Pages)' });
+
+      // 🔄 라이브 업데이트
       try {
         queryClient.setQueryData(queryKeys.documents.lists(), (oldData) => {
           if (!Array.isArray(oldData)) return oldData;
           return oldData.map(d => d && d.id === currentDocument.id ? { ...d, isPublishing: true } : d);
         });
-      } catch {} // 에러 발생해도 무시
+      } catch { }
 
-      // Preflight
-      const pre = await fetch('/api/publish/preflight', {
-        method: 'POST',
-        headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({ id: currentDocument.id })
+      // ✅ Client-Side Publish 실행
+      const result = await publish(currentDocument);
+
+      setMessage({
+        type: 'success',
+        text: `배포 완료! ${result.estimatedDeployTime} 후 확인 가능합니다. (${result.publicUrl})`
       });
-      if (!pre.ok) {
-        const txt = await pre.text();
-        throw new Error(`사전 검사 실패: ${pre.status} ${pre.statusText} ${txt || ''}`);
-      }
-      const preJson = await pre.json();
-      if (!preJson.ok) {
-        const conflict = preJson?.conflict?.destExists ? `파일 충돌: ${preJson.conflict.fileName}` : null;
-        const missing = (preJson?.linkReport?.internal?.missingIds || []).join(', ');
-        const broken = (preJson?.linkReport?.external?.failed || []).join(', ');
-        const details = [conflict, missing && `누락 문서: ${missing}`, broken && `실패 링크: ${broken}`].filter(Boolean).join(' | ');
-        setMessage({ type: 'warning', text: `배포 불가: ${details || '사전 검사 오류'}` });
-        return;
-      }
 
-      setMessage({ type: 'info', text: '배포 중… (파일 동기화 및 Git 푸시)' });
-      const res = await fetch('/api/publish', {
-        method: 'POST',
-        headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({ id: currentDocument.id })
-      });
-      if (!res.ok) {
-        const txt = await res.text();
-        throw new Error(`배포 실패: ${res.status} ${res.statusText} ${txt || ''}`);
-      }
-      const json = await res.json();
-      setMessage({ type: 'success', text: json?.message || '배포가 완료되었습니다.' });
-
-      // ✅ 성공 시 상태 갱신 (published 전이)
+      // ✅ 성공 시 상태 갱신
       try {
         queryClient.setQueryData(queryKeys.documents.lists(), (oldData) => {
           if (!Array.isArray(oldData)) return oldData;
           return oldData.map(d => d && d.id === currentDocument.id ? { ...d, isPublishing: false, status: 'published', publishedAt: new Date().toISOString() } : d);
         });
-      } catch {} // 에러 발생해도 무시
+      } catch { }
+
     } catch (e) {
       logError(e, 'publish');
       setMessage({ type: 'error', text: e?.message || '배포 중 오류가 발생했습니다.' });
     } finally {
-      setIsPublishing(false);
       window.dispatchEvent(new Event('miki:publish:finished'));
-      // 🔄 종료 시 배지 제거 (실패 포함)
       try {
         queryClient.setQueryData(queryKeys.documents.lists(), (oldData) => {
           if (!Array.isArray(oldData)) return oldData;
           return oldData.map(d => d && d.id === currentDocument?.id ? { ...d, isPublishing: false } : d);
         });
-      } catch {} // 에러 발생해도 무시
+      } catch { }
     }
-  }, [currentDocument, isPublishing, queryClient]);
+  }, [currentDocument, isPublishing, queryClient, publish]);
 
   // 문서 로드
   const loadPost = useCallback(async (id) => {
     try {
       logger.info(`문서 로드 시작: ${id}`);
-      
+
       // 🚨 사용자 시나리오 처리: 현재 작성 중인 문서가 있는지 확인
       if (currentDocument) {
         const hasContent = content.trim().length > 0;
         const hasCustomTitle = title !== currentDocument.title && title.trim().length > 0;
         const hasUnsavedWork = hasContent || hasCustomTitle;
-        
+
         if (hasUnsavedWork) {
           logger.info('💾 [LOAD-POST] 작성 중인 내용 감지 - 자동 저장 시도');
-          
+
           // Q1-b: 자동 저장 시도
           try {
             await manualSave();
@@ -400,11 +378,11 @@ function AppContent() {
           } catch (saveError) {
             logger.error('❌ [LOAD-POST] 자동 저장 실패:', saveError);
             // Q3: 저장 실패는 없어야 함 - 하지만 발생한 경우 사용자에게 알림
-            setMessage({ 
-              type: 'warning', 
-              text: '현재 작성 중인 내용을 저장하지 못했습니다. 계속 진행하시겠습니까?' 
+            setMessage({
+              type: 'warning',
+              text: '현재 작성 중인 내용을 저장하지 못했습니다. 계속 진행하시겠습니까?'
             });
-            
+
             // 추가 확인을 위해 5초 대기
             setTimeout(() => setMessage(null), 5000);
           }
@@ -413,21 +391,21 @@ function AppContent() {
           logger.info('🗑️ [LOAD-POST] 빈 새글 감지 - 저장 없이 진행');
         }
       }
-      
+
       // 로딩 상태 표시
       setMessage({ type: 'info', text: '문서를 불러오는 중...' });
-      
+
       // API를 통해 문서 데이터 가져오기
       const document = await storage.getPost(id); // <-- storage.getPost() 사용
       logger.info(`문서 로드 성공:`, document);
-      
+
       // Zustand store에 문서 추가 (중요: currentDocument가 올바르게 설정되도록)
       setCurrentDocument(document);
-      
+
       // 상태 업데이트
       setTitle(document.title || extractTitleFromContent(document.content));
       setContent(document.content || '');
-      
+
       // 🎯 제목 모드 설정: 로드된 문서의 제목이 자동 추출된 것인지 판단
       const autoExtractedTitle = extractTitleFromContent(document.content || '');
       if (document.title === autoExtractedTitle || !document.title) {
@@ -442,7 +420,7 @@ function AppContent() {
         titleModeRef.current = 'manual';
         logger.info(`📝 [TITLE-LOAD] 수동 모드로 설정: ${document.title}`);
       }
-      
+
       // 에디터에 내용 설정
       if (editorRef.current) {
         const editorInstance = editorRef.current.getEditorInstance();
@@ -450,28 +428,28 @@ function AppContent() {
           editorInstance.setMarkdown(document.content || '');
         }
       }
-      
+
       // 🎯 Phase C: 문서별 독립적 AI 대화 관리 - 스마트 클리어 시스템
       if (aiPanelRef.current) {
         const currentConversation = aiPanelRef.current.getConversation();
-        
+
         // 🔑 핵심: 현재 로드하는 문서와 관련된 대화인지 확인
-        const isCurrentDocumentConversation = currentConversation && 
-          currentConversation.length > 0 && 
+        const isCurrentDocumentConversation = currentConversation &&
+          currentConversation.length > 0 &&
           currentConversation.some(msg => {
             // 메시지에 documentId가 없으면 현재 문서의 대화로 간주 (하위 호환성)
             return !msg.documentId || msg.documentId === document.id;
           });
-        
-        const hasMeaningfulConversation = currentConversation && 
-          currentConversation.length > 0 && 
-          currentConversation.some(msg => 
-            msg.text && 
-            msg.text.trim().length > 0 && 
-            !msg.isLoading && 
+
+        const hasMeaningfulConversation = currentConversation &&
+          currentConversation.length > 0 &&
+          currentConversation.some(msg =>
+            msg.text &&
+            msg.text.trim().length > 0 &&
+            !msg.isLoading &&
             !msg.isPendingCommand
           );
-        
+
         // 🎯 스마트 클리어: 다른 문서의 대화만 클리어, 현재 문서 대화는 보존
         if (hasMeaningfulConversation && !isCurrentDocumentConversation) {
           aiPanelRef.current.clearConversation();
@@ -482,17 +460,17 @@ function AppContent() {
           logger.info('🎯 빈 대화 또는 무의미한 대화 - 클리어 건너뜀으로 상태 변경 차단');
         }
       }
-      
+
       // 성공 메시지
       setMessage({ type: 'success', text: '문서를 불러왔습니다.' });
-      
+
       // 메시지 자동 제거
       setTimeout(() => setMessage(null), 2000);
-      
+
     } catch (error) {
       logger.error('문서 로드 실패:', error);
       logError(error, 'load');
-      
+
       // 404 오류인 경우 현재 문서 초기화
       if (error.message.includes('찾을 수 없습니다')) {
         setCurrentDocument(null);
@@ -502,12 +480,12 @@ function AppContent() {
           editorRef.current.getEditorInstance().setMarkdown('');
         }
       }
-      
-      setMessage({ 
-        type: 'error', 
-        text: error.message || '문서 로드 중 오류가 발생했습니다.' 
+
+      setMessage({
+        type: 'error',
+        text: error.message || '문서 로드 중 오류가 발생했습니다.'
       });
-      
+
       // 오류 메시지 자동 제거 (5초 후)
       setTimeout(() => setMessage(null), 5000);
     }
@@ -516,11 +494,11 @@ function AppContent() {
   // 새 글 생성
   const newPost = useCallback(() => {
     logger.info('🚀 [NEW-POST] 새 글 생성 시작');
-    
+
     try {
       const newMemo = createNewMemo();
       logger.info('✅ [NEW-POST] 새 메모 생성 완료:', newMemo);
-      
+
       // Zustand store가 문서 추가와 currentDocument 설정을 한 번에 처리
       setCurrentDocument(newMemo);
       logger.info('✅ [NEW-POST] currentDocument 설정 완료');
@@ -532,36 +510,36 @@ function AppContent() {
           if (list.find(d => d && d.id === newMemo.id)) return list;
           return [{ ...newMemo, preview: '', size: 0 }, ...list];
         });
-      } catch {} // 에러 발생해도 무시
-      
+      } catch { } // 에러 발생해도 무시
+
       setTitle(newMemo.title);
       logger.info('✅ [NEW-POST] 제목 설정 완료:', newMemo.title);
-      
+
       // 🎯 새 글은 항상 자동 모드로 시작
       setTitleMode('auto');
       titleModeRef.current = 'auto';
       lastAutoTitleRef.current = newMemo.title;
       logger.info('✅ [NEW-POST] 제목 모드를 자동으로 설정');
-      
+
       setContent('');
       logger.info('✅ [NEW-POST] 내용 초기화 완료');
-      
+
       if (editorRef.current) {
         editorRef.current.getEditorInstance().setMarkdown('');
         logger.info('✅ [NEW-POST] 에디터 내용 초기화 완료');
       } else {
         logger.warn('⚠️ [NEW-POST] editorRef.current가 없음');
       }
-      
+
       if (aiPanelRef.current) {
         aiPanelRef.current.clearConversation();
         logger.info('✅ [NEW-POST] AI 대화 초기화 완료');
       } else {
         logger.warn('⚠️ [NEW-POST] aiPanelRef.current가 없음');
       }
-      
+
       logger.info('🎉 [NEW-POST] 새 글 생성 전체 과정 완료');
-      
+
     } catch (error) {
       logger.error('❌ [NEW-POST] 새 글 생성 중 오류:', error);
     }
@@ -580,11 +558,11 @@ function AppContent() {
       if (editorRef.current) {
         editorRef.current.getEditorInstance().setMarkdown('');
       }
-      
+
       if (aiPanelRef.current) {
         aiPanelRef.current.clearConversation();
       }
-      
+
       setCurrentDocument(null);
       setTitle('');
       setContent('');
@@ -594,7 +572,7 @@ function AppContent() {
   // AI 명령 처리
   const handleAiCommand = useCallback((command) => {
     logger.info('AI 명령 처리 시작:', command);
-    
+
     // 강화된 에디터 인스턴스 확인 로직
     if (!editorRef.current) {
       logger.warn('⚠️ editorRef.current가 null입니다');
@@ -610,7 +588,7 @@ function AppContent() {
       // Toast UI Editor 인스턴스 안전하게 가져오기
       const mikiEditorInstance = editorRef.current;
       const toastUIEditorInstance = mikiEditorInstance.getEditorInstance();
-      
+
       if (!toastUIEditorInstance) {
         logger.warn('⚠️ Toast UI Editor 인스턴스가 아직 초기화되지 않았습니다. 0.5초 후 재시도...');
         setTimeout(() => handleAiCommand(command), 500);
@@ -632,7 +610,7 @@ function AppContent() {
   // AI 제안 표시
   const handleAiSuggestion = useCallback((suggestion) => {
     logger.info('AI 제안 처리 시작:', suggestion);
-    
+
     // 강화된 에디터 인스턴스 확인 로직
     if (!editorRef.current) {
       logger.warn('⚠️ editorRef.current가 null입니다');
@@ -648,7 +626,7 @@ function AppContent() {
       // Toast UI Editor 인스턴스 안전하게 가져오기
       const mikiEditorInstance = editorRef.current;
       const toastUIEditorInstance = mikiEditorInstance.getEditorInstance();
-      
+
       if (!toastUIEditorInstance) {
         logger.warn('⚠️ Toast UI Editor 인스턴스가 아직 초기화되지 않았습니다. 0.5초 후 재시도...');
         setTimeout(() => handleAiSuggestion(suggestion), 500);
@@ -689,11 +667,11 @@ function AppContent() {
   // The old SetupWizard is no longer needed here.
 
   if (isLoadingDocuments) {
-  return (
+    return (
       <div className="miki-root h-screen flex flex-col bg-gray-100">
         {/* 상단 메뉴 바 (로딩 상태) */}
         <header className="px-4 py-2 bg-white border-b">
-        <div className="container mx-auto flex justify-between items-center">
+          <div className="container mx-auto flex justify-between items-center">
             <button onClick={toggleMenu} className="p-2 rounded hover:bg-gray-100" aria-label="메뉴">
               <svg className="w-5 h-5" fill="none" viewBox="0 0 24 24" stroke="currentColor">
                 <path strokeLinecap="round" strokeLinejoin="round" strokeWidth="2" d="M4 6h16M4 12h16M4 18h16" />
@@ -707,13 +685,12 @@ function AppContent() {
             <div />
           </div>
         </header>
-        
+
         <div className="flex-grow p-4 overflow-hidden">
           <div className="flex h-full" style={{ flexDirection: isMobile ? 'column' : 'row' }}>
             {/* 문서 목록 스켈레톤 */}
-            <div className={`bg-white rounded shadow flex flex-col ${ 
-              isMobile ? 'block flex-grow mb-2' : 'w-1/5 mr-2'
-            }`}>
+            <div className={`bg-white rounded shadow flex flex-col ${isMobile ? 'block flex-grow mb-2' : 'w-1/5 mr-2'
+              }`}>
               <div className="p-3 border-b">
                 <div className="h-6 bg-gray-200 rounded w-20 animate-pulse"></div>
               </div>
@@ -721,18 +698,16 @@ function AppContent() {
                 <DocumentListSkeleton />
               </div>
             </div>
-            
+
             {/* 에디터 스켈레톤 */}
-            <div className={`bg-white rounded shadow flex flex-col ${ 
-              isMobile ? 'block flex-grow mb-2' : 'flex-1 mx-2'
-            }`}>
+            <div className={`bg-white rounded shadow flex flex-col ${isMobile ? 'block flex-grow mb-2' : 'flex-1 mx-2'
+              }`}>
               <EditorSkeleton />
             </div>
-            
+
             {/* AI 패널 스켈레톤 */}
-            <div className={`bg-white rounded shadow flex flex-col ${ 
-              isMobile ? 'block flex-grow' : 'w-1/4 ml-2'
-            }`}>
+            <div className={`bg-white rounded shadow flex flex-col ${isMobile ? 'block flex-grow' : 'w-1/4 ml-2'
+              }`}>
               <AiPanelSkeleton />
             </div>
           </div>
@@ -752,9 +727,9 @@ function AppContent() {
             <header>
               <div className="font-semibold">단축키 도움말</div>
               <button className="p-1 rounded hover:bg-gray-100" onClick={() => setHelpOpen(false)} aria-label="닫기">
-                <svg className="w-5 h-5" viewBox="0 0 24 24" fill="none" stroke="currentColor"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth="2" d="M6 18L18 6M6 6l12 12"/></svg>
+                <svg className="w-5 h-5" viewBox="0 0 24 24" fill="none" stroke="currentColor"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth="2" d="M6 18L18 6M6 6l12 12" /></svg>
               </button>
-      </header>
+            </header>
             <div className="miki-help-content text-sm">
               <div className="mb-2 text-gray-600">앱 어디서든 <span className="miki-kbd">?</span> 를 눌러 이 패널을 열 수 있어요. ESC로 닫기.</div>
               <ul className="space-y-1">
@@ -781,7 +756,7 @@ function AppContent() {
           </div>
         </div>
       )}
-      
+
       {/* 에러 표시 */}
       {error && (
         <div className="p-4">
@@ -793,10 +768,10 @@ function AppContent() {
           />
         </div>
       )}
-      
+
       {/* 메시지 토스트 */}
       <MessageToast message={message} onClose={handleCloseMessage} />
-      
+
       {/* 메인 컨텐츠 영역 */}
       <div className="flex-grow p-4 overflow-hidden" style={{ minHeight: 0 }}>
         <AppLayout
@@ -807,7 +782,7 @@ function AppContent() {
           editorPanelClass={editorPanelClass}
           sidebarView={sidebarView}
           setSidebarView={setSidebarView}
-          
+
           // DocumentSidebar props
           currentDocument={currentDocument}
           searchQuery={searchQuery}
@@ -820,7 +795,7 @@ function AppContent() {
           content={content}
           onPublish={handlePublish}
           isPublishing={isPublishing}
-          
+
           // EditorPanel props
           title={title}
           titleMode={titleMode}
@@ -837,16 +812,16 @@ function AppContent() {
           hasUnsavedChanges={hasUnsavedChanges}
           isAutoSaving={isAutoSaving}
           isManualSaving={isManualSaving}
-          
+
           // AiPanelContainer props
           aiPanelRef={aiPanelRef}
           currentDocumentId={currentDocument?.id}
-            editorContext={editorContext}
+          editorContext={editorContext}
           onApplyAiCommand={handleAiCommand}
-            onStructuredCommand={handleAiCommand}
-            onDisplaySuggestion={handleAiSuggestion}
-          />
-        </div>
+          onStructuredCommand={handleAiCommand}
+          onDisplaySuggestion={handleAiSuggestion}
+        />
+      </div>
     </div>
   );
 }
@@ -857,7 +832,7 @@ function App() {
     <ErrorBoundary>
       <QueryClientProvider client={queryClient}>
         {/* SSOT 강제 설정: 레거시 localStorage 스캔 비활성화 */}
-        {(() => { try { if (typeof window !== 'undefined') window.MIKI_STRICT_SSOT = true; } catch {} return null; })()}
+        {(() => { try { if (typeof window !== 'undefined') window.MIKI_STRICT_SSOT = true; } catch { } return null; })()}
         <AppContent />
         {/* 🎯 React Query 완전 해방: DevTools 완전 비활성화 */}
         {/* DevTools가 리페치를 유발할 수 있으므로 완전 차단 */}

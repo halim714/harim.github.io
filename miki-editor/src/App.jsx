@@ -5,6 +5,7 @@ import Editor from './pages/Editor';
 import OnboardingSetup from './pages/OnboardingSetup';
 import LoginPage from './pages/LoginPage';
 import CallbackPage from './pages/CallbackPage';
+import VerificationPage from './pages/VerificationPage';
 import { AuthService } from './services/auth';
 
 const LoadingScreen = () => (
