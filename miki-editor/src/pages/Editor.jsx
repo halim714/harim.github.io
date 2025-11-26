@@ -328,7 +328,14 @@ function AppContent() {
       } catch { }
 
       // ✅ Client-Side Publish 실행
-      const result = await publish(currentDocument);
+      // 🚀 FIX: currentDocument는 저장된 상태일 수 있으므로, 현재 에디터의 최신 내용(content, title)을 반영하여 배포
+      const docToPublish = {
+        ...currentDocument,
+        title: title,   // 현재 에디터의 제목
+        content: content // 현재 에디터의 내용
+      };
+
+      const result = await publish(docToPublish);
 
       setMessage({
         type: 'success',
