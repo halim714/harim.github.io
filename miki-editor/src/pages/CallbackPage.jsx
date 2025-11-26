@@ -17,10 +17,8 @@ export default function CallbackPage() {
             return;
         }
 
-        // Vercel Function URL (개발/프로덕션 자동 감지)
-        const apiUrl = import.meta.env.DEV
-            ? '/api/auth/callback'
-            : 'https://miki-editor.vercel.app/api/auth/callback';
+        // Vercel Function URL (Relative path works for both Dev and Prod)
+        const apiUrl = '/api/auth/callback';
 
         fetch(`${apiUrl}?code=${code}`)
             .then(res => {
