@@ -109,23 +109,38 @@ export const storage = {
     const title = post.title || extractTitle(post.content);
     const slug = slugify(title);
 
-    // 기존 파일 목록 조회 (중복 방지)
-    // 주의: 매번 리스트를 불러오는 것은 비효율적일 수 있으나, 충돌 방지를 위해 안전함.
+    // 기존 파일 목록 조회 (중복 방지 및 기존 파일 찾기)
     const existingFiles = await this.getPostList();
     const existingFilenames = existingFiles.map(f => `${f.id}.md`);
 
-    // 고유한 파일명 생성
-    // ID가 이미 있으면(수정 시) 그 ID 유지, 없으면(새 글) Slug 기반 생성
+    // 기존 ID가 있는지 확인
     let id = post.id;
     let filename;
+    let oldFilename = null;
 
-    if (!id || id.startsWith('memo_')) { // 임시 ID이거나 새 글인 경우
+    if (!id || id.startsWith('memo_')) {
+      // 1. 새 글인 경우: Slug 기반 새 파일명 생성
       filename = generateUniqueFilename(slug, existingFilenames);
       id = filename.replace('.md', '');
     } else {
-      filename = `${id}.md`;
+      // 2. 기존 글인 경우: 제목이 바뀌었는지 확인
+      // 기존 ID로 파일명 추정
+      const currentSlug = slugify(title);
+      const expectedFilename = `${currentSlug}.md`;
+
+      // 현재 ID와 예상되는 파일명이 다르면 (제목이 바뀌어서 슬러그가 달라짐)
+      if (id !== currentSlug && !id.startsWith('memo_')) {
+        // 이름 변경 로직: 새 파일명 생성
+        filename = generateUniqueFilename(slug, existingFilenames);
+        oldFilename = `${id}.md`; // 삭제할 구 파일명
+        id = filename.replace('.md', ''); // 새 ID 할당
+      } else {
+        // 제목이 같거나 변경 불필요
+        filename = `${id}.md`;
+      }
     }
 
+    // 파일 생성/업데이트
     const sha = await github.createOrUpdateFile(
       'miki-data',
       `miki-editor/posts/${filename}`,
@@ -133,6 +148,25 @@ export const storage = {
       `Create/Update ${title}`,
       post.sha
     );
+
+    // 이름이 바뀌었으면 기존 파일 삭제 (Renaming 효과)
+    if (oldFilename) {
+      try {
+        // 기존 파일의 SHA가 필요함. getPostList에서 가져온 정보 활용
+        const oldFile = existingFiles.find(f => f.id === oldFilename.replace('.md', ''));
+        if (oldFile) {
+          await github.deleteFile(
+            'miki-data',
+            `miki-editor/posts/${oldFilename}`,
+            `Rename: ${oldFilename} -> ${filename}`,
+            oldFile.sha
+          );
+        }
+      } catch (e) {
+        console.error('Failed to delete old file during rename:', e);
+        // 삭제 실패해도 새 파일은 저장되었으므로 치명적이지 않음
+      }
+    }
 
     return {
       ...post,
