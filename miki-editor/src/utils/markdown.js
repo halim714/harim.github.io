@@ -65,3 +65,47 @@ export function extractMetadata(markdown) {
         lastModified: new Date().toISOString()
     };
 }
+
+/**
+ * Front Matter 파싱 (Browser-safe Regex implementation)
+ * (Restored for GraphQL integration)
+ */
+export function parseFrontMatter(content) {
+    if (!content) return { data: {}, content: '' };
+
+    const frontMatterRegex = /^---\n([\s\S]*?)\n---\n([\s\S]*)$/;
+    const match = content.match(frontMatterRegex);
+
+    if (!match) {
+        return {
+            data: {},
+            content: content
+        };
+    }
+
+    const yamlBlock = match[1];
+    const body = match[2];
+    const data = {};
+
+    // Simple YAML parser (key: value)
+    yamlBlock.split('\n').forEach(line => {
+        const parts = line.split(':');
+        if (parts.length >= 2) {
+            const key = parts[0].trim();
+            let value = parts.slice(1).join(':').trim();
+
+            // Remove quotes if present
+            if ((value.startsWith('"') && value.endsWith('"')) || (value.startsWith("'") && value.endsWith("'"))) {
+                value = value.slice(1, -1);
+            }
+
+            // Parse booleans
+            if (value === 'true') value = true;
+            if (value === 'false') value = false;
+
+            data[key] = value;
+        }
+    });
+
+    return { data, content: body };
+}
