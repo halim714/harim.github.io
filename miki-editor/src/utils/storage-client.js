@@ -181,12 +181,15 @@ export const storage = {
     // ✅ 4. Front Matter 주입
     const { data: frontMatter, content: body } = parseFrontMatter(post.content || '');
 
+    const now = new Date().toISOString();
+
     const updatedFrontMatter = {
       ...frontMatter,
       docId: docId, // ✅ docId 주입
       title: title,
-      updatedAt: new Date().toISOString(),
-      createdAt: frontMatter.createdAt || post.createdAt || new Date().toISOString()
+      // ✅ CRITICAL FIX: 기존 updatedAt이 있으면 유지, 없거나 새 문서면 현재 시간
+      updatedAt: frontMatter.updatedAt || post.updatedAt || now,
+      createdAt: frontMatter.createdAt || post.createdAt || now
     };
 
     const updatedContent = stringifyFrontMatter(updatedFrontMatter) + body;

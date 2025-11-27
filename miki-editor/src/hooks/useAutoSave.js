@@ -151,6 +151,7 @@ const useAutoSave = ({
         content,
         title,
         titleMode,
+        // ✅ 자동저장 시에만 updatedAt 명시적으로 설정
         updatedAt: new Date().toISOString()
       };
 
