@@ -33,7 +33,19 @@ export class PublishService {
 
         // ✅ CRITICAL FIX: 프라이빗 저장소에 메타데이터 주입
         const { parseFrontMatter } = await import('../utils/markdown');
-        const { data: frontMatter, content: body } = parseFrontMatter(document.content || '');
+
+        // document.frontMatter가 있으면 우선 사용 (에디터에서 넘어온 경우)
+        // 없으면 content에서 파싱 (직접 로드한 경우 등)
+        let frontMatter, body;
+
+        if (document.frontMatter) {
+            frontMatter = document.frontMatter;
+            body = document.content; // 이미 본문만 있음
+        } else {
+            const parsed = parseFrontMatter(document.content || '');
+            frontMatter = parsed.data;
+            body = parsed.content;
+        }
 
         // published 메타데이터 주입
         const updatedFrontMatter = {
