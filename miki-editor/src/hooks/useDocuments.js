@@ -15,15 +15,17 @@ export function useSaveDocument() {
   return useMutation({
     mutationFn: async (document) => {
       if (!document || !document.id) throw new Error('문서 ID가 필요합니다.');
-      
+
       const isNew = document.isEmpty || !document.sha;
       let saved;
 
       if (isNew) {
         saved = await storage.savePost({
+          id: document.id, // 🔥 이 줄이 누락되어 있었음!
           content: document.content ?? '',
           title: document.title ?? '',
           titleMode: document.titleMode || 'auto',
+          sha: document.sha, // 기존 파일이면 SHA도 전달
         });
       } else {
         saved = await storage.updatePost(document.id, {
@@ -32,7 +34,7 @@ export function useSaveDocument() {
           titleMode: document.titleMode || 'auto',
         });
       }
-      
+
       // [분석 결과 반영] 서버 응답과 원래 document 객체를 합쳐서 반환
       return { ...document, ...saved };
     },
@@ -53,7 +55,7 @@ export function useSaveDocument() {
           };
           return [entry, ...filtered];
         });
-      } catch {}
+      } catch { }
     },
   });
 }
@@ -68,15 +70,15 @@ export function useDeleteDocument() {
       return id;
     },
     onSuccess: async (id) => {
-      try { cleanupLocalArtifactsForId(id); } catch {}
+      try { cleanupLocalArtifactsForId(id); } catch { }
       try {
         qc.setQueryData(queryKeys.documents.lists(), (old) => {
           const prev = Array.isArray(old) ? old : [];
           return prev.filter((d) => d && d.id !== id);
         });
-      } catch {}
+      } catch { }
       // 위키 포스트 삭제는 별도 API 호출 유지
-      try { fetch(`/api/wiki/doc/${encodeURIComponent(id)}`, { method: 'DELETE' }).catch(() => {}); } catch {}
+      try { fetch(`/api/wiki/doc/${encodeURIComponent(id)}`, { method: 'DELETE' }).catch(() => { }); } catch { }
     },
   });
 }

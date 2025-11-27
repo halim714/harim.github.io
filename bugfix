@@ -1,0 +1,155 @@
+핵심 문제: useDocuments.js의 useSaveDocument가 document.id를 전달하지 않고 있습니다!​
+
+현재 코드를 보면:
+
+javascript
+if (isNew) {
+  saved = await storage.savePost({
+    content: document.content ?? '',
+    title: document.title ?? '',
+    titleMode: document.titleMode || 'auto',
+    // ❌ id가 누락됨!
+  });
+}
+이 때문에 storage-client.js에서:
+
+javascript
+let id = post.id; // undefined!
+if (!id || id.startsWith('memo_')) {
+  // 항상 여기로 들어와서 새 파일 생성
+  filename = generateUniqueFilename(slug, existingFilenames);
+}
+매번 새 파일이 생성됩니다.​
+
+🔧 수정안: useDocuments.js
+파일: src/hooks/useDocuments.js (전체 useSaveDocument 교체)
+
+javascript
+export function useSaveDocument() {
+  const qc = useQueryClient();
+  return useMutation({
+    mutationFn: async (document) => {
+      if (!document || !document.id) throw new Error('문서 ID가 필요합니다.');
+      
+      const isNew = document.isEmpty || !document.sha;
+      let saved;
+      
+      if (isNew) {
+        // ✅ CRITICAL FIX: document.id를 반드시 전달
+        saved = await storage.savePost({
+          id: document.id, // 🔥 이 줄이 누락되어 있었음!
+          content: document.content ?? '',
+          title: document.title ?? '',
+          titleMode: document.titleMode || 'auto',
+          sha: document.sha, // 기존 파일이면 SHA도 전달
+        });
+      } else {
+        saved = await storage.updatePost(document.id, {
+          content: document.content ?? '',
+          title: document.title ?? '',
+          titleMode: document.titleMode || 'auto',
+        });
+      }
+      
+      // [분석 결과 반영] 서버 응답과 원래 document 객체를 합쳐서 반환
+      return { ...document, ...saved };
+    },
+    onSuccess: (saved) => {
+      try {
+        qc.setQueryData(queryKeys.documents.lists(), (old) => {
+          const prev = Array.isArray(old) ? old : [];
+          const filtered = prev.filter((d) => d && d.id !== saved.id);
+          const preview = (saved.content || '').substring(0, 150);
+          const entry = {
+            id: saved.id,
+            title: saved.title,
+            titleMode: saved.titleMode || 'auto',
+            preview,
+            updatedAt: new Date().toISOString(),
+            createdAt: saved.createdAt || new Date().toISOString(),
+            size: (saved.content || '').length,
+          };
+          return [entry, ...filtered];
+        });
+      } catch {}
+    },
+  });
+}
+🔧 추가 수정: storage-client.js (안전성 강화)
+파일: src/utils/storage-client.js (savePost 메서드 수정)
+
+javascript
+async savePost(post) {
+  const github = await getGithub();
+  
+  // ✅ Slugify 적용: 제목 → 파일명
+  const title = post.title || extractTitle(post.content);
+  const slug = slugify(title);
+  
+  // 기존 파일 목록 조회 (중복 방지 및 기존 파일 찾기)
+  const existingFiles = await this.getPostList();
+  const existingFilenames = existingFiles.map(f => `${f.id}.md`);
+  
+  // 기존 ID가 있는지 확인
+  let id = post.id;
+  let filename;
+  let oldFilename = null;
+  
+  // 🔥 CRITICAL FIX: memo_ ID를 가진 새 문서 처리
+  if (!id || id.startsWith('memo_')) {
+    // 1. 새 글인 경우: Slug 기반 새 파일명 생성
+    filename = generateUniqueFilename(slug, existingFilenames);
+    id = filename.replace('.md', '');
+    console.log(`📝 [SAVE] 새 문서 생성: memo_ → ${id}`);
+  } else {
+    // 2. 기존 글인 경우: 제목이 바뀌었는지 확인
+    const currentSlug = slugify(title);
+    
+    // 현재 ID와 예상되는 파일명이 다르면 (제목이 바뀌어서 슬러그가 달라짐)
+    if (id !== currentSlug && existingFiles.find(f => f.id === id)) {
+      // 이름 변경 로직: 새 파일명 생성
+      filename = generateUniqueFilename(currentSlug, existingFilenames);
+      oldFilename = `${id}.md`; // 삭제할 구 파일명
+      console.log(`🔄 [SAVE] 파일명 변경: ${id}.md → ${filename}`);
+      id = filename.replace('.md', ''); // 새 ID 할당
+    } else {
+      // 제목이 같거나 변경 불필요
+      filename = `${id}.md`;
+      console.log(`💾 [SAVE] 기존 문서 업데이트: ${id}`);
+    }
+  }
+  
+  // 파일 생성/업데이트
+  const sha = await github.createOrUpdateFile(
+    'miki-data',
+    `miki-editor/posts/${filename}`,
+    post.content || '',
+    `Create/Update ${title}`,
+    post.sha
+  );
+  
+  // 이름이 바뀌었으면 기존 파일 삭제 (Renaming 효과)
+  if (oldFilename) {
+    try {
+      const oldFile = existingFiles.find(f => f.id === oldFilename.replace('.md', ''));
+      if (oldFile) {
+        await github.deleteFile(
+          'miki-data',
+          `miki-editor/posts/${oldFilename}`,
+          `Rename: ${oldFilename} -> ${filename}`,
+          oldFile.sha
+        );
+      }
+    } catch (e) {
+      console.error('Failed to delete old file during rename:', e);
+    }
+  }
+  
+  return {
+    ...post,
+    id,
+    title,
+    sha,
+    metadata: extractMetadata(post.content || '')
+  };
+},
