@@ -136,25 +136,27 @@ export const storage = {
     let filename;
     let oldFilename = null;
 
+    // 🔥 CRITICAL FIX: memo_ ID를 가진 새 문서 처리
     if (!id || id.startsWith('memo_')) {
       // 1. 새 글인 경우: Slug 기반 새 파일명 생성
       filename = generateUniqueFilename(slug, existingFilenames);
       id = filename.replace('.md', '');
+      console.log(`📝 [SAVE] 새 문서 생성: memo_ → ${id}`);
     } else {
       // 2. 기존 글인 경우: 제목이 바뀌었는지 확인
-      // 기존 ID로 파일명 추정
       const currentSlug = slugify(title);
-      const expectedFilename = `${currentSlug}.md`;
 
       // 현재 ID와 예상되는 파일명이 다르면 (제목이 바뀌어서 슬러그가 달라짐)
-      if (id !== currentSlug && !id.startsWith('memo_')) {
+      if (id !== currentSlug && existingFiles.find(f => f.id === id)) {
         // 이름 변경 로직: 새 파일명 생성
-        filename = generateUniqueFilename(slug, existingFilenames);
+        filename = generateUniqueFilename(currentSlug, existingFilenames);
         oldFilename = `${id}.md`; // 삭제할 구 파일명
+        console.log(`🔄 [SAVE] 파일명 변경: ${id}.md → ${filename}`);
         id = filename.replace('.md', ''); // 새 ID 할당
       } else {
         // 제목이 같거나 변경 불필요
         filename = `${id}.md`;
+        console.log(`💾 [SAVE] 기존 문서 업데이트: ${id}`);
       }
     }
 
@@ -170,7 +172,6 @@ export const storage = {
     // 이름이 바뀌었으면 기존 파일 삭제 (Renaming 효과)
     if (oldFilename) {
       try {
-        // 기존 파일의 SHA가 필요함. getPostList에서 가져온 정보 활용
         const oldFile = existingFiles.find(f => f.id === oldFilename.replace('.md', ''));
         if (oldFile) {
           await github.deleteFile(
@@ -182,7 +183,6 @@ export const storage = {
         }
       } catch (e) {
         console.error('Failed to delete old file during rename:', e);
-        // 삭제 실패해도 새 파일은 저장되었으므로 치명적이지 않음
       }
     }
 
