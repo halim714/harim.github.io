@@ -49,7 +49,8 @@ export function useSaveDocument() {
             title: saved.title,
             titleMode: saved.titleMode || 'auto',
             preview,
-            updatedAt: new Date().toISOString(),
+            // ✅ FIX: saved에서 받은 시간 그대로 사용
+            updatedAt: saved.updatedAt || new Date().toISOString(),
             createdAt: saved.createdAt || new Date().toISOString(),
             size: (saved.content || '').length,
           };
