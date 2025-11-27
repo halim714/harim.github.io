@@ -149,14 +149,23 @@ function AppContent() {
       // 🔥 NEW: 저장 성공 시 Phantom Document 제거하고 React Query 캐시 업데이트
       if (currentDocument?.isEmpty && savedDocument?.id) {
         removePhantom(currentDocument.id);
+
+        // ✅ CRITICAL FIX: ID 동기화 - 무한 복제 방지
+        if (currentDocument.id.startsWith('memo_') && savedDocument.id !== currentDocument.id) {
+          logger.info(`🔄 [ID-SYNC] ${currentDocument.id} → ${savedDocument.id}`);
+          setCurrentDocument(savedDocument);
+        }
+
         // React Query 캐시에 즉시 추가하여 Phantom에서 Real로 전환
         queryClient.setQueryData(['documents'], (oldData) => {
           if (!oldData) return [savedDocument];
+
           // 안전성 강화: savedDocument가 유효한지 확인
           if (!savedDocument || !savedDocument.id) {
             logger.warn('⚠️ [CACHE-UPDATE] savedDocument가 유효하지 않음, 캐시 업데이트 건너뜀');
             return oldData;
           }
+
           const filteredData = oldData.filter(doc => doc && doc.id && doc.id !== savedDocument.id);
           return [savedDocument, ...filteredData];
         });

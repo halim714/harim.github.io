@@ -15,12 +15,18 @@ export function generateFrontMatter(document) {
     const tags = document.tags || extractTags(document.content);
     const dateStr = createdAt.split('T')[0]; // YYYY-MM-DD
 
+    // ✅ 배포 상태 추가
+    const published = document.published || false;
+    const status = document.status || (published ? 'published' : 'draft');
+
     return `---
 docId: "${id}"
 title: "${title.replace(/"/g, '\\"')}"
 titleMode: "${titleMode}"
 createdAt: "${createdAt}"
 updatedAt: "${updatedAt}"
+published: ${published}
+status: ${status}
 permalink: "/doc/${id}/"
 layout: post
 date: ${dateStr}

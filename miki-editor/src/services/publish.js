@@ -31,7 +31,35 @@ export class PublishService {
         // 2. Jekyll용 마크다운 생성 (Front Matter 포함)
         const publishContent = prepareForPublish(document);
 
-        // 3. 프라이빗 저장소에 먼저 저장 (원본)
+        // ✅ CRITICAL FIX: 프라이빗 저장소에 메타데이터 주입
+        const { parseFrontMatter } = await import('../utils/markdown');
+        const { data: frontMatter, content: body } = parseFrontMatter(document.content || '');
+
+        // published 메타데이터 주입
+        const updatedFrontMatter = {
+            ...frontMatter,
+            published: true,
+            publishedAt: new Date().toISOString(),
+            status: 'published',
+            title: document.title,
+            slug: slug,
+            docId: document.id
+        };
+
+        // Front Matter 재조립 (YAML 형식 준수)
+        const frontMatterLines = Object.entries(updatedFrontMatter).map(([key, value]) => {
+            if (typeof value === 'boolean') {
+                return `${key}: ${value}`;
+            } else if (typeof value === 'string') {
+                return `${key}: "${value.replace(/"/g, '\\"')}"`;
+            } else {
+                return `${key}: ${value}`;
+            }
+        });
+
+        const updatedPrivateContent = `---\n${frontMatterLines.join('\n')}\n---\n${body}`;
+
+        // 3. 프라이빗 저장소에 먼저 저장 (원본 + 메타데이터)
         // 원본은 ID 기반 파일명을 유지 (데이터 일관성)
         // 메타데이터에 slug 정보가 포함되어 있으므로 나중에 추적 가능
         const privatePath = `miki-editor/posts/${document.id}.md`;
@@ -40,7 +68,7 @@ export class PublishService {
         await this.github.createOrUpdateFile(
             'miki-data',
             privatePath,
-            document.content,
+            updatedPrivateContent, // ✅ 메타데이터가 주입된 내용
             `Publish: ${document.title} (Sync to Private)`,
             document.sha
         );
