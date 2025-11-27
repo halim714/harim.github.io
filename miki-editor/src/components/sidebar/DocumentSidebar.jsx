@@ -7,6 +7,7 @@ import { useDocuments } from '../../hooks/useDocuments';
 import realTimeDocSync from '../../utils/RealTimeDocumentSync';
 import DocumentSearchManager from '../../utils/DocumentSearchManager';
 import { usePhantomDocument } from '../../hooks/usePhantomDocument';
+import { storage } from '../../utils/storage-client'; // 🔥 NEW: storage client import
 import Icon from '../common/Icon';
 
 const removeMarkdownFormatting = (text) => {
@@ -390,70 +391,42 @@ const DocumentSidebar = ({
         // 즉시 캐시 업데이트 (UI에서 바로 사라짐)
         queryClient.setQueryData(['documents'], optimisticData);
 
-        // 서버 요청 시작
-        const abortController = new AbortController();
-        const response = await fetch(`http://localhost:3003/api/posts/${post.id}`, {
-          method: 'DELETE',
-          signal: abortController.signal
-        }).catch(err => {
-          if (err.name === 'AbortError') {
-            return null;
-          }
-          throw err;
-        });
+        // ✅ Serverless Delete: storage client 사용
+        await storage.deletePost(post.id);
 
-        if (!response) return; // 요청이 취소된 경우
+        // ✅ 삭제 성공 - 로컬 스토리지 정리
+        try {
+          console.log(`✅ [DELETE] 삭제 완료: ${post.title}`);
 
-        if (response.ok) {
-          // ✅ 서버 삭제 성공 - 로컬 스토리지 정리
-          try {
-            console.log(`✅ [DELETE] 삭제 완료: ${post.title}`);
+          // 1. 메인 문서 데이터 삭제
+          localStorage.removeItem(`miki_document_${post.id}`);
+          localStorage.removeItem(`miki_title_${post.id}`);
 
-            // 1. 메인 문서 데이터 삭제
-            localStorage.removeItem(`miki_document_${post.id}`);
-            localStorage.removeItem(`miki_title_${post.id}`);
-
-            // 2. 최근 문서 목록에서 정확한 ID만 제거
-            const recentDocsJson = localStorage.getItem('miki_recent_docs');
-            if (recentDocsJson) {
-              const recentDocs = JSON.parse(recentDocsJson);
-              const filteredDocs = recentDocs.filter(doc => doc.id !== post.id);
-              localStorage.setItem('miki_recent_docs', JSON.stringify(filteredDocs));
-            }
-
-            // 3. 현재 문서 처리 콜백
-            onDeletePost(post);
-
-            // 4. 최종 캐시 검증 (서버와 동기화)
-            setTimeout(() => {
-              queryClient.invalidateQueries(['documents']);
-            }, 1000);
-
-            setMessage({ type: 'success', text: '글이 삭제되었습니다.' });
-
-          } catch (localError) {
-            console.error('❌ [DELETE] 로컬 스토리지 정리 오류:', localError);
-            // 로컬 스토리지 오류는 심각하지 않으므로 계속 진행
+          // 2. 최근 문서 목록에서 정확한 ID만 제거
+          const recentDocsJson = localStorage.getItem('miki_recent_docs');
+          if (recentDocsJson) {
+            const recentDocs = JSON.parse(recentDocsJson);
+            const filteredDocs = recentDocs.filter(doc => doc.id !== post.id);
+            localStorage.setItem('miki_recent_docs', JSON.stringify(filteredDocs));
           }
 
-        } else {
-          // ❌ 서버 삭제 실패 - 원본 데이터 복원
-          console.error(`❌ [DELETE] 서버 삭제 실패: ${response.status}`);
-          queryClient.setQueryData(['documents'], previousData);
+          // 3. 현재 문서 처리 콜백
+          onDeletePost(post);
 
-          setMessage({
-            type: 'error',
-            text: `삭제 실패: 서버 오류 (${response.status})`
-          });
+          // 4. 최종 캐시 검증 (서버와 동기화)
+          setTimeout(() => {
+            queryClient.invalidateQueries(['documents']);
+          }, 1000);
+
+          setMessage({ type: 'success', text: '글이 삭제되었습니다.' });
+
+        } catch (localError) {
+          console.error('❌ [DELETE] 로컬 스토리지 정리 오류:', localError);
         }
 
       } catch (error) {
-        if (error.name === 'AbortError') {
-          return;
-        }
-
-        // ❌ 네트워크 오류 - 원본 데이터 복원
-        console.error('❌ [DELETE] 네트워크 오류:', error);
+        // ❌ 오류 발생 - 원본 데이터 복원
+        console.error('❌ [DELETE] 삭제 실패:', error);
         const previousData = queryClient.getQueryData(['documents']);
 
         // 안전 장치: 삭제된 문서가 캐시에 없으면 서버에서 다시 가져오기
@@ -461,7 +434,7 @@ const DocumentSidebar = ({
           queryClient.invalidateQueries(['documents']);
         }
 
-        setMessage({ type: 'error', text: '삭제 실패: ' + error.message });
+        setMessage({ type: 'error', text: '삭제 실패: ' + (error.message || '알 수 없는 오류') });
       }
     }
   };
@@ -763,7 +736,10 @@ const DocumentSidebar = ({
                         <span>{formatDay(post.updatedAt)}</span>
                         <span className="ml-2 flex-1 text-right">{formatTime(post.updatedAt)}</span>
                       </div>
-                      <span className="ml-2 inline-block w-1.5 h-1.5 rounded-full bg-gray-400"></span>
+                      <span
+                        className={`ml-2 inline-block w-1.5 h-1.5 rounded-full ${post.status === 'published' ? 'bg-green-500' : 'bg-gray-400'}`}
+                        title={post.status === 'published' ? '배포됨' : '작성 중'}
+                      ></span>
                     </div>
                   </button>
 
