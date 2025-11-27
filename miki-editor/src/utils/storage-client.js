@@ -114,14 +114,15 @@ export const storage = {
       }
 
       const content = decodeContent(file.content);
-      const { data: frontMatter } = parseFrontMatter(content);
+      const { data: frontMatter, content: body } = parseFrontMatter(content);
       const metadata = extractMetadata(content);
 
       return {
         id: frontMatter.docId || id, // docId 우선
         filename: filename,
-        title: metadata.title || id,
-        content: content,
+        title: frontMatter.title || metadata.title || id,
+        content: body, // ✅ 메타데이터가 제거된 순수 본문만 반환
+        frontMatter: frontMatter, // ✅ 원본 메타데이터 보존 (저장 시 사용)
         sha: file.sha,
         metadata,
         updatedAt: frontMatter.updatedAt || new Date().toISOString()
@@ -179,17 +180,22 @@ export const storage = {
     }
 
     // ✅ 4. Front Matter 주입
-    const { data: frontMatter, content: body } = parseFrontMatter(post.content || '');
+    // 에디터에서 온 content는 본문만 있음.
+    // 기존 frontMatter(post.frontMatter)와 현재 본문에서 파싱한 frontMatter(혹시 사용자가 썼을 수도 있음)를 병합
+    const { data: newFrontMatter, content: body } = parseFrontMatter(post.content || '');
+
+    // 기존 메타데이터 (로드 시 보존된 것)
+    const preservedFrontMatter = post.frontMatter || {};
 
     const now = new Date().toISOString();
 
     const updatedFrontMatter = {
-      ...frontMatter,
-      docId: docId, // ✅ docId 주입
+      ...preservedFrontMatter, // 기존 메타데이터 유지 (태그 등)
+      ...newFrontMatter,       // 새로 파싱된 메타데이터 (있다면 덮어씀)
+      docId: docId,            // docId 강제 주입
       title: title,
-      // ✅ CRITICAL FIX: 기존 updatedAt이 있으면 유지, 없거나 새 문서면 현재 시간
-      updatedAt: frontMatter.updatedAt || post.updatedAt || now,
-      createdAt: frontMatter.createdAt || post.createdAt || now
+      updatedAt: preservedFrontMatter.updatedAt || post.updatedAt || now,
+      createdAt: preservedFrontMatter.createdAt || post.createdAt || now
     };
 
     const updatedContent = stringifyFrontMatter(updatedFrontMatter) + body;
@@ -225,8 +231,9 @@ export const storage = {
       filename: filename,
       title,
       sha,
-      updatedAt: updatedFrontMatter.updatedAt, // 🔥 이 줄 추가!
-      createdAt: updatedFrontMatter.createdAt, // 🔥 이 줄 추가!
+      frontMatter: updatedFrontMatter, // ✅ 업데이트된 메타데이터 반환
+      updatedAt: updatedFrontMatter.updatedAt,
+      createdAt: updatedFrontMatter.createdAt,
       metadata: extractMetadata(updatedContent)
     };
   },

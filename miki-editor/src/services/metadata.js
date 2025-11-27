@@ -19,6 +19,30 @@ export function generateFrontMatter(document) {
     const published = document.published || false;
     const status = document.status || (published ? 'published' : 'draft');
 
+    // ✅ 기존 Front Matter 병합 (태그, 커스텀 필드 보존)
+    const existingFrontMatter = document.frontMatter || {};
+
+    // 기본 필드 외의 커스텀 필드만 추출
+    const customFields = {};
+    const excludeKeys = ['docId', 'title', 'titleMode', 'createdAt', 'updatedAt', 'published', 'status', 'permalink', 'layout', 'date', 'tags'];
+
+    Object.keys(existingFrontMatter).forEach(key => {
+        if (!excludeKeys.includes(key)) {
+            customFields[key] = existingFrontMatter[key];
+        }
+    });
+
+    // 커스텀 필드 YAML 문자열 생성
+    let customFieldsYaml = '';
+    if (Object.keys(customFields).length > 0) {
+        customFieldsYaml = Object.entries(customFields)
+            .map(([key, value]) => {
+                if (typeof value === 'string') return `${key}: "${value.replace(/"/g, '\\"')}"`;
+                return `${key}: ${JSON.stringify(value)}`;
+            })
+            .join('\n') + '\n';
+    }
+
     return `---
 docId: "${id}"
 title: "${title.replace(/"/g, '\\"')}"
@@ -31,7 +55,7 @@ permalink: "/doc/${id}/"
 layout: post
 date: ${dateStr}
 tags: [${tags.join(', ')}]
----
+${customFieldsYaml}---
 `;
 }
 

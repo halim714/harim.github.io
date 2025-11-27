@@ -26,12 +26,14 @@ export function useSaveDocument() {
           title: document.title ?? '',
           titleMode: document.titleMode || 'auto',
           sha: document.sha, // 기존 파일이면 SHA도 전달
+          frontMatter: document.frontMatter // ✅ Pass preserved frontMatter
         });
       } else {
         saved = await storage.updatePost(document.id, {
           content: document.content ?? '',
           title: document.title ?? '',
           titleMode: document.titleMode || 'auto',
+          frontMatter: document.frontMatter // ✅ Pass preserved frontMatter
         });
       }
 
