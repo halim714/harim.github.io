@@ -70,6 +70,9 @@ export function extractMetadata(markdown) {
  * Front Matter 파싱 (Browser-safe Regex implementation)
  * (Restored for GraphQL integration)
  */
+/**
+ * Front Matter 파싱 + docId 추출 우선순위
+ */
 export function parseFrontMatter(content) {
     if (!content) return { data: {}, content: '' };
 
@@ -95,7 +98,8 @@ export function parseFrontMatter(content) {
             let value = parts.slice(1).join(':').trim();
 
             // Remove quotes if present
-            if ((value.startsWith('"') && value.endsWith('"')) || (value.startsWith("'") && value.endsWith("'"))) {
+            if ((value.startsWith('"') && value.endsWith('"')) ||
+                (value.startsWith("'") && value.endsWith("'"))) {
                 value = value.slice(1, -1);
             }
 
@@ -108,4 +112,21 @@ export function parseFrontMatter(content) {
     });
 
     return { data, content: body };
+}
+
+/**
+ * Front Matter 생성 (docId 포함)
+ */
+export function stringifyFrontMatter(data) {
+    const lines = Object.entries(data).map(([key, value]) => {
+        if (typeof value === 'boolean') {
+            return `${key}: ${value}`;
+        } else if (typeof value === 'string') {
+            return `${key}: "${value.replace(/"/g, '\\"')}"`;
+        } else {
+            return `${key}: ${value}`;
+        }
+    });
+
+    return `---\n${lines.join('\n')}\n---\n`;
 }
