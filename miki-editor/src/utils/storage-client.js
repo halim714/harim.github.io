@@ -34,7 +34,8 @@ const decodeContent = (base64) => {
 };
 
 import { slugify, generateUniqueFilename } from './slugify';
-import { extractTitle, extractMetadata } from './markdown';
+import { slugify, generateUniqueFilename } from './slugify';
+import { extractTitle, extractMetadata, parseFrontMatter } from './markdown'; // parseFrontMatter 추가
 
 // ... (AuthService, GitHubService imports and helpers remain same) ...
 
@@ -42,9 +43,11 @@ export const storage = {
   async getPostList() {
     const github = await getGithub();
     try {
-      console.log('Fetching post list from:', 'miki-data', 'miki-editor/posts');
-      const files = await github.getFiles('miki-data', 'miki-editor/posts');
-      console.log('Raw files response:', files);
+      console.log('Fetching post list with GraphQL from:', 'miki-data', 'miki-editor/posts');
+
+      // 🔥 GraphQL로 파일 목록 + 메타데이터(내용) 한 번에 가져오기
+      const files = await github.getFilesWithMetadata('miki-data', 'miki-editor/posts');
+      console.log('GraphQL raw files response:', files);
 
       if (!Array.isArray(files)) {
         console.error('Expected array of files, got:', files);
@@ -54,16 +57,32 @@ export const storage = {
       // .gitkeep 등 제외하고 md 파일만 필터링
       const posts = files
         .filter(f => f.name.endsWith('.md'))
-        .map(f => ({
-          id: f.name.replace('.md', ''),
-          title: f.name.replace('.md', '').replace(/-/g, ' '), // 임시 제목 (메타데이터 파싱 전)
-          updatedAt: new Date().toISOString(), // GitHub API는 리스트에서 날짜 안 줌
-          size: f.size,
-          sha: f.sha,
-          path: f.path
-        }));
+        .map(f => {
+          // Front Matter 파싱
+          const { data: frontMatter, content: body } = parseFrontMatter(f.text);
 
-      console.log('Processed posts:', posts);
+          // 메타데이터 추출
+          const title = frontMatter.title || extractTitle(body) || f.name.replace('.md', '').replace(/-/g, ' ');
+          const createdAt = frontMatter.createdAt || frontMatter.date || new Date().toISOString();
+          const updatedAt = frontMatter.updatedAt || frontMatter.date || new Date().toISOString();
+          const status = frontMatter.status || (frontMatter.published ? 'published' : 'draft');
+
+          return {
+            id: f.name.replace('.md', ''),
+            title: title,
+            updatedAt: updatedAt,
+            createdAt: createdAt,
+            status: status, // 배포 상태 (published/draft)
+            size: f.text.length,
+            preview: body.substring(0, 150) + (body.length > 150 ? '...' : ''),
+            path: f.path
+          };
+        });
+
+      // 🔥 날짜 기준 내림차순 정렬 (최신순)
+      posts.sort((a, b) => new Date(b.updatedAt) - new Date(a.updatedAt));
+
+      console.log('Processed posts with metadata:', posts);
       return posts;
     } catch (error) {
       console.error('Failed to fetch post list:', error);

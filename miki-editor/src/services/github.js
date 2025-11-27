@@ -241,6 +241,58 @@ miki-editor/
     }
 
     /**
+     * GraphQL을 사용하여 파일 목록과 메타데이터(Front Matter)를 한 번에 가져오기
+     * (Restored from commit 670e85f)
+     */
+    async getFilesWithMetadata(repoName, path) {
+        try {
+            const query = `
+                query getPosts($owner: String!, $repo: String!, $path: String!) {
+                    repository(owner: $owner, name: $repo) {
+                        object(expression: $path) {
+                            ... on Tree {
+                                entries {
+                                    name
+                                    object {
+                                        ... on Blob {
+                                            text
+                                        }
+                                    }
+                                }
+                            }
+                        }
+                    }
+                }
+            `;
+
+            // HEAD:path 형식으로 변환
+            const expression = `HEAD:${path}`;
+
+            const response = await this.octokit.graphql(query, {
+                owner: this.username,
+                repo: repoName,
+                path: expression
+            });
+
+            const entries = response.repository?.object?.entries;
+
+            if (!entries) {
+                return [];
+            }
+
+            return entries.map(entry => ({
+                name: entry.name,
+                text: entry.object?.text || ''
+            }));
+
+        } catch (error) {
+            console.warn('GraphQL fetch failed, falling back to REST:', error);
+            // GraphQL 실패 시 REST API로 폴백 (내용은 없음)
+            return this.getFiles(repoName, path);
+        }
+    }
+
+    /**
      * 단일 파일 가져오기
      */
     async getFile(repoName, path) {
