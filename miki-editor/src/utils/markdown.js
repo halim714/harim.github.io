@@ -1,3 +1,5 @@
+import yaml from 'js-yaml';
+
 /**
  * 마크다운에서 제목 추출 (Legacy Logic Ported)
  */
@@ -67,16 +69,15 @@ export function extractMetadata(markdown) {
 }
 
 /**
- * Front Matter 파싱 (Browser-safe Regex implementation)
- * (Restored for GraphQL integration)
- */
-/**
- * Front Matter 파싱 + docId 추출 우선순위
+ * Front Matter 파싱 (Production-Grade)
+ * - js-yaml 사용으로 안전성 확보
+ * - 유연한 정규식으로 Double Front Matter 방지
  */
 export function parseFrontMatter(content) {
     if (!content) return { data: {}, content: '' };
 
-    const frontMatterRegex = /^---\n([\s\S]*?)\n---\n([\s\S]*)$/;
+    // ✅ 유연한 정규식: 공백 허용, 줄바꿈 방식 무관 (\r\n 지원)
+    const frontMatterRegex = /^---\s*[\r\n]+([\s\S]*?)[\r\n]+---\s*[\r\n]+([\s\S]*)$/;
     const match = content.match(frontMatterRegex);
 
     if (!match) {
@@ -88,45 +89,42 @@ export function parseFrontMatter(content) {
 
     const yamlBlock = match[1];
     const body = match[2];
-    const data = {};
 
-    // Simple YAML parser (key: value)
-    yamlBlock.split('\n').forEach(line => {
-        const parts = line.split(':');
-        if (parts.length >= 2) {
-            const key = parts[0].trim();
-            let value = parts.slice(1).join(':').trim();
-
-            // Remove quotes if present
-            if ((value.startsWith('"') && value.endsWith('"')) ||
-                (value.startsWith("'") && value.endsWith("'"))) {
-                value = value.slice(1, -1);
-            }
-
-            // Parse booleans
-            if (value === 'true') value = true;
-            if (value === 'false') value = false;
-
-            data[key] = value;
-        }
-    });
-
-    return { data, content: body };
+    try {
+        // ✅ js-yaml로 안전하게 파싱
+        const data = yaml.load(yamlBlock) || {};
+        return { data, content: body };
+    } catch (error) {
+        console.error('❌ [YAML-PARSE] Front Matter 파싱 실패:', error);
+        // 파싱 실패 시 안전하게 원본 반환
+        return {
+            data: {},
+            content: content
+        };
+    }
 }
 
 /**
- * Front Matter 생성 (docId 포함)
+ * Front Matter 생성 (Production-Grade)
+ * - js-yaml 사용으로 안전하게 직렬화
  */
 export function stringifyFrontMatter(data) {
-    const lines = Object.entries(data).map(([key, value]) => {
-        if (typeof value === 'boolean') {
-            return `${key}: ${value}`;
-        } else if (typeof value === 'string') {
-            return `${key}: "${value.replace(/"/g, '\\"')}"`;
-        } else {
-            return `${key}: ${value}`;
-        }
-    });
+    if (!data || Object.keys(data).length === 0) {
+        return '';
+    }
 
-    return `---\n${lines.join('\n')}\n---\n`;
+    try {
+        // ✅ js-yaml로 안전하게 직렬화
+        const yamlString = yaml.dump(data, {
+            indent: 2,
+            lineWidth: -1, // 줄바꿈 안 함
+            noRefs: true,  // 참조 사용 안 함
+            sortKeys: false // 키 정렬 안 함 (입력 순서 유지)
+        });
+
+        return `---\n${yamlString}---\n`;
+    } catch (error) {
+        console.error('❌ [YAML-STRINGIFY] Front Matter 생성 실패:', error);
+        return '';
+    }
 }

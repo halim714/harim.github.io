@@ -315,6 +315,28 @@ miki-editor/
     }
 
     /**
+     * 파일의 마지막 커밋 날짜 가져오기
+     */
+    async getLastCommitDate(repoName, path) {
+        try {
+            const { data } = await this.octokit.rest.repos.listCommits({
+                owner: this.username,
+                repo: repoName,
+                path: path,
+                per_page: 1
+            });
+
+            if (data && data.length > 0) {
+                return data[0].commit.committer.date;
+            }
+            return null;
+        } catch (error) {
+            console.warn(`Failed to fetch commit date for ${path}:`, error);
+            return null;
+        }
+    }
+
+    /**
      * 파일 삭제
      */
     async deleteFile(repoName, path, message, sha) {

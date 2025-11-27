@@ -225,6 +225,8 @@ export const storage = {
       filename: filename,
       title,
       sha,
+      updatedAt: updatedFrontMatter.updatedAt, // 🔥 이 줄 추가!
+      createdAt: updatedFrontMatter.createdAt, // 🔥 이 줄 추가!
       metadata: extractMetadata(updatedContent)
     };
   },
