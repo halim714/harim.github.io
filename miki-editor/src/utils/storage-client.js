@@ -381,6 +381,9 @@ export const storage = {
       }
     }
 
+    // 🔴 [New] 로컬 DB에서도 삭제 (부활 방지)
+    await dbHelpers.deleteLocal(id);
+
     return { id };
   }
 };

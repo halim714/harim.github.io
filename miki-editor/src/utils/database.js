@@ -82,6 +82,20 @@ export const dbHelpers = {
   // 미동기화 문서 개수 확인 (App.jsx용)
   async getUnsyncedCount() {
     return await db.documents.where('synced').equals(false).count();
+  },
+
+  // 🔴 [New] 로컬 문서 삭제
+  async deleteLocal(docId) {
+    try {
+      // docId로 찾아서 삭제
+      const doc = await db.documents.where('docId').equals(docId).first();
+      if (doc) {
+        await db.documents.delete(doc.id);
+        console.log(`🗑️ [DB] 로컬 문서 삭제 완료: ${docId}`);
+      }
+    } catch (error) {
+      console.error('Local delete failed:', error);
+    }
   }
 };
 
