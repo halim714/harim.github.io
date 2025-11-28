@@ -36,25 +36,24 @@ const decodeContent = (base64) => {
   }
 };
 
-export const storage = {
-  // 🛠 유틸리티: 문서별 독립 디바운스 관리자
-  class DebounceMap {
-    constructor() {
-      this.timers = new Map();
-    }
-
-run(key, func, delay) {
-  if (this.timers.has(key)) {
-    clearTimeout(this.timers.get(key));
+// 🛠 유틸리티: 문서별 독립 디바운스 관리자
+class DebounceMap {
+  constructor() {
+    this.timers = new Map();
   }
 
-  const timer = setTimeout(() => {
-    this.timers.delete(key);
-    func();
-  }, delay);
+  run(key, func, delay) {
+    if (this.timers.has(key)) {
+      clearTimeout(this.timers.get(key));
+    }
 
-  this.timers.set(key, timer);
-}
+    const timer = setTimeout(() => {
+      this.timers.delete(key);
+      func();
+    }, delay);
+
+    this.timers.set(key, timer);
+  }
 }
 
 const saveDebouncer = new DebounceMap();
