@@ -1,7 +1,8 @@
 import { AuthService } from './auth';
 import { GitHubService } from './github';
-import { prepareForPublish } from './metadata';
+import { prepareForPublish, generateFrontMatter } from './metadata';
 import { slugify } from '../utils/slugify';
+import { parseFrontMatter } from '../utils/markdown';
 
 /**
  * Publish Service
@@ -23,77 +24,49 @@ export class PublishService {
     async publishDocument(document) {
         await this.initialize();
 
-        // 1. 제목으로 파일명 생성 (Jekyll 형식: YYYY-MM-DD-slug.md)
         const slug = slugify(document.title);
         const date = new Date().toISOString().split('T')[0];
         const filename = `${date}-${slug}.md`;
 
-        // 2. Jekyll용 마크다운 생성 (Front Matter 포함)
-        const publishContent = prepareForPublish(document);
+        // 🟢 본문 정제 (Double Front Matter 방지)
+        const { content: cleanBody } = parseFrontMatter(document.content || '');
 
-        // ✅ CRITICAL FIX: 프라이빗 저장소에 메타데이터 주입
-        const { parseFrontMatter } = await import('../utils/markdown');
+        // 🟢 메타데이터 확정
+        const originalPublishedAt = document.publishedAt || document.frontMatter?.publishedAt;
+        const newPublishedAt = originalPublishedAt || new Date().toISOString();
 
-        // document.frontMatter가 있으면 우선 사용 (에디터에서 넘어온 경우)
-        // 없으면 content에서 파싱 (직접 로드한 경우 등)
-        let frontMatter, body;
-
-        if (document.frontMatter) {
-            frontMatter = document.frontMatter;
-            body = document.content; // 이미 본문만 있음
-        } else {
-            const parsed = parseFrontMatter(document.content || '');
-            frontMatter = parsed.data;
-            body = parsed.content;
-        }
-
-        // published 메타데이터 주입
-        const updatedFrontMatter = {
-            ...frontMatter,
+        const finalDocumentState = {
+            ...document,
+            content: cleanBody,
             published: true,
-            publishedAt: new Date().toISOString(),
             status: 'published',
-            title: document.title,
-            slug: slug,
-            docId: document.id
+            publishedAt: newPublishedAt,
+            updatedAt: new Date().toISOString()
         };
 
-        // Front Matter 재조립 (YAML 형식 준수)
-        const frontMatterLines = Object.entries(updatedFrontMatter).map(([key, value]) => {
-            if (typeof value === 'boolean') {
-                return `${key}: ${value}`;
-            } else if (typeof value === 'string') {
-                return `${key}: "${value.replace(/"/g, '\\"')}"`;
-            } else {
-                return `${key}: ${value}`;
-            }
-        });
+        // 🟢 Public: 링크 변환 O
+        const publicContent = prepareForPublish(finalDocumentState);
 
-        const updatedPrivateContent = `---\n${frontMatterLines.join('\n')}\n---\n${body}`;
+        // 🟢 Private: 링크 변환 X, 원본 보존
+        const privateFrontMatter = generateFrontMatter(finalDocumentState);
+        const privateContent = privateFrontMatter + '\n' + cleanBody;
 
-        // 3. 프라이빗 저장소에 먼저 저장 (원본 + 메타데이터)
-        // 원본은 ID 기반 파일명을 유지 (데이터 일관성)
-        // 메타데이터에 slug 정보가 포함되어 있으므로 나중에 추적 가능
+        // Private 저장
         const privatePath = `miki-editor/posts/${document.id}.md`;
-
-        // 원본 저장 (내용은 그대로, 커밋 메시지만 Publish 기록)
-        await this.github.createOrUpdateFile(
+        const newPrivateSha = await this.github.createOrUpdateFile(
             'miki-data',
             privatePath,
-            updatedPrivateContent, // ✅ 메타데이터가 주입된 내용
+            privateContent,
             `Publish: ${document.title} (Sync to Private)`,
             document.sha
         );
 
-        // 4. 퍼블릭 저장소에 배포 (Jekyll 형식)
+        // Public 저장
         const publicPath = `_posts/${filename}`;
-
-        // 퍼블릭 리포지토리 존재 여부 확인 (없으면 생성 시도하지 않음, Onboarding에서 했어야 함)
-
-        const publicSha = await this.github.createOrUpdateFile(
+        await this.github.createOrUpdateFile(
             `${this.username}.github.io`,
             publicPath,
-            publishContent,
+            publicContent,
             `Publish: ${document.title}`
         );
 
@@ -102,8 +75,10 @@ export class PublishService {
             privateRepo: 'miki-data',
             publicRepo: `${this.username}.github.io`,
             publicPath,
-            publicUrl: `https://${this.username}.github.io/${slug}`, // Jekyll 기본 permalink 규칙 가정
-            estimatedDeployTime: '1-2 minutes'
+            publicUrl: `https://${this.username}.github.io/${slug}`,
+            estimatedDeployTime: '1-2 minutes',
+            newSha: newPrivateSha,
+            finalDocument: finalDocumentState
         };
     }
 
