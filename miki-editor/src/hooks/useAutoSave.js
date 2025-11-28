@@ -83,6 +83,9 @@ const useAutoSave = ({
         saveTimeoutRef.current = null;
       }
 
+      // 🔴 [Fix] 수동 저장 플래그도 초기화
+      isManualSaveRef.current = false;
+
       logger.info(`🔄 [AUTO-SAVE] 문서 전환 감지: ${document.id} - 변경 감지 기준점 리셋`);
     }
   }, [document?.id]); // ⚠️ document.id가 바뀔 때만 실행
@@ -162,6 +165,13 @@ const useAutoSave = ({
   // 자동 저장 실행
   const performAutoSave = useCallback(async () => {
     if (!document || !hasUnsavedChanges) return;
+
+    // 🔴 [Fix] 삭제된 문서(ID가 없는 경우 등)는 저장하지 않음
+    if (!document.id) {
+      logger.warn('🛑 [AUTO-SAVE] 문서 ID 없음 - 저장 중단');
+      return;
+    }
+
     // 동일 내용 재저장 방지
     const currentHash = makeHash(content, title);
     if (currentHash === lastSavedHashRef.current) {
