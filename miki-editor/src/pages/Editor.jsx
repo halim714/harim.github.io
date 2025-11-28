@@ -357,7 +357,6 @@ function AppContent() {
         return; // 저장 실패 시 배포 중단
       }
 
-      // 🟢 [변경] 최신 상태(docToPublish)로 배포 요청
       const result = await publish(docToPublish);
 
       setMessage({
@@ -385,7 +384,7 @@ function AppContent() {
         });
       } catch { }
     }
-  }, [currentDocument, isPublishing, queryClient, publish, title, content, manualSave]);
+  }, [currentDocument, isPublishing, queryClient, publish, title, content]);
 
   // 문서 로드
   const loadPost = useCallback(async (id) => {
