@@ -28,8 +28,6 @@ const removeMarkdownFormatting = (text) => {
     .trim();
 };
 
-import { usePublish } from '../../hooks/usePublish'; // 🔥 NEW: usePublish import
-
 const DocumentSidebar = ({
   currentDocument,
   searchQuery,
@@ -48,7 +46,6 @@ const DocumentSidebar = ({
 }) => {
   const queryClient = useQueryClient();
   const { data: documentsData, isLoading, error, refetch } = useDocuments();
-  const { unpublish, isUnpublishing } = usePublish(); // 🔥 NEW: usePublish hook
 
   // 🎯 성능 측정을 위한 ref 생성
   const documentListRef = useRef(null);
@@ -383,19 +380,6 @@ const DocumentSidebar = ({
     if (isMobile) setActiveMobilePanel('editor');
   };
 
-  // 🔥 NEW: 게시 취소 핸들러
-  const handleUnpublishDocument = async (post) => {
-    if (window.confirm(`'${post.title}'의 게시를 취소하시겠습니까?`)) {
-      try {
-        await unpublish(post);
-        setMessage({ type: 'success', text: '게시가 취소되었습니다.' });
-      } catch (error) {
-        console.error('Unpublish failed:', error);
-        setMessage({ type: 'error', text: '게시 취소 실패' });
-      }
-    }
-  };
-
   const handleDeleteDocument = async (post) => {
     if (window.confirm(`'${post.title}'을(를) 삭제하시겠습니까?`)) {
       try {
@@ -407,17 +391,6 @@ const DocumentSidebar = ({
 
         // 즉시 캐시 업데이트 (UI에서 바로 사라짐)
         queryClient.setQueryData(queryKeys.documents.lists(), optimisticData);
-
-        // 🔴 [New] 게시된 문서라면 게시 취소 먼저 실행 (퍼블릭 삭제)
-        if (post.status === 'published' || post.isPublished) {
-          try {
-            console.log(`🌍 [DELETE] 퍼블릭 게시물 삭제 시도: ${post.title}`);
-            await unpublish(post);
-            console.log(`✅ [DELETE] 퍼블릭 게시물 삭제 완료`);
-          } catch (e) {
-            console.warn(`⚠️ [DELETE] 퍼블릭 게시물 삭제 실패 (무시하고 진행):`, e);
-          }
-        }
 
         // ✅ Serverless Delete: storage client 사용
         await storage.deletePost(post.id);
@@ -771,30 +744,14 @@ const DocumentSidebar = ({
                     </div>
                   </button>
 
-                  {/* 삭제 및 게시 취소 버튼 */}
-                  <div className="mt-2 flex justify-end space-x-2">
-                    {/* 🔴 [New] 게시 취소 버튼 (게시된 경우에만 표시) */}
-                    {(post.status === 'published' || post.isPublished) && (
-                      <button
-                        onClick={(e) => {
-                          e.stopPropagation();
-                          handleUnpublishDocument(post);
-                        }}
-                        disabled={isUnpublishing}
-                        className="px-2 py-1 text-xs text-orange-500 hover:bg-orange-50 rounded border border-orange-200 transition-colors"
-                        title="퍼블릭 저장소에서 내리기"
-                      >
-                        {isUnpublishing ? '취소 중...' : '게시 취소'}
-                      </button>
-                    )}
-
-                    {/* 기존 삭제 버튼 */}
+                  {/* 삭제 버튼 (옵션) */}
+                  <div className="mt-2 flex justify-end">
                     <button
                       onClick={(e) => {
                         e.stopPropagation();
                         handleDeleteDocument(post);
                       }}
-                      className="px-2 py-1 text-xs text-gray-500 hover:text-red-500 hover:bg-red-50 rounded transition-colors"
+                      className="px-2 py-1 text-xs text-gray-500 hover:text-red-500 hover:bg-red-50 rounded"
                     >
                       삭제
                     </button>
