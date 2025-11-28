@@ -380,12 +380,15 @@ function AppContent() {
 
       // 🚨 사용자 시나리오 처리: 현재 작성 중인 문서가 있는지 확인
       if (currentDocument) {
-        const hasContent = content.trim().length > 0;
-        const hasCustomTitle = title !== currentDocument.title && title.trim().length > 0;
-        const hasUnsavedWork = hasContent || hasCustomTitle;
+        // 🟢 [수정] 실제 원본과 달라진 경우에만 저장 (Strict Comparison)
+        // 기존에는 내용이 존재하기만 하면 저장했으나, 이제는 변경 여부를 확인
+        const isContentChanged = content !== (currentDocument.content || '');
+        const isTitleChanged = title !== (currentDocument.title || '');
+
+        const hasUnsavedWork = isContentChanged || isTitleChanged;
 
         if (hasUnsavedWork) {
-          logger.info('💾 [LOAD-POST] 작성 중인 내용 감지 - 자동 저장 시도');
+          logger.info('💾 [LOAD-POST] 변경된 내용 감지 - 자동 저장 시도');
 
           // Q1-b: 자동 저장 시도 (Fire-and-forget)
           // Local-First 전략: 저장을 기다리지 않고 즉시 로드 진행
