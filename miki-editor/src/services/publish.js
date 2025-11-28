@@ -1,8 +1,8 @@
 import { AuthService } from './auth';
 import { GitHubService } from './github';
 import { prepareForPublish, generateFrontMatter } from './metadata';
-import { slugify } from '../utils/slugify';
 import { parseFrontMatter } from '../utils/markdown';
+import { slugify } from '../utils/slugify';
 
 /**
  * Publish Service
