@@ -399,6 +399,12 @@ function AppContent() {
         } else if (currentDocument.isEmpty) {
           // Q2-B: 아무것도 적지 않은 새글인 경우 - 그냥 진행 (버리기)
           logger.info('🗑️ [LOAD-POST] 빈 새글 감지 - 저장 없이 진행');
+
+          // 🟢 [Fix] 캐시에서 임시 문서 제거 (UI 목록에서 즉시 사라지게 함)
+          queryClient.setQueryData(queryKeys.documents.lists(), (oldData) => {
+            if (!Array.isArray(oldData)) return oldData;
+            return oldData.filter(d => d.id !== currentDocument.id);
+          });
         }
       }
 
