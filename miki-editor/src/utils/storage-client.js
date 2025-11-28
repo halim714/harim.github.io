@@ -353,17 +353,30 @@ export const storage = {
   async deletePost(id) {
     const github = await getGithub();
 
-    // docId로 파일명 찾기
-    const postList = await this.getPostList();
-    const post = postList.find(p => p.id === id);
+    // 1. IndexedDB에서 먼저 찾기
+    let localDoc = await db.documents.where('docId').equals(id).first();
 
-    if (!post) {
-      console.warn(`⚠️ [DELETE] 문서 없음: ${id}`);
+    // 2. 없으면 목록에서 찾기
+    if (!localDoc) {
+      const postList = await this.getPostList();
+      localDoc = postList.find(p => p.id === id);
+    }
+
+    if (!localDoc) {
+      console.warn('문서 없음:', id);
       return { id };
     }
 
-    const filename = post.filename || id;
+    const filename = localDoc.filename || id;
 
+    // IndexedDB에서 직접 가져온 경우 frontMatter 확인
+    const frontMatter = localDoc.frontMatter || {};
+
+    // status 체크 수정
+    const isPublished = frontMatter.status === 'published'
+      || frontMatter.published === true;
+
+    // 3. Private 삭제
     try {
       const file = await github.getFile('miki-data', `miki-editor/posts/${filename}.md`);
       await github.deleteFile(
@@ -372,18 +385,58 @@ export const storage = {
         `Delete ${filename}`,
         file.sha
       );
-      console.log(`✅ [DELETE] 삭제 완료: ${filename}.md`);
+      console.log('Private 삭제 완료');
+    } catch (error) {
+      if (error.status !== 404) throw error;
+    }
+
+    // 4. Public 삭제 (백그라운드)
+    if (isPublished) {
+      this._deletePublicInBackground(github, localDoc, frontMatter).catch(e => {
+        console.warn('Public 삭제 실패:', e);
+      });
+    }
+
+    // 5. IndexedDB 삭제
+    await dbHelpers.deleteLocal(id);
+
+    return { id };
+  },
+
+  // 백그라운드 삭제 함수
+  async _deletePublicInBackground(github, doc, frontMatter) {
+    try {
+      const username = github.username;
+      const slug = slugify(doc.title);
+
+      // frontMatter에서 날짜 가져오기
+      const dateStr = frontMatter.publishedAt
+        || frontMatter.date
+        || doc.updatedAt
+        || doc.createdAt
+        || new Date().toISOString();
+      const date = dateStr.split('T')[0];
+
+      const publicPath = `_posts/${date}-${slug}.md`;
+      const publicRepo = `${username}.github.io`;
+
+      const publicFile = await github.getFile(publicRepo, publicPath);
+
+      if (publicFile && publicFile.sha) {
+        await github.deleteFile(
+          publicRepo,
+          publicPath,
+          `Unpublish: ${doc.title}`,
+          publicFile.sha
+        );
+        console.log('Public 삭제 완료 (백그라운드)');
+      }
     } catch (error) {
       if (error.status === 404) {
-        console.warn(`⚠️ [DELETE] 이미 삭제된 파일: ${filename}.md`);
+        console.warn('Public 파일 없음');
       } else {
         throw error;
       }
     }
-
-    // 🔴 [New] 로컬 DB에서도 삭제 (부활 방지)
-    await dbHelpers.deleteLocal(id);
-
-    return { id };
   }
 };
