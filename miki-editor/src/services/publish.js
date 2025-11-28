@@ -52,7 +52,14 @@ export class PublishService {
         const privateContent = privateFrontMatter + '\n' + cleanBody;
 
         // Private 저장
-        const privatePath = `miki-editor/posts/${document.id}.md`;
+        // 🟢 [Fix] 파일명 규칙 통일 (storage-client.js와 일치)
+        let privateFilename = document.filename;
+        if (!privateFilename) {
+            privateFilename = slugify(document.title);
+        }
+        privateFilename = privateFilename.replace(/\.md$/, '');
+
+        const privatePath = `miki-editor/posts/${privateFilename}.md`;
         const newPrivateSha = await this.github.createOrUpdateFile(
             'miki-data',
             privatePath,
