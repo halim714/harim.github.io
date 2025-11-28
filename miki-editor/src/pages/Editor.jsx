@@ -150,8 +150,13 @@ function AppContent() {
       if (currentDocument?.isEmpty && savedDocument?.id) {
         removePhantom(currentDocument.id);
 
-        // ✅ CRITICAL FIX: ID 동기화 - 무한 복제 방지
-        if (currentDocument.id.startsWith('memo_') && savedDocument.id !== currentDocument.id) {
+        // ✅ CRITICAL FIX: ID 동기화 및 파일명(filename) 최신화
+        // ID가 같더라도 파일명이 바뀌었을 수 있으므로 무조건 동기화
+        if (savedDocument && savedDocument.id === currentDocument?.id) {
+          logger.info(`🔄 [SYNC] 문서 상태 동기화 (파일명 변경 등 반영): ${savedDocument.filename}`);
+          setCurrentDocument(savedDocument);
+        } else if (currentDocument.id.startsWith('memo_') && savedDocument.id !== currentDocument.id) {
+          // 기존 로직: 임시 ID -> 실제 ID 변경 시
           logger.info(`🔄 [ID-SYNC] ${currentDocument.id} → ${savedDocument.id}`);
           setCurrentDocument(savedDocument);
         }
