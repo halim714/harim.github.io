@@ -371,7 +371,7 @@ function AppContent() {
         });
       } catch { }
     }
-  }, [currentDocument, isPublishing, queryClient, publish]);
+  }, [currentDocument, isPublishing, queryClient, publish, title, content]);
 
   // 문서 로드
   const loadPost = useCallback(async (id) => {
