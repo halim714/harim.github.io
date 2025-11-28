@@ -24,10 +24,9 @@ export class PublishService {
     async publishDocument(document) {
         await this.initialize();
 
-        // Public 파일명 (Jekyll 형식)
         const slug = slugify(document.title);
         const date = new Date().toISOString().split('T')[0];
-        const publicFilename = `${date}-${slug}.md`;
+        const filename = `${date}-${slug}.md`;
 
         // 🟢 본문 정제 (Double Front Matter 방지)
         const { content: cleanBody } = parseFrontMatter(document.content || '');
@@ -52,19 +51,8 @@ export class PublishService {
         const privateFrontMatter = generateFrontMatter(finalDocumentState);
         const privateContent = privateFrontMatter + '\n' + cleanBody;
 
-        // 🟢 Private 파일명 결정 (storage-client 결과 재사용)
-        let privateFilename = document.filename;
-
-        if (!privateFilename) {
-            // 방어 로직: filename이 없으면 제목 기반 생성
-            privateFilename = slugify(document.title);
-        }
-
-        // 확장자 중복 방지
-        privateFilename = privateFilename.replace(/\.md$/, '');
-        const privatePath = `miki-editor/posts/${privateFilename}.md`;
-
         // Private 저장
+        const privatePath = `miki-editor/posts/${document.id}.md`;
         const newPrivateSha = await this.github.createOrUpdateFile(
             'miki-data',
             privatePath,
@@ -74,7 +62,7 @@ export class PublishService {
         );
 
         // Public 저장
-        const publicPath = `_posts/${publicFilename}`;
+        const publicPath = `_posts/${filename}`;
         await this.github.createOrUpdateFile(
             `${this.username}.github.io`,
             publicPath,
@@ -90,12 +78,7 @@ export class PublishService {
             publicUrl: `https://${this.username}.github.io/${slug}`,
             estimatedDeployTime: '1-2 minutes',
             newSha: newPrivateSha,
-            filename: `${privateFilename}.md`,
-            finalDocument: {
-                ...finalDocumentState,
-                filename: `${privateFilename}.md`,
-                sha: newPrivateSha
-            }
+            finalDocument: finalDocumentState
         };
     }
 
