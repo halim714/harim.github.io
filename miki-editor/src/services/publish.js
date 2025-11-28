@@ -51,8 +51,18 @@ export class PublishService {
         const privateFrontMatter = generateFrontMatter(finalDocumentState);
         const privateContent = privateFrontMatter + '\n' + cleanBody;
 
-        // Private 저장
-        const privatePath = `miki-editor/posts/${document.id}.md`;
+        // 🟢 [변경] Private 파일명 결정 로직 개선
+        // 1순위: storage-client가 확정한 filename (저장 시 생성됨)
+        // 2순위: slug (fallback)
+        let privateFilename = document.filename;
+        if (!privateFilename) {
+            privateFilename = slug;
+        }
+
+        // 확장자 중복 방지 및 경로 생성
+        privateFilename = privateFilename.replace(/\.md$/, '');
+        const privatePath = `miki-editor/posts/${privateFilename}.md`;
+
         const newPrivateSha = await this.github.createOrUpdateFile(
             'miki-data',
             privatePath,
