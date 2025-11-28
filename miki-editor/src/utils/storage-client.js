@@ -58,63 +58,112 @@ class DebounceMap {
 
 const saveDebouncer = new DebounceMap();
 
-import { dbHelpers } from './database';
+import { dbHelpers, db } from './database';
 
 export const storage = {
   // ... getPostList, getPost 등 기존 코드 ...
   async getPostList() {
     const github = await getGithub();
+    let githubPosts = [];
+
+    // 1. GitHub 데이터 가져오기 (실패 시 빈 배열 처리하여 오프라인 지원)
     try {
       console.log('Fetching post list with GraphQL from:', 'miki-data', 'miki-editor/posts');
-
       const files = await github.getFilesWithMetadata('miki-data', 'miki-editor/posts');
-      console.log('GraphQL raw files response:', files);
 
-      if (!Array.isArray(files)) {
-        console.error('Expected array of files, got:', files);
-        return [];
+      if (Array.isArray(files)) {
+        githubPosts = files
+          .filter(f => f.name.endsWith('.md'))
+          .map(f => {
+            const { data: frontMatter, content: body } = parseFrontMatter(f.text);
+            const docId = frontMatter.docId || f.name.replace('.md', '');
+            const filename = f.name.replace('.md', '');
+
+            return {
+              id: docId,
+              filename: filename,
+              title: frontMatter.title || extractTitle(body) || filename.replace(/-/g, ' '),
+              updatedAt: frontMatter.updatedAt || new Date().toISOString(),
+              createdAt: frontMatter.createdAt || new Date().toISOString(),
+              status: frontMatter.status || (frontMatter.published ? 'published' : 'draft'),
+              size: f.text.length,
+              preview: body.substring(0, 150) + (body.length > 150 ? '...' : ''),
+              path: f.path,
+              hasDocId: !!frontMatter.docId,
+              source: 'github' // 디버깅용
+            };
+          });
       }
-
-      // .gitkeep 등 제외하고 md 파일만 필터링
-      const posts = files
-        .filter(f => f.name.endsWith('.md'))
-        .map(f => {
-          // Front Matter 파싱
-          const { data: frontMatter, content: body } = parseFrontMatter(f.text);
-
-          // ✅ Hybrid Identity: docId 우선, 없으면 파일명
-          const docId = frontMatter.docId || f.name.replace('.md', '');
-          const filename = f.name.replace('.md', '');
-
-          // 메타데이터 추출
-          const title = frontMatter.title || extractTitle(body) || filename.replace(/-/g, ' ');
-          const createdAt = frontMatter.createdAt || frontMatter.date || new Date().toISOString();
-          const updatedAt = frontMatter.updatedAt || frontMatter.date || new Date().toISOString();
-          const status = frontMatter.status || (frontMatter.published ? 'published' : 'draft');
-
-          return {
-            id: docId, // ✅ 이제 docId가 ID
-            filename: filename, // 🔥 파일명은 별도 저장
-            title: title,
-            updatedAt: updatedAt,
-            createdAt: createdAt,
-            status: status,
-            size: f.text.length,
-            preview: body.substring(0, 150) + (body.length > 150 ? '...' : ''),
-            path: f.path,
-            hasDocId: !!frontMatter.docId // 🔥 docId 존재 여부 플래그
-          };
-        });
-
-      // 🔥 날짜 기준 내림차순 정렬 (최신순)
-      posts.sort((a, b) => new Date(b.updatedAt) - new Date(a.updatedAt));
-
-      console.log('Processed posts with hybrid identity:', posts);
-      return posts;
     } catch (error) {
-      console.error('Failed to fetch post list:', error);
-      return [];
+      console.warn('GitHub fetch failed (offline?):', error);
+      // 오프라인이거나 에러 시 로컬 데이터만으로 진행
     }
+
+    // 2. 로컬 DB 데이터 가져오기
+    let localPosts = [];
+    try {
+      localPosts = await db.documents.toArray();
+    } catch (e) {
+      console.error('Local DB fetch failed:', e);
+    }
+
+    // 3. 병합 (Local-First 정책)
+    const mergedMap = new Map();
+
+    // 3-1. GitHub 데이터 먼저 넣기
+    githubPosts.forEach(post => {
+      mergedMap.set(post.id, post);
+    });
+
+    // 3-2. 로컬 데이터로 덮어쓰기 (더 최신이거나, 미동기화 상태인 경우)
+    localPosts.forEach(localDoc => {
+      // localDoc.docId가 실제 문서 ID임 (스키마 v2 기준)
+      const docId = localDoc.docId;
+      if (!docId) return;
+
+      const existing = mergedMap.get(docId);
+
+      // 로컬 데이터 포맷팅
+      const formattedLocal = {
+        id: docId,
+        filename: existing?.filename || docId, // 파일명은 기존 것 유지하거나 ID 사용
+        title: localDoc.title,
+        updatedAt: localDoc.updatedAt,
+        createdAt: localDoc.createdAt || localDoc.updatedAt,
+        status: 'draft',
+        size: localDoc.content?.length || 0,
+        preview: (localDoc.content || '').substring(0, 150),
+        path: existing?.path, // 경로는 기존 것 유지
+        hasDocId: true,
+        source: 'local',
+        synced: localDoc.synced
+      };
+
+      if (!existing) {
+        // GitHub에 없는 새 문서 (로컬 전용)
+        mergedMap.set(docId, formattedLocal);
+      } else {
+        // GitHub에 있지만 로컬이 더 최신이거나 미동기화 상태면 덮어쓰기
+        const localTime = new Date(localDoc.updatedAt).getTime();
+        const serverTime = new Date(existing.updatedAt).getTime();
+
+        // 💡 핵심: 로컬이 미동기화 상태(synced: false)이거나, 시간이 더 뒤면 로컬 우선
+        if (!localDoc.synced || localTime >= serverTime) {
+          mergedMap.set(docId, {
+            ...existing, // 기존 GitHub 정보(sha, path 등) 유지
+            ...formattedLocal, // 로컬의 최신 내용(title, preview, updatedAt) 덮어쓰기
+            source: 'local-merged'
+          });
+        }
+      }
+    });
+
+    // 4. 배열 변환 및 정렬
+    const posts = Array.from(mergedMap.values());
+    posts.sort((a, b) => new Date(b.updatedAt) - new Date(a.updatedAt));
+
+    console.log(`Merged posts: ${posts.length} (GitHub: ${githubPosts.length}, Local: ${localPosts.length})`);
+    return posts;
   },
 
   async getPost(id) {
