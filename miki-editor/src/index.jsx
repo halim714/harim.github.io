@@ -3,7 +3,7 @@ import ReactDOM from 'react-dom'; // 'react-dom/client' 대신 'react-dom'을 �
 
 import './index.css';
 import App from './App';
-import reportWebVitals from './reportWebVitals';
+
 import { createLogger } from './utils/logger';
 import { initializeDatabase } from './utils/database';
 
