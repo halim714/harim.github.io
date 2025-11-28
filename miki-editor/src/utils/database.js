@@ -96,6 +96,71 @@ export const dbHelpers = {
     } catch (error) {
       console.error('Local delete failed:', error);
     }
+  },
+
+  // 🟢 [New] 배포 완료 표시 (로컬 DB 업데이트)
+  async markPublished(docId, publishedAt) {
+    try {
+      // docId로 문서 찾기
+      const doc = await db.documents.where('docId').equals(docId).first();
+
+      if (!doc) {
+        console.warn(`[DB] 문서를 찾을 수 없음: ${docId}`);
+        return;
+      }
+
+      // 🟢 기존 publishedAt 보존 (재배포 시)
+      const existingPublishedAt = doc.frontMatter?.publishedAt;
+      const finalPublishedAt = existingPublishedAt || publishedAt || new Date().toISOString();
+
+      // frontMatter 업데이트
+      const updatedFrontMatter = {
+        ...(doc.frontMatter || {}),
+        status: 'published',
+        published: true,
+        publishedAt: finalPublishedAt
+      };
+
+      // DB 업데이트
+      await db.documents.update(doc.id, {
+        synced: true, // 배포되었으므로 동기화됨
+        frontMatter: updatedFrontMatter
+      });
+
+      console.log(`✅ [DB] 로컬 문서 배포 상태 업데이트 완료: ${docId}`);
+    } catch (e) {
+      console.error('[DB] markPublished 실패:', e);
+      throw e; // 에러를 상위로 전파 (디버깅용)
+    }
+  },
+
+  // 🟢 [New] 게시 취소 표시 (로컬 DB 업데이트)
+  async markUnpublished(docId) {
+    try {
+      const doc = await db.documents.where('docId').equals(docId).first();
+
+      if (!doc) {
+        console.warn(`[DB] 문서를 찾을 수 없음: ${docId}`);
+        return;
+      }
+
+      const updatedFrontMatter = {
+        ...(doc.frontMatter || {}),
+        status: 'draft',
+        published: false
+        // publishedAt은 유지 (이력 보존)
+      };
+
+      await db.documents.update(doc.id, {
+        synced: true,
+        frontMatter: updatedFrontMatter
+      });
+
+      console.log(`✅ [DB] 로컬 문서 게시 취소 상태 업데이트 완료: ${docId}`);
+    } catch (e) {
+      console.error('[DB] markUnpublished 실패:', e);
+      throw e;
+    }
   }
 };
 
