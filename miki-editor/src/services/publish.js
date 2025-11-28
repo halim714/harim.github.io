@@ -51,18 +51,17 @@ export class PublishService {
         const privateFrontMatter = generateFrontMatter(finalDocumentState);
         const privateContent = privateFrontMatter + '\n' + cleanBody;
 
-        // 🟢 [변경] Private 파일명 결정 로직 개선
-        // 1순위: storage-client가 확정한 filename (저장 시 생성됨)
-        // 2순위: slug (fallback)
+        // Private 저장
+        // 🟢 [복구된 로직] 파일명 규칙 통일 (storage-client.js와 일치)
+        // document.filename이 있으면 그것을 쓰고, 없으면 slug를 씁니다.
         let privateFilename = document.filename;
         if (!privateFilename) {
             privateFilename = slug;
         }
 
-        // 확장자 중복 방지 및 경로 생성
+        // 확장자 제거 (.md가 있을 수도 없을 수도 있음)
         privateFilename = privateFilename.replace(/\.md$/, '');
         const privatePath = `miki-editor/posts/${privateFilename}.md`;
-
         const newPrivateSha = await this.github.createOrUpdateFile(
             'miki-data',
             privatePath,
