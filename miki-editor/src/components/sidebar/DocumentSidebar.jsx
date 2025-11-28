@@ -9,6 +9,7 @@ import DocumentSearchManager from '../../utils/DocumentSearchManager';
 import { usePhantomDocument } from '../../hooks/usePhantomDocument';
 import { storage } from '../../utils/storage-client'; // 🔥 NEW: storage client import
 import Icon from '../common/Icon';
+import { queryKeys } from '../../config/queryClient';
 
 const removeMarkdownFormatting = (text) => {
   if (!text) return '';
@@ -339,7 +340,7 @@ const DocumentSidebar = ({
     console.log('🎯 [LIBERATION] React Query 완전 해방 모드에서 유일한 리페치 방법');
 
     // 🎯 완전 해방 모드에서는 수동 새로고침만이 유일한 리페치 방법
-    queryClient.invalidateQueries({ queryKey: ['documents'] });
+    queryClient.invalidateQueries({ queryKey: queryKeys.documents.lists() });
 
     // 강제 리페치 (staleTime: Infinity를 무시하고 강제 실행)
     refetch();
@@ -385,11 +386,11 @@ const DocumentSidebar = ({
         // 🔥 Phase 2: Optimistic Delete - 즉시 UI에서 제거
         console.log(`🚀 [DELETE] 삭제 시작: ${post.title}`);
 
-        const previousData = queryClient.getQueryData(['documents']);
+        const previousData = queryClient.getQueryData(queryKeys.documents.lists());
         const optimisticData = previousData?.filter(doc => doc.id !== post.id);
 
         // 즉시 캐시 업데이트 (UI에서 바로 사라짐)
-        queryClient.setQueryData(['documents'], optimisticData);
+        queryClient.setQueryData(queryKeys.documents.lists(), optimisticData);
 
         // ✅ Serverless Delete: storage client 사용
         await storage.deletePost(post.id);
@@ -415,7 +416,7 @@ const DocumentSidebar = ({
 
           // 4. 최종 캐시 검증 (서버와 동기화)
           setTimeout(() => {
-            queryClient.invalidateQueries(['documents']);
+            queryClient.invalidateQueries({ queryKey: queryKeys.documents.lists() });
           }, 1000);
 
           setMessage({ type: 'success', text: '글이 삭제되었습니다.' });
@@ -427,11 +428,11 @@ const DocumentSidebar = ({
       } catch (error) {
         // ❌ 오류 발생 - 원본 데이터 복원
         console.error('❌ [DELETE] 삭제 실패:', error);
-        const previousData = queryClient.getQueryData(['documents']);
+        const previousData = queryClient.getQueryData(queryKeys.documents.lists());
 
         // 안전 장치: 삭제된 문서가 캐시에 없으면 서버에서 다시 가져오기
         if (!previousData?.find(doc => doc.id === post.id)) {
-          queryClient.invalidateQueries(['documents']);
+          queryClient.invalidateQueries({ queryKey: queryKeys.documents.lists() });
         }
 
         setMessage({ type: 'error', text: '삭제 실패: ' + (error.message || '알 수 없는 오류') });
@@ -487,7 +488,7 @@ const DocumentSidebar = ({
           console.log(`✅ [REAL-TIME] 에디터 ↔ 문서목록 실시간 동기화 정상 작동`);
 
           // 캐시 상태 정보 (간소화)
-          const cacheData = queryClient.getQueryData(['documents']);
+          const cacheData = queryClient.getQueryData(queryKeys.documents.lists());
           console.log(`💾 [CACHE-INFO] 캐시 데이터 존재: ${!!cacheData}`);
           console.log(`💾 [CACHE-INFO] 캐시 데이터 길이: ${cacheData?.length || 0}`);
 
