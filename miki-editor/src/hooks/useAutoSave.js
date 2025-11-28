@@ -66,6 +66,27 @@ const useAutoSave = ({
     return null;
   }, [onLazyDocumentCreate]);
 
+  // 🟢 [Fix] 문서 전환(ID 변경) 시 변경 감지 기준점 리셋
+  // 이 코드가 없으면, 문서 A -> B 전환 시 내용 차이를 '수정'으로 인식하여 자동 저장해버림
+  useEffect(() => {
+    if (document?.id) {
+      // 새로운 문서가 로드되었으므로, 현재 내용을 '기준점'으로 설정
+      lastContentRef.current = content;
+      lastTitleRef.current = title;
+
+      // "변경되지 않음" 상태로 초기화
+      setHasUnsavedChanges(false);
+
+      // 혹시 예약된 자동저장이 있다면 취소 (이전 문서의 잔여 작업 방지)
+      if (saveTimeoutRef.current) {
+        clearTimeout(saveTimeoutRef.current);
+        saveTimeoutRef.current = null;
+      }
+
+      logger.info(`🔄 [AUTO-SAVE] 문서 전환 감지: ${document.id} - 변경 감지 기준점 리셋`);
+    }
+  }, [document?.id]); // ⚠️ document.id가 바뀔 때만 실행
+
   // 변경사항 감지 - 🎯 Phase 1: 의미있는 변경사항만 저장 + Lazy Document 생성
   useEffect(() => {
     const contentChanged = content !== lastContentRef.current;
