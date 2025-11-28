@@ -37,6 +37,32 @@ const decodeContent = (base64) => {
 };
 
 export const storage = {
+  // 🛠 유틸리티: 문서별 독립 디바운스 관리자
+  class DebounceMap {
+    constructor() {
+      this.timers = new Map();
+    }
+
+run(key, func, delay) {
+  if (this.timers.has(key)) {
+    clearTimeout(this.timers.get(key));
+  }
+
+  const timer = setTimeout(() => {
+    this.timers.delete(key);
+    func();
+  }, delay);
+
+  this.timers.set(key, timer);
+}
+}
+
+const saveDebouncer = new DebounceMap();
+
+import { dbHelpers } from './database';
+
+export const storage = {
+  // ... getPostList, getPost 등 기존 코드 ...
   async getPostList() {
     const github = await getGithub();
     try {
@@ -133,7 +159,40 @@ export const storage = {
     }
   },
 
+  // 🟢 [New] Local-First 래퍼 함수
   async savePost(post) {
+    // 1. 로컬 DB에 즉시 저장 (0ms)
+    await dbHelpers.saveLocal(post);
+
+    // 2. GitHub 저장은 백그라운드 + 디바운스 (5초)
+    // 문서 ID별로 타이머가 따로 돌아가므로 A문서 저장이 B문서 저장을 방해하지 않음
+    saveDebouncer.run(post.id, async () => {
+      try {
+        console.log(`☁️ [GitHub] 백그라운드 저장 시작: ${post.title}`);
+
+        // 기존의 복잡한 로직(파일명/Slug 등)을 그대로 재사용!
+        const saved = await this._savePostToGitHub(post);
+
+        // 성공 시 로컬 DB에 동기화 완료 표시
+        // saved.id는 docId이므로 정확함
+        await dbHelpers.markSynced(saved.id);
+        console.log(`✅ [GitHub] 백그라운드 저장 완료: ${post.title}`);
+      } catch (error) {
+        console.error(`❌ [GitHub] 백그라운드 저장 실패: ${post.title}`, error);
+        // 실패해도 로컬엔 남아있음 (추후 Retry 로직 추가 가능)
+      }
+    }, 5000);
+
+    // 3. UI에는 즉시 성공 응답 (기다리지 않음)
+    return {
+      ...post,
+      updatedAt: new Date().toISOString(),
+      syncStatus: 'pending'
+    };
+  },
+
+  // 🔴 [Rename] 기존 로직은 그대로 보존 (파일명 생성, Slug 처리 등 핵심 로직)
+  async _savePostToGitHub(post) {
     const github = await getGithub();
 
     // ✅ 1. docId 확정 (새 문서면 생성, 기존 문서면 유지)
