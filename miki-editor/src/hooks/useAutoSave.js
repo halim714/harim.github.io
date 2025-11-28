@@ -89,6 +89,14 @@ const useAutoSave = ({
 
   // 변경사항 감지 - 🎯 Phase 1: 의미있는 변경사항만 저장 + Lazy Document 생성
   useEffect(() => {
+    // 🟢 [Fix] 현재 내용이 문서 원본과 완전히 같다면, 
+    // 이는 '타이핑'이 아니라 '로드 완료' 상황이므로 변경 감지 기준점만 업데이트하고 종료
+    if (document && content === document.content) {
+      lastContentRef.current = content;
+      lastTitleRef.current = title;
+      return; // 저장 로직 실행 안 함 🛑
+    }
+
     const contentChanged = content !== lastContentRef.current;
     const titleChanged = title !== lastTitleRef.current;
 
