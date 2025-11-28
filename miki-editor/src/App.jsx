@@ -71,9 +71,27 @@ async function checkRepoExists(token, repoName) {
 
 export const useAuth = () => useContext(AuthContext);
 
+import { dbHelpers } from './utils/database';
+
 function AppContent() {
   const { loading, user, needsSetup } = useAuth();
   const location = useLocation();
+
+  // 🛡️ 종료 방지: 미동기화 문서 확인
+  useEffect(() => {
+    const handleBeforeUnload = async (e) => {
+      // 동기화 안 된 문서가 하나라도 있으면 경고
+      const count = await dbHelpers.getUnsyncedCount();
+
+      if (count > 0) {
+        e.preventDefault();
+        e.returnValue = '아직 GitHub에 저장되지 않은 문서가 있습니다. 잠시 후 다시 시도해주세요.';
+      }
+    };
+
+    window.addEventListener('beforeunload', handleBeforeUnload);
+    return () => window.removeEventListener('beforeunload', handleBeforeUnload);
+  }, []);
 
   // CallbackPage 최우선 처리
   if (location.pathname === '/callback') {

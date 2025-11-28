@@ -387,21 +387,12 @@ function AppContent() {
         if (hasUnsavedWork) {
           logger.info('💾 [LOAD-POST] 작성 중인 내용 감지 - 자동 저장 시도');
 
-          // Q1-b: 자동 저장 시도
-          try {
-            await manualSave();
-            logger.info('✅ [LOAD-POST] 자동 저장 완료 - 새 문서 로드 진행');
-          } catch (saveError) {
-            logger.error('❌ [LOAD-POST] 자동 저장 실패:', saveError);
-            // Q3: 저장 실패는 없어야 함 - 하지만 발생한 경우 사용자에게 알림
-            setMessage({
-              type: 'warning',
-              text: '현재 작성 중인 내용을 저장하지 못했습니다. 계속 진행하시겠습니까?'
-            });
-
-            // 추가 확인을 위해 5초 대기
-            setTimeout(() => setMessage(null), 5000);
-          }
+          // Q1-b: 자동 저장 시도 (Fire-and-forget)
+          // Local-First 전략: 저장을 기다리지 않고 즉시 로드 진행
+          manualSave().catch(err => {
+            logger.error('❌ [LOAD-POST] 백그라운드 저장 실패:', err);
+          });
+          logger.info('✅ [LOAD-POST] 저장 요청 보냄 (기다리지 않음) - 새 문서 로드 진행');
         } else if (currentDocument.isEmpty) {
           // Q2-B: 아무것도 적지 않은 새글인 경우 - 그냥 진행 (버리기)
           logger.info('🗑️ [LOAD-POST] 빈 새글 감지 - 저장 없이 진행');
