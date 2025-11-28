@@ -342,13 +342,22 @@ function AppContent() {
       } catch { }
 
       // ✅ Client-Side Publish 실행
-      // 🚀 FIX: currentDocument는 저장된 상태일 수 있으므로, 현재 에디터의 최신 내용(content, title)을 반영하여 배포
-      const docToPublish = {
-        ...currentDocument,
-        title: title,   // 현재 에디터의 제목
-        content: content // 현재 에디터의 내용
-      };
+      // 🟢 [변경] 배포 전 저장 강제 및 최신 문서 획득
+      let docToPublish;
+      try {
+        const savedDoc = await manualSave();
+        // 저장된 문서가 있으면 그것을 사용, 없으면(변경사항 없음 등) 현재 상태 사용
+        docToPublish = savedDoc || {
+          ...currentDocument,
+          title: title,
+          content: content
+        };
+      } catch (saveError) {
+        setMessage({ type: 'error', text: '저장 실패. 배포를 중단합니다.' });
+        return; // 저장 실패 시 배포 중단
+      }
 
+      // 🟢 [변경] 최신 상태(docToPublish)로 배포 요청
       const result = await publish(docToPublish);
 
       setMessage({
@@ -376,7 +385,7 @@ function AppContent() {
         });
       } catch { }
     }
-  }, [currentDocument, isPublishing, queryClient, publish, title, content]);
+  }, [currentDocument, isPublishing, queryClient, publish, title, content, manualSave]);
 
   // 문서 로드
   const loadPost = useCallback(async (id) => {

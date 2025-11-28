@@ -294,10 +294,14 @@ const useAutoSave = ({
       onSaveSuccess?.(savedDocument || documentToSave);
       logger.info('✅ [MANUAL-SAVE] onSaveSuccess 콜백 실행');
 
+      // 🟢 [변경] 저장된 최신 문서 객체 반환
+      return savedDocument || documentToSave;
+
     } catch (error) {
       logger.error('❌ [MANUAL-SAVE] 수동 저장 실패:', error);
       setSaveStatus('error');
       onSaveError?.(error);
+      throw error; // 🟢 [변경] 호출자가 실패를 알 수 있도록 에러 전파
     } finally {
       // 수동 저장 플래그 해제
       isManualSaveRef.current = false;
