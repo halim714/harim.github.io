@@ -222,8 +222,10 @@ export const storage = {
         const saved = await this._savePostToGitHub(post);
 
         // 성공 시 로컬 DB에 동기화 완료 표시
-        // saved.id는 docId이므로 정확함
-        await dbHelpers.markSynced(saved.id);
+        // 🟢 [변경] filename도 같이 업데이트하여 영구 보존
+        await dbHelpers.markSyncedWithUpdate(saved.id, {
+          filename: saved.filename
+        });
         console.log(`✅ [GitHub] 백그라운드 저장 완료: ${post.title}`);
       } catch (error) {
         console.error(`❌ [GitHub] 백그라운드 저장 실패: ${post.title}`, error);
@@ -365,6 +367,20 @@ export const storage = {
     if (!localDoc) {
       console.warn('문서 없음:', id);
       return { id };
+    }
+
+    // 🟢 [변경] DB에 저장된 filename 우선 사용
+    // 만약 DB에 filename이 없다면(구 데이터), getPostList로 찾아옴 (폴백)
+    if (!localDoc.filename) {
+      try {
+        const postList = await this.getPostList();
+        const mergedDoc = postList.find(p => p.id === id);
+        if (mergedDoc) {
+          localDoc.filename = mergedDoc.filename; // 메모리상 업데이트
+        }
+      } catch (e) {
+        console.warn('Fallback fetch failed:', e);
+      }
     }
 
     const filename = localDoc.filename || id;
