@@ -48,6 +48,7 @@ export const dbHelpers = {
         title: post.title,
         content: post.content,
         frontMatter: post.frontMatter,
+        filename: post.filename, // 🟢 [추가] 파일명 영구 저장
         updatedAt: new Date().toISOString(),
         synced: false, // 🔴 미동기화 상태로 저장
         // 기존 필드 유지
@@ -67,12 +68,21 @@ export const dbHelpers = {
     }
   },
 
-  // 동기화 완료 표시
+  // 동기화 완료 표시 (업데이트 포함)
   async markSynced(docId) {
+    // 하위 호환성을 위해 유지
+    return this.markSyncedWithUpdate(docId);
+  },
+
+  // 🟢 [New] 동기화 완료 및 추가 데이터 업데이트
+  async markSyncedWithUpdate(docId, updates = {}) {
     try {
       const doc = await db.documents.where('docId').equals(docId).first();
       if (doc) {
-        await db.documents.update(doc.id, { synced: true }); // 🟢 동기화 완료
+        await db.documents.update(doc.id, {
+          synced: true, // 🟢 동기화 완료
+          ...updates    // 🟢 추가 필드 업데이트 (filename 등)
+        });
       }
     } catch (e) {
       console.error('Failed to mark synced:', e);
