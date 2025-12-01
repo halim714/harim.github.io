@@ -209,33 +209,53 @@ export const storage = {
 
   // 🟢 [New] Local-First 래퍼 함수
   async savePost(post) {
-    // 1. 로컬 DB에 즉시 저장 (0ms)
-    await dbHelpers.saveLocal(post);
+    let docToSave = { ...post };
 
-    // 2. GitHub 저장은 백그라운드 + 디바운스 (5초)
+    // 1. 🟢 [Fix] 임시 ID면 즉시 영구 ID 발급 및 교체 (Client-Side ID Stabilization)
+    // 이렇게 해야 에디터와 GitHub가 동일한 ID를 사용하게 되어 "Split Brain" 방지
+    if (isTemporaryId(docToSave.id)) {
+      const newId = generateDocumentId();
+      console.log(`🔄 [ID-STABILIZE] 임시 ID(${docToSave.id}) → 영구 ID(${newId}) 교체`);
+
+      docToSave.id = newId;
+      docToSave.frontMatter = {
+        ...(docToSave.frontMatter || {}),
+        docId: newId
+      };
+
+      // 구 임시 데이터 삭제 (IndexedDB)
+      await dbHelpers.deleteLocal(post.id);
+    }
+
+    // 2. 로컬 DB에 즉시 저장 (0ms)
+    // 이제 영구 ID로 저장되므로, 이후 GitHub 저장 시에도 이 ID가 유지됨
+    await dbHelpers.saveLocal(docToSave);
+
+    // 3. GitHub 저장은 백그라운드 + 디바운스 (5초)
     // 문서 ID별로 타이머가 따로 돌아가므로 A문서 저장이 B문서 저장을 방해하지 않음
-    saveDebouncer.run(post.id, async () => {
+    saveDebouncer.run(docToSave.id, async () => {
       try {
-        console.log(`☁️ [GitHub] 백그라운드 저장 시작: ${post.title}`);
+        console.log(`☁️ [GitHub] 백그라운드 저장 시작: ${docToSave.title}`);
 
         // 기존의 복잡한 로직(파일명/Slug 등)을 그대로 재사용!
-        const saved = await this._savePostToGitHub(post);
+        const saved = await this._savePostToGitHub(docToSave);
 
         // 성공 시 로컬 DB에 동기화 완료 표시
         // 🟢 [변경] filename도 같이 업데이트하여 영구 보존
         await dbHelpers.markSyncedWithUpdate(saved.id, {
           filename: saved.filename
         });
-        console.log(`✅ [GitHub] 백그라운드 저장 완료: ${post.title}`);
+        console.log(`✅ [GitHub] 백그라운드 저장 완료: ${docToSave.title}`);
       } catch (error) {
-        console.error(`❌ [GitHub] 백그라운드 저장 실패: ${post.title}`, error);
+        console.error(`❌ [GitHub] 백그라운드 저장 실패: ${docToSave.title}`, error);
         // 실패해도 로컬엔 남아있음 (추후 Retry 로직 추가 가능)
       }
     }, 5000);
 
-    // 3. UI에는 즉시 성공 응답 (기다리지 않음)
+    // 4. UI에는 즉시 성공 응답 (기다리지 않음)
+    // 🟢 [Fix] 변경된 ID가 포함된 docToSave를 반환하여 에디터가 ID를 업데이트하도록 함
     return {
-      ...post,
+      ...docToSave,
       updatedAt: new Date().toISOString(),
       syncStatus: 'pending'
     };
