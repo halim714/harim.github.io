@@ -22,13 +22,17 @@ export function slugify(text) {
  */
 export function generateUniqueFilename(title, existingFiles = []) {
     let slug = slugify(title);
-    let counter = 1;
     let filename = `${slug}.md`;
 
     // existingFiles는 'filename.md' 형식의 배열이라고 가정
-    while (existingFiles.includes(filename)) {
-        filename = `${slug}-${counter}.md`;
-        counter++;
+    if (existingFiles.includes(filename)) {
+        // 🟢 [PRD Phase 2] 충돌 시 Short UUID 사용
+        // crypto가 있으면 사용, 없으면 Math.random fallback
+        const randomSuffix = typeof crypto !== 'undefined' && crypto.randomUUID
+            ? crypto.randomUUID().slice(0, 8)
+            : Math.random().toString(36).substring(2, 10);
+
+        filename = `${slug}-${randomSuffix}.md`;
     }
 
     return filename;

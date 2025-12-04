@@ -270,27 +270,39 @@ export const storage = {
     let filename;
     let oldFilename = null;
 
-    if (existingPost) {
-      // 기존 문서: 파일명이 slug와 다르면 변경
-      const currentFilename = existingPost.filename;
-      if (currentFilename !== slug) {
-        // 파일명 변경 (slug 중복 체크)
-        const existingFilenames = postList
-          .filter(p => p.id !== docId)
-          .map(p => p.filename);
-
-        filename = generateUniqueFilename(slug, existingFilenames.map(f => `${f}.md`)).replace('.md', '');
-        oldFilename = currentFilename;
-        console.log(`🔄 [SAVE] 파일명 변경: ${oldFilename}.md → ${filename}.md`);
+    // 🟢 [PRD Phase 2] 파일명 동기화 로직
+    // 1. 제목이 없거나 '새 메모'인 경우 -> 기존 파일명 유지 또는 기본값
+    if (!title || title === '새 메모' || title.trim().length < 2) {
+      if (existingPost) {
+        filename = existingPost.filename;
+        console.log(`💾 [SAVE] 제목이 기본값이므로 파일명 유지: ${filename}.md`);
       } else {
-        filename = currentFilename;
-        console.log(`💾 [SAVE] 파일명 유지: ${filename}.md`);
+        // 새 문서인데 제목도 없음 -> 기본값 (하지만 Editor.jsx에서 이미 '새-메모.md'로 설정됨)
+        filename = post.filename || '새-메모';
       }
     } else {
-      // 새 문서: slug로 파일명 생성 (중복 체크)
-      const existingFilenames = postList.map(p => p.filename);
-      filename = generateUniqueFilename(slug, existingFilenames.map(f => `${f}.md`)).replace('.md', '');
-      console.log(`🆕 [SAVE] 새 파일명 생성: ${filename}.md`);
+      // 2. 의미 있는 제목이 있는 경우 -> Slug 기반 파일명 생성
+      // 기존 문서가 있고, 그 파일명이 이미 현재 Slug와 같다면 유지
+      if (existingPost && existingPost.filename === slug) {
+        filename = existingPost.filename;
+        console.log(`💾 [SAVE] 파일명 유지 (Slug 일치): ${filename}.md`);
+      } else {
+        // 파일명 변경 필요 (또는 새 문서)
+        // 중복 체크를 위해 다른 문서들의 파일명 목록 수집
+        const existingFilenames = postList
+          .filter(p => p.id !== docId) // 나 자신 제외
+          .map(p => p.filename);
+
+        // 충돌 시 Short UUID 붙임 (slugify.js의 generateUniqueFilename 활용)
+        filename = generateUniqueFilename(slug, existingFilenames.map(f => `${f}.md`)).replace('.md', '');
+
+        if (existingPost && existingPost.filename !== filename) {
+          oldFilename = existingPost.filename;
+          console.log(`🔄 [SAVE] 파일명 변경: ${oldFilename}.md → ${filename}.md`);
+        } else {
+          console.log(`🆕 [SAVE] 새 파일명 결정: ${filename}.md`);
+        }
+      }
     }
 
     // ✅ 4. Front Matter 주입
