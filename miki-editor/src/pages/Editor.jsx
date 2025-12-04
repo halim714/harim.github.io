@@ -67,11 +67,13 @@ const extractTitleFromContent = (content) => {
   return cleanTitle || '새 메모';
 };
 
+import { generateDocumentId } from '../utils/id-generator';
+
 const createNewMemo = () => {
-  const timestamp = Date.now();
-  const randomSuffix = Math.random().toString(36).substring(2, 8);
+  const id = generateDocumentId(); // UUID 즉시 생성
   return {
-    id: `memo_${timestamp}_${randomSuffix}`,
+    id: id,
+    filename: '새-메모.md', // Slug 기반 초기값
     title: '새 메모',
     content: '',
     createdAt: new Date().toISOString(),

@@ -190,6 +190,7 @@ const useAutoSave = ({
         content,
         title,
         titleMode,
+        filename: document.filename, // 🟢 [Fix] filename 보존
         // ✅ 자동저장 시에만 updatedAt 명시적으로 설정
         updatedAt: new Date().toISOString()
       };
@@ -272,6 +273,7 @@ const useAutoSave = ({
         content,
         title,
         titleMode,
+        filename: document.filename, // 🟢 [Fix] filename 보존
         updatedAt: new Date().toISOString()
       };
       logger.info('✅ [MANUAL-SAVE] 저장할 문서 데이터 준비:', {
