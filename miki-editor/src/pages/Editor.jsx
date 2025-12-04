@@ -67,7 +67,7 @@ const extractTitleFromContent = (content) => {
   return cleanTitle || '새 메모';
 };
 
-import { generateDocumentId } from '../utils/id-generator';
+import { generateDocumentId, isTemporaryId } from '../utils/id-generator';
 
 const createNewMemo = () => {
   const id = generateDocumentId(); // UUID 즉시 생성
@@ -582,6 +582,60 @@ function AppContent() {
       newPost();
     }
   }, [isLoadingDocuments, currentDocument, newPost]);
+
+  // 🎯 Phase 3: Legacy Migration (memo_ -> uuid)
+  useEffect(() => {
+    const migrateLegacyDocument = async () => {
+      // 1. 대상 확인: 현재 문서가 있고, ID가 임시 포맷(memo_)인 경우
+      if (!currentDocument || !isTemporaryId(currentDocument.id)) return;
+
+      const oldId = currentDocument.id;
+      const lockKey = `migration_lock_${oldId}`;
+
+      // 2. Lock 확인 (중복 실행 방지)
+      if (localStorage.getItem(lockKey)) return;
+      localStorage.setItem(lockKey, 'true');
+
+      try {
+        logger.info(`🔄 [MIGRATION] Legacy document detected: ${oldId}`);
+
+        // 3. 새 ID 생성 및 데이터 준비
+        const newId = generateDocumentId();
+        const migratedDoc = {
+          ...currentDocument,
+          id: newId,
+          // 파일명은 기존 것 유지하거나 새로 생성 (Phase 2 로직이 storage에서 처리함)
+          filename: currentDocument.filename || '새-메모.md'
+        };
+
+        // 4. 새 문서 저장 (IndexedDB + GitHub)
+        // savePost 내부에서 Phase 2 로직(파일명 동기화)도 수행됨
+        await storage.savePost(migratedDoc);
+        logger.info(`✅ [MIGRATION] Saved as new ID: ${newId}`);
+
+        // 5. 구 문서 삭제
+        await storage.deletePost(oldId);
+        logger.info(`🗑️ [MIGRATION] Deleted old ID: ${oldId}`);
+
+        // 6. 상태 업데이트 (UI 반영)
+        setCurrentDocument(migratedDoc);
+
+        // 7. URL 업데이트 (Cosmetic)
+        // 앱이 URL 라우팅을 완벽히 지원하지 않더라도, 주소창에 UUID를 표시하여 사용자에게 피드백 제공
+        const newUrl = window.location.href.replace(oldId, newId);
+        if (newUrl !== window.location.href) {
+          window.history.replaceState(null, '', newUrl);
+        }
+
+      } catch (e) {
+        logger.error('❌ [MIGRATION] Failed:', e);
+      } finally {
+        localStorage.removeItem(lockKey);
+      }
+    };
+
+    migrateLegacyDocument();
+  }, [currentDocument]);
 
   // 문서 삭제 후 처리
   const handleDeletePost = useCallback((deletedPost) => {
