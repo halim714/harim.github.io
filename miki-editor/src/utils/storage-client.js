@@ -213,19 +213,8 @@ export const storage = {
 
     // 1. 🟢 [Fix] 임시 ID면 즉시 영구 ID 발급 및 교체 (Client-Side ID Stabilization)
     // 이렇게 해야 에디터와 GitHub가 동일한 ID를 사용하게 되어 "Split Brain" 방지
-    if (isTemporaryId(docToSave.id)) {
-      const newId = generateDocumentId();
-      console.log(`🔄 [ID-STABILIZE] 임시 ID(${docToSave.id}) → 영구 ID(${newId}) 교체`);
-
-      docToSave.id = newId;
-      docToSave.frontMatter = {
-        ...(docToSave.frontMatter || {}),
-        docId: newId
-      };
-
-      // 구 임시 데이터 삭제 (IndexedDB)
-      await dbHelpers.deleteLocal(post.id);
-    }
+    // 1. 🟢 [Client-Side UUID] 이미 UUID이므로 별도 처리 불필요
+    // (Phase 3 레거시 마이그레이션은 별도 로직에서 처리)
 
     // 2. 로컬 DB에 즉시 저장 (0ms)
     // 이제 영구 ID로 저장되므로, 이후 GitHub 저장 시에도 이 ID가 유지됨
@@ -266,13 +255,9 @@ export const storage = {
     const github = await getGithub();
 
     // ✅ 1. docId 확정 (새 문서면 생성, 기존 문서면 유지)
-    let docId = post.id;
-    if (isTemporaryId(docId)) {
-      docId = generateDocumentId();
-      console.log(`🆕 [SAVE] 새 docId 생성: ${docId}`);
-    } else {
-      console.log(`📝 [SAVE] 기존 docId 유지: ${docId}`);
-    }
+    // ✅ 1. docId 확정 (이미 UUID이므로 그대로 사용)
+    const docId = post.id;
+    console.log(`📝 [SAVE] docId 사용: ${docId}`);
 
     // ✅ 2. 파일명 결정 (slug 기반)
     const title = post.title || extractTitle(post.content);
