@@ -58,12 +58,7 @@ export default function OnboardingSetup() {
                 setMessage('설정 완료! 🎉');
                 setDetails(result);
                 confetti({ particleCount: 100, spread: 70, origin: { y: 0.6 } });
-
-                // 2초 후 자동으로 에디터로 이동
-                setTimeout(() => {
-                    completeSetup();
-                    navigate('/editor');
-                }, 2000);
+                // 사용자가 직접 "에디터로 이동" 버튼 클릭해야 함
             } else {
                 setStatus('error');
                 setMessage('설정 중 문제가 발생했습니다.');
