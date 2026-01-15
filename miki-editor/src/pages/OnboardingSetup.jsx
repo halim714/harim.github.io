@@ -1,4 +1,4 @@
-import React, { useState, useEffect } from 'react';
+import React, { useState, useEffect, useRef } from 'react';
 import { useNavigate } from 'react-router-dom';
 import confetti from 'canvas-confetti';
 import { Loader2, CheckCircle, XCircle, ArrowRight, AlertCircle } from 'lucide-react';
@@ -7,14 +7,17 @@ import { GitHubService } from '../services/github';
 import { useAuth } from '../App';
 
 export default function OnboardingSetup() {
-    const [status, setStatus] = useState('initializing'); // 'initializing' | 'processing' | 'success' | 'error' | 'conflict'
+    const [status, setStatus] = useState('initializing');
     const [message, setMessage] = useState('준비 중...');
     const [details, setDetails] = useState(null);
     const [progress, setProgress] = useState(0);
     const navigate = useNavigate();
     const { completeSetup } = useAuth();
+    const isRunning = useRef(false);
 
     useEffect(() => {
+        if (isRunning.current) return; // 중복 실행 방지
+        isRunning.current = true;
         startSetup();
     }, []);
 
