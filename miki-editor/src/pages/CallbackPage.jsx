@@ -1,4 +1,4 @@
-import React, { useEffect, useState } from 'react';
+import React, { useEffect, useState, useRef } from 'react';
 import { useNavigate, useSearchParams } from 'react-router-dom';
 import { AuthService } from '../services/auth';
 import { useAuth } from '../App';
@@ -9,8 +9,12 @@ export default function CallbackPage() {
     const [error, setError] = useState('');
     const navigate = useNavigate();
     const auth = useAuth();
+    const isProcessing = useRef(false);
 
     useEffect(() => {
+        if (isProcessing.current) return; // 중복 실행 방지
+        isProcessing.current = true;
+
         const code = searchParams.get('code');
 
         if (!code) {
@@ -53,7 +57,7 @@ export default function CallbackPage() {
                 setError(err.message);
                 setStatus('error');
             });
-    }, [searchParams, navigate, auth]);
+    }, [searchParams, navigate]); // auth 의존성 제거
 
     return (
         <div style={{
