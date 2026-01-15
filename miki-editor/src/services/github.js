@@ -7,7 +7,12 @@ import { Octokit } from 'octokit';
  */
 export class GitHubService {
     constructor(token) {
-        this.octokit = new Octokit({ auth: token });
+        this.octokit = new Octokit({
+            auth: token,
+            retry: {
+                doNotRetry: [400, 401, 403, 404, 409, 410, 422, 451]
+            }
+        });
         this.username = null;
     }
 
