@@ -1,12 +1,14 @@
 import React, { useEffect, useState } from 'react';
 import { useNavigate, useSearchParams } from 'react-router-dom';
 import { AuthService } from '../services/auth';
+import { useAuth } from '../App';
 
 export default function CallbackPage() {
     const [searchParams] = useSearchParams();
     const [status, setStatus] = useState('processing');
     const [error, setError] = useState('');
     const navigate = useNavigate();
+    const auth = useAuth();
 
     useEffect(() => {
         const code = searchParams.get('code');
@@ -27,10 +29,16 @@ export default function CallbackPage() {
                 }
                 return res.json();
             })
-            .then(data => {
+            .then(async data => {
                 if (data.token) {
                     // localStorage에 토큰 저장
                     AuthService.saveToken(data.token);
+
+                    // AuthProvider 상태 즉시 갱신 (새로고침 없이)
+                    if (auth?.refreshAuth) {
+                        await auth.refreshAuth();
+                    }
+
                     setStatus('success');
 
                     // 1초 후 메인 페이지로 이동
@@ -45,7 +53,7 @@ export default function CallbackPage() {
                 setError(err.message);
                 setStatus('error');
             });
-    }, [searchParams, navigate]);
+    }, [searchParams, navigate, auth]);
 
     return (
         <div style={{
