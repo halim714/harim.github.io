@@ -167,7 +167,7 @@ export class GitHubService {
     }
 
     /**
-     * Jekyll 설정 (안전 모드: 이미 존재하면 건너뜀)
+     * Jekyll 설정 (파일 존재 시 덮어씀)
      */
     async setupJekyll(repo) {
         const files = [
@@ -177,18 +177,7 @@ export class GitHubService {
         ];
 
         for (const file of files) {
-            // 파일 존재 여부 확인
-            try {
-                await this.getFile(repo.name, file.path);
-                console.log(`Skipping ${file.path} (already exists)`);
-            } catch (error) {
-                // 404면 생성 진행
-                if (error.message.includes('Expected a file') || error.status === 404 || error.message.includes('Not Found')) {
-                    await this.createOrUpdateFile(repo.name, file.path, file.content, `Setup: ${file.path}`);
-                } else {
-                    throw error;
-                }
-            }
+            await this.createOrUpdateFile(repo.name, file.path, file.content, `Setup: ${file.path}`);
         }
     }
 
@@ -212,7 +201,7 @@ export class GitHubService {
     }
 
     /**
-     * 초기 디렉토리 구조 생성 (안전 모드)
+     * 초기 디렉토리 구조 생성
      */
     async createInitialStructure(repo) {
         const readme = `# Miki Data Repository
@@ -231,15 +220,11 @@ miki-editor/
         try {
             await this.createOrUpdateFile(repo.name, 'miki-editor/posts/.gitkeep', '', 'Initialize directory structure');
         } catch (error) {
-            if (error.status !== 422) throw error; // 422 외 에러만 throw
+            if (error.status !== 422) throw error;
         }
 
-        // README는 존재하면 건너뜀
-        try {
-            await this.getFile(repo.name, 'README.md');
-        } catch (error) {
-            await this.createOrUpdateFile(repo.name, 'README.md', readme, 'Add README');
-        }
+        // README 생성
+        await this.createOrUpdateFile(repo.name, 'README.md', readme, 'Add README');
     }
 
     /**
