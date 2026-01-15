@@ -33,27 +33,18 @@ export default function OnboardingSetup() {
 
             const github = new GitHubService(token);
 
-            // Step 1: 사용자 이름 설정
-            setMessage('사용자 정보 확인 중...');
-            setProgress(20);
-            await github.setUsername();
-
-            // Step 2: 충돌 확인
-            setMessage('기존 저장소 확인 중...');
-            setProgress(30);
-            const conflicts = await github.checkConflicts();
-
-            if (conflicts.hasConflicts && !useExisting) {
-                setStatus('conflict');
-                setMessage('기존 저장소가 발견되었습니다.');
-                setDetails(conflicts);
-                return;
-            }
-
-            // Step 3: 저장소 생성
-            setMessage(useExisting ? '기존 저장소 연결 중...' : '저장소 생성 중...');
+            // 저장소 설정 (setUsername, checkConflicts, 생성 모두 initialize에서 처리)
+            setMessage(useExisting ? '기존 저장소 연결 중...' : '저장소 설정 중...');
             setProgress(50);
             const result = await github.initialize({ useExisting });
+
+            // 충돌 발견 시
+            if (result.needsResolution) {
+                setStatus('conflict');
+                setMessage('기존 저장소가 발견되었습니다.');
+                setDetails(result.conflicts);
+                return;
+            }
 
             if (result.success) {
                 setProgress(100);

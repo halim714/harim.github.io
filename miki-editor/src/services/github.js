@@ -64,17 +64,14 @@ export class GitHubService {
         // 2. 저장소 생성
         const { dataRepo, pagesRepo } = await this.createRepositories(options.useExisting);
 
-        // 🔧 GitHub API 전파 대기 (레포 생성 직후 파일 접근 시 404 방지)
-        await this.delay(3000);
-
-        // 3. Jekyll 설정 (재시도 포함)
-        await this.retryOperation(() => this.setupJekyll(pagesRepo), 3);
+        // 3. Jekyll 설정
+        await this.setupJekyll(pagesRepo);
 
         // 4. GitHub Pages 활성화
         await this.enablePages(pagesRepo);
 
-        // 5. 초기 구조 생성 (재시도 포함)
-        await this.retryOperation(() => this.createInitialStructure(dataRepo), 3);
+        // 5. 초기 구조 생성
+        await this.createInitialStructure(dataRepo);
 
         return {
             success: true,
