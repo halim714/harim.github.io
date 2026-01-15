@@ -21,6 +21,28 @@ export class GitHubService {
     }
 
     /**
+     * 지연 헬퍼
+     */
+    delay(ms) {
+        return new Promise(resolve => setTimeout(resolve, ms));
+    }
+
+    /**
+     * 재시도 래퍼 (GitHub API 전파 지연 대응)
+     */
+    async retryOperation(operation, maxRetries = 3, delayMs = 2000) {
+        for (let i = 0; i < maxRetries; i++) {
+            try {
+                return await operation();
+            } catch (error) {
+                if (i === maxRetries - 1) throw error;
+                console.log(`Retry ${i + 1}/${maxRetries} after error:`, error.message);
+                await this.delay(delayMs);
+            }
+        }
+    }
+
+    /**
      * 메인 초기화 함수
      */
     async initialize(options = {}) {
@@ -42,14 +64,17 @@ export class GitHubService {
         // 2. 저장소 생성
         const { dataRepo, pagesRepo } = await this.createRepositories(options.useExisting);
 
-        // 3. Jekyll 설정
-        await this.setupJekyll(pagesRepo);
+        // 🔧 GitHub API 전파 대기 (레포 생성 직후 파일 접근 시 404 방지)
+        await this.delay(3000);
+
+        // 3. Jekyll 설정 (재시도 포함)
+        await this.retryOperation(() => this.setupJekyll(pagesRepo), 3);
 
         // 4. GitHub Pages 활성화
         await this.enablePages(pagesRepo);
 
-        // 5. 초기 구조 생성
-        await this.createInitialStructure(dataRepo);
+        // 5. 초기 구조 생성 (재시도 포함)
+        await this.retryOperation(() => this.createInitialStructure(dataRepo), 3);
 
         return {
             success: true,
