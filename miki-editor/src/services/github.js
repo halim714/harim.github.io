@@ -115,7 +115,8 @@ export class GitHubService {
                 });
                 return data;
             } catch (error) {
-                if (useExisting && error.status === 422) {
+                // 422 = 레포가 이미 존재함 -> 기존 레포 사용
+                if (error.status === 422) {
                     try {
                         const { data } = await this.octokit.rest.repos.get({
                             owner: this.username,
@@ -199,8 +200,12 @@ miki-editor/
 \`\`\`
 `;
 
-        // .gitkeep은 덮어써도 상관없음 (빈 파일)
-        await this.createOrUpdateFile(repo.name, 'miki-editor/posts/.gitkeep', '', 'Initialize directory structure');
+        // .gitkeep 생성 (이미 존재하면 무시)
+        try {
+            await this.createOrUpdateFile(repo.name, 'miki-editor/posts/.gitkeep', '', 'Initialize directory structure');
+        } catch (error) {
+            if (error.status !== 422) throw error; // 422 외 에러만 throw
+        }
 
         // README는 존재하면 건너뜀
         try {
@@ -237,58 +242,6 @@ miki-editor/
                 return [];
             }
             throw error;
-        }
-    }
-
-    /**
-     * GraphQL을 사용하여 파일 목록과 메타데이터(Front Matter)를 한 번에 가져오기
-     * (Restored from commit 670e85f)
-     */
-    async getFilesWithMetadata(repoName, path) {
-        try {
-            const query = `
-                query getPosts($owner: String!, $repo: String!, $path: String!) {
-                    repository(owner: $owner, name: $repo) {
-                        object(expression: $path) {
-                            ... on Tree {
-                                entries {
-                                    name
-                                    object {
-                                        ... on Blob {
-                                            text
-                                        }
-                                    }
-                                }
-                            }
-                        }
-                    }
-                }
-            `;
-
-            // HEAD:path 형식으로 변환
-            const expression = `HEAD:${path}`;
-
-            const response = await this.octokit.graphql(query, {
-                owner: this.username,
-                repo: repoName,
-                path: expression
-            });
-
-            const entries = response.repository?.object?.entries;
-
-            if (!entries) {
-                return [];
-            }
-
-            return entries.map(entry => ({
-                name: entry.name,
-                text: entry.object?.text || ''
-            }));
-
-        } catch (error) {
-            console.warn('GraphQL fetch failed, falling back to REST:', error);
-            // GraphQL 실패 시 REST API로 폴백 (내용은 없음)
-            return this.getFiles(repoName, path);
         }
     }
 

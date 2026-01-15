@@ -4,6 +4,7 @@ import confetti from 'canvas-confetti';
 import { Loader2, CheckCircle, XCircle, ArrowRight, AlertCircle } from 'lucide-react';
 import { AuthService } from '../services/auth';
 import { GitHubService } from '../services/github';
+import { useAuth } from '../App';
 
 export default function OnboardingSetup() {
     const [status, setStatus] = useState('initializing'); // 'initializing' | 'processing' | 'success' | 'error' | 'conflict'
@@ -11,6 +12,7 @@ export default function OnboardingSetup() {
     const [details, setDetails] = useState(null);
     const [progress, setProgress] = useState(0);
     const navigate = useNavigate();
+    const { completeSetup } = useAuth();
 
     useEffect(() => {
         startSetup();
@@ -56,6 +58,12 @@ export default function OnboardingSetup() {
                 setMessage('설정 완료! 🎉');
                 setDetails(result);
                 confetti({ particleCount: 100, spread: 70, origin: { y: 0.6 } });
+
+                // 2초 후 자동으로 에디터로 이동
+                setTimeout(() => {
+                    completeSetup();
+                    navigate('/editor');
+                }, 2000);
             } else {
                 setStatus('error');
                 setMessage('설정 중 문제가 발생했습니다.');
@@ -70,6 +78,7 @@ export default function OnboardingSetup() {
     };
 
     const handleGoToEditor = () => {
+        completeSetup();
         navigate('/editor');
     };
 

@@ -19,7 +19,13 @@ const AuthContext = createContext(null);
 function AuthProvider({ children }) {
   const [auth, setAuth] = useState({ loading: true, user: null, needsSetup: false });
 
+  // 초기 로드 시 인증 상태 확인
   useEffect(() => {
+    refreshAuth();
+  }, []);
+
+  // 토큰 저장 후 호출하여 상태 즉시 갱신 (새로고침 없이)
+  const refreshAuth = async () => {
     const token = AuthService.getToken();
 
     if (!token) {
@@ -27,30 +33,33 @@ function AuthProvider({ children }) {
       return;
     }
 
-    // 사용자 정보 + needsSetup 확인
-    Promise.all([
-      AuthService.getCurrentUser(),
-      checkRepoExists(token, 'miki-data')
-    ])
-      .then(([user, hasRepo]) => {
-        if (user) {
-          setAuth({
-            loading: false,
-            user,
-            needsSetup: !hasRepo
-          });
-        } else {
-          setAuth({ loading: false, user: null, needsSetup: false });
-        }
-      })
-      .catch((error) => {
-        console.error('Auth check error:', error);
-        AuthService.logout();
+    try {
+      const [user, hasRepo] = await Promise.all([
+        AuthService.getCurrentUser(),
+        checkRepoExists(token, 'miki-data')
+      ]);
+      if (user) {
+        setAuth({ loading: false, user, needsSetup: !hasRepo });
+      } else {
         setAuth({ loading: false, user: null, needsSetup: false });
-      });
-  }, []);
+      }
+    } catch (error) {
+      console.error('Auth check error:', error);
+      AuthService.logout();
+      setAuth({ loading: false, user: null, needsSetup: false });
+    }
+  };
 
-  return <AuthContext.Provider value={auth}>{children}</AuthContext.Provider>;
+  // 온보딩 완료 시 호출
+  const completeSetup = () => {
+    setAuth(prev => ({ ...prev, needsSetup: false }));
+  };
+
+  return (
+    <AuthContext.Provider value={{ ...auth, refreshAuth, completeSetup }}>
+      {children}
+    </AuthContext.Provider>
+  );
 }
 
 // 저장소 존재 확인 헬퍼
