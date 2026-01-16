@@ -1,7 +1,7 @@
 @tailwind base;
 @tailwind components;
 @tailwind utilities;
- 
+
 @layer base {
   :root {
     --background: 0 0% 100%;
@@ -30,7 +30,7 @@
     --chart-4: 43 74% 66%;
     --chart-5: 27 87% 67%;
   }
- 
+
   .dark {
     --background: 222.2 84% 4.9%;
     --foreground: 210 40% 98%;
@@ -58,11 +58,12 @@
     --chart-5: 340 75% 55%;
   }
 }
- 
+
 @layer base {
   * {
     @apply border-border;
   }
+
   body {
     @apply bg-background text-foreground;
   }
@@ -75,8 +76,16 @@
     'Ubuntu', 'Cantarell', 'Fira Sans', 'Droid Sans', 'Helvetica Neue', system-ui, Arial, sans-serif;
   /* 에디터 기본 본문 폰트 크기 (pt). 사용자 요구: 12pt */
   --miki-editor-font-size: 12pt;
+
+  /* === Editor Layout Variables === */
+  --editor-max-width: 800px;
+  --editor-padding-desktop: 48px;
+  --editor-padding-tablet: 32px;
+  --editor-padding-mobile: 16px;
 }
-html, body {
+
+html,
+body {
   margin: 0;
   height: 100vh;
   font-family: var(--miki-font-ui) !important;
@@ -106,8 +115,10 @@ html::-webkit-scrollbar {
 body.miki-focus-mode {
   background-color: #fafafa;
 }
+
 body.miki-help-open {
-  overflow: hidden; /* 도움말 오버레이 시 스크롤 잠금 */
+  overflow: hidden;
+  /* 도움말 오버레이 시 스크롤 잠금 */
 }
 
 code {
@@ -116,8 +127,13 @@ code {
 }
 
 /* 에디터 기본 상단 툴바 숨김 (플로팅 툴바 사용) */
-.miki-editor-container .toastui-editor-toolbar { display: none !important; }
-.miki-editor-container .toastui-editor-mode-switch { display: none !important; }
+.miki-editor-container .toastui-editor-toolbar {
+  display: none !important;
+}
+
+.miki-editor-container .toastui-editor-mode-switch {
+  display: none !important;
+}
 
 /* 플로팅 툴바 스타일 */
 .miki-floating-toolbar {
@@ -129,14 +145,16 @@ code {
   background: rgba(255, 255, 255, 0.95);
   backdrop-filter: saturate(120%) blur(6px);
   border: 1px solid #e5e7eb;
-  box-shadow: 0 8px 24px rgba(0,0,0,0.12);
+  box-shadow: 0 8px 24px rgba(0, 0, 0, 0.12);
   border-radius: 12px;
   padding: 6px;
 }
 
 .miki-floating-toolbar button {
-  width: 48px; /* 1.4배 확대 */
-  height: 48px; /* 1.4배 확대 */
+  width: 48px;
+  /* 1.4배 확대 */
+  height: 48px;
+  /* 1.4배 확대 */
   display: inline-flex;
   align-items: center;
   justify-content: center;
@@ -164,20 +182,26 @@ code {
 /* 🔥 NEW: Phantom Document 시각적 구분 스타일 */
 .phantom-temporary {
   opacity: 0.8;
-  border-left: 3px solid #fbbf24 !important; /* 노란색 - 임시 상태 */
-  background-color: #fefce8; /* 연한 노란색 배경 */
+  border-left: 3px solid #fbbf24 !important;
+  /* 노란색 - 임시 상태 */
+  background-color: #fefce8;
+  /* 연한 노란색 배경 */
 }
 
 .phantom-saving {
   opacity: 0.9;
-  border-left: 3px solid #3b82f6 !important; /* 파란색 - 저장 중 */
-  background-color: #eff6ff; /* 연한 파란색 배경 */
+  border-left: 3px solid #3b82f6 !important;
+  /* 파란색 - 저장 중 */
+  background-color: #eff6ff;
+  /* 연한 파란색 배경 */
 }
 
 .phantom-error {
   opacity: 0.7;
-  border-left: 3px solid #ef4444 !important; /* 빨간색 - 오류 상태 */
-  background-color: #fef2f2; /* 연한 빨간색 배경 */
+  border-left: 3px solid #ef4444 !important;
+  /* 빨간색 - 오류 상태 */
+  background-color: #fef2f2;
+  /* 연한 빨간색 배경 */
 }
 
 .phantom-temporary::before {
@@ -216,6 +240,7 @@ code {
   align-items: center;
   justify-content: center;
 }
+
 .miki-help-modal {
   width: min(720px, 92vw);
   background: #fff;
@@ -223,6 +248,7 @@ code {
   box-shadow: 0 20px 48px rgba(0, 0, 0, 0.25);
   overflow: hidden;
 }
+
 .miki-help-modal header {
   display: flex;
   align-items: center;
@@ -231,11 +257,13 @@ code {
   border-bottom: 1px solid #e5e7eb;
   background: #f9fafb;
 }
+
 .miki-help-modal .miki-help-content {
   padding: 16px 18px;
   max-height: 70vh;
   overflow: auto;
 }
+
 .miki-kbd {
   display: inline-block;
   min-width: 1.75em;
@@ -256,6 +284,7 @@ code {
   font-family: var(--miki-font-ui) !important;
   font-synthesis: none;
 }
+
 .miki-root .toastui-editor-defaultUI,
 .miki-root .toastui-editor-contents,
 .miki-root .toastui-editor-defaultUI *,
@@ -287,7 +316,8 @@ code {
 }
 
 /* 루트 컨테이너 보강 */
-#root, #root * {
+#root,
+#root * {
   font-family: var(--miki-font-ui) !important;
 }
 
@@ -311,7 +341,12 @@ code {
 }
 
 /* 패널 헤더도 동일 폰트 강제 */
-.miki-root h1, .miki-root h2, .miki-root h3, .miki-root h4, .miki-root h5, .miki-root h6 {
+.miki-root h1,
+.miki-root h2,
+.miki-root h3,
+.miki-root h4,
+.miki-root h5,
+.miki-root h6 {
   font-family: var(--miki-font-ui) !important;
 }
 
@@ -326,7 +361,8 @@ code {
   margin-right: auto;
   padding-left: 36px;
   padding-right: 36px;
-  padding-top: 72px; /* 입력 텍스트가 상단에 붙지 않도록 상단 여백 강화 */
+  padding-top: 72px;
+  /* 입력 텍스트가 상단에 붙지 않도록 상단 여백 강화 */
   padding-bottom: 40px;
   box-sizing: border-box;
   font-size: var(--miki-editor-font-size) !important;
@@ -382,14 +418,16 @@ code {
 .miki-root .ProseMirror {
   min-height: 65vh;
   /* 내부 컨텐츠에 스크롤이 생겨도 본문 너비/정렬이 흔들리지 않도록 */
-  overflow: visible !important; /* 스크롤 책임은 외부 래퍼 */
+  overflow: visible !important;
+  /* 스크롤 책임은 외부 래퍼 */
 }
 
 /* 에디터 외부 래퍼 스크롤바를 마진 바깥에 표시하기 위한 보강 */
 .miki-root .editor-outer-scroll {
   overflow-y: auto;
   overflow-x: hidden;
-  scrollbar-gutter: stable; /* 스크롤 유무에 따라 레이아웃 점프 방지 */
+  scrollbar-gutter: stable;
+  /* 스크롤 유무에 따라 레이아웃 점프 방지 */
   /* 내부/외부 래퍼 정렬 일치: 컨테이너 스트레치 */
   display: flex;
   flex-direction: column;
@@ -397,11 +435,13 @@ code {
 }
 
 /* 외부/내부 래퍼 크기와 정렬을 1:1로 맞춤 */
-.miki-root .editor-outer-scroll > .miki-editor-container,
+.miki-root .editor-outer-scroll>.miki-editor-container,
 .miki-root .editor-outer-scroll .toastui-editor-defaultUI {
   width: 100% !important;
-  height: auto !important;      /* 콘텐츠 높이에 맞춰 확장 */
-  min-height: 100% !important;  /* 컨테이너보다 작을 땐 채우기 */
+  height: auto !important;
+  /* 콘텐츠 높이에 맞춰 확장 */
+  min-height: 100% !important;
+  /* 컨테이너보다 작을 땐 채우기 */
   margin: 0 !important;
   padding: 0 !important;
 }
@@ -437,20 +477,26 @@ code {
 /* 🔥 NEW: Phantom Document 시각적 구분 스타일 */
 .phantom-temporary {
   opacity: 0.8;
-  border-left: 3px solid #fbbf24 !important; /* 노란색 - 임시 상태 */
-  background-color: #fefce8; /* 연한 노란색 배경 */
+  border-left: 3px solid #fbbf24 !important;
+  /* 노란색 - 임시 상태 */
+  background-color: #fefce8;
+  /* 연한 노란색 배경 */
 }
 
 .phantom-saving {
   opacity: 0.9;
-  border-left: 3px solid #3b82f6 !important; /* 파란색 - 저장 중 */
-  background-color: #eff6ff; /* 연한 파란색 배경 */
+  border-left: 3px solid #3b82f6 !important;
+  /* 파란색 - 저장 중 */
+  background-color: #eff6ff;
+  /* 연한 파란색 배경 */
 }
 
 .phantom-error {
   opacity: 0.7;
-  border-left: 3px solid #ef4444 !important; /* 빨간색 - 오류 상태 */
-  background-color: #fef2f2; /* 연한 빨간색 배경 */
+  border-left: 3px solid #ef4444 !important;
+  /* 빨간색 - 오류 상태 */
+  background-color: #fef2f2;
+  /* 연한 빨간색 배경 */
 }
 
 .phantom-temporary::before {
@@ -489,6 +535,7 @@ code {
   align-items: center;
   justify-content: center;
 }
+
 .miki-help-modal {
   width: min(720px, 92vw);
   background: #fff;
@@ -496,6 +543,7 @@ code {
   box-shadow: 0 20px 48px rgba(0, 0, 0, 0.25);
   overflow: hidden;
 }
+
 .miki-help-modal header {
   display: flex;
   align-items: center;
@@ -504,9 +552,56 @@ code {
   border-bottom: 1px solid #e5e7eb;
   background: #f9fafb;
 }
+
 .miki-help-modal .miki-help-content {
   padding: 16px 18px;
   max-height: 70vh;
   overflow: auto;
 }
+
 /* 중복/불필요 블록 정리 (위에서 이미 선언됨) */
+
+/* === Editor Content Wrapper === */
+.editor-content-wrapper {
+  width: 100%;
+  max-width: var(--editor-max-width);
+  margin: 0 auto;
+  padding: 0 var(--editor-padding-desktop);
+  display: flex;
+  flex-direction: column;
+  height: 100%;
+}
+
+/* 전체화면 모드: 너비 제한 해제 */
+.editor-content-wrapper-fullscreen {
+  width: 100%;
+  max-width: 100%;
+  margin: 0 auto;
+  padding: 0 var(--editor-padding-desktop);
+  display: flex;
+  flex-direction: column;
+  height: 100%;
+}
+
+/* 태블릿: 패딩 축소 */
+@media (max-width: 1024px) {
+  .editor-content-wrapper {
+    padding: 0 var(--editor-padding-tablet);
+  }
+
+  .editor-content-wrapper-fullscreen {
+    padding: 0 var(--editor-padding-tablet);
+  }
+}
+
+/* 모바일: 전체 너비 사용, 최소 패딩 */
+@media (max-width: 768px) {
+  .editor-content-wrapper {
+    padding: 0 var(--editor-padding-mobile);
+    max-width: 100%;
+  }
+
+  .editor-content-wrapper-fullscreen {
+    padding: 0 var(--editor-padding-mobile);
+  }
+}
