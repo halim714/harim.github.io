@@ -317,11 +317,11 @@ miki-editor/
     /**
      * 파일 생성/업데이트 (SHA 자동 처리)
      */
-    async createOrUpdateFile(repoName, path, content, message, sha = null) {
+    async createOrUpdateFile(repoName, path, content, message, sha = null, options = {}) {
         let currentSha = sha;
 
-        // SHA가 없으면 조회 시도
-        if (!currentSha) {
+        // SHA가 없고 생략 옵션이 없는 경우만 조회 시도
+        if (!currentSha && !options.skipShaLookup) {
             try {
                 const { data } = await this.octokit.rest.repos.getContent({
                     owner: this.username,
@@ -352,6 +352,52 @@ miki-editor/
      */
     encodeContent(str) {
         return btoa(unescape(encodeURIComponent(str)));
+    }
+
+    /**
+     * GraphQL을 사용하여 파일 목록, 내용, SHA를 한 번에 가져오기
+     */
+    async getFilesWithMetadata(repoName, path) {
+        try {
+            const query = `
+                query getPosts($owner: String!, $repo: String!, $path: String!) {
+                    repository(owner: $owner, name: $repo) {
+                        object(expression: $path) {
+                            ... on Tree {
+                                entries {
+                                    name
+                                    oid
+                                    object {
+                                        ... on Blob {
+                                            text
+                                        }
+                                    }
+                                }
+                            }
+                        }
+                    }
+                }
+            `;
+
+            const expression = `HEAD:${path}`;
+            const response = await this.octokit.graphql(query, {
+                owner: this.username,
+                repo: repoName,
+                path: expression
+            });
+
+            const entries = response.repository?.object?.entries;
+            if (!entries) return [];
+
+            return entries.map(entry => ({
+                name: entry.name,
+                sha: entry.oid,
+                text: entry.object?.text || ''
+            }));
+        } catch (error) {
+            console.warn('GraphQL fetch failed:', error);
+            throw error;
+        }
     }
 
     // Jekyll 설정 헬퍼

@@ -81,6 +81,7 @@ export const storage = {
 
             return {
               id: docId,
+              sha: f.sha,
               filename: filename,
               title: frontMatter.title || extractTitle(body) || filename.replace(/-/g, ' '),
               updatedAt: frontMatter.updatedAt || new Date().toISOString(),
@@ -327,12 +328,14 @@ export const storage = {
     const updatedContent = stringifyFrontMatter(updatedFrontMatter) + body;
 
     // ✅ 5. 파일 저장
+    const isNewFile = !existingPost;
     const sha = await github.createOrUpdateFile(
       'miki-data',
       `miki-editor/posts/${filename}.md`,
       updatedContent,
       `Save: ${title}`,
-      post.sha || (existingPost ? existingPost.sha : undefined)
+      post.sha || (existingPost ? existingPost.sha : undefined),
+      { skipShaLookup: isNewFile }
     );
 
     // ✅ 6. 파일명 변경 시 구 파일 삭제
