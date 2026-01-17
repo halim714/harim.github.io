@@ -39,13 +39,16 @@ export function generateUniqueFilename(title, existingFiles = []) {
 }
 
 // ============================================
-// 새 파일명 패턴 (YYYYMMDD-slug-uuid8.md)
+// 새 파일명 패턴 (slug-uuid8-YYYYMMDD.md)
 // ============================================
 
 /**
  * 새 파일명 패턴 상수
+ * 새 패턴: slug-uuid8-YYYYMMDD
+ * 마이그레이션 패턴: YYYYMMDD-slug-uuid8 (기존 파일 호환)
  */
-const FILENAME_PATTERN = /^(\d{8})-(.+)-([a-f0-9]{8})$/;
+const NEW_FILENAME_PATTERN = /^(.+)-([a-f0-9]{8})-(\d{8})$/;
+const MIGRATION_FILENAME_PATTERN = /^(\d{8})-(.+)-([a-f0-9]{8})$/;
 const MAX_SLUG_LENGTH = 40;
 
 /**
@@ -80,7 +83,7 @@ export function truncateSlug(slug, maxLength = MAX_SLUG_LENGTH) {
 }
 
 /**
- * 새 파일명 생성
+ * 새 파일명 생성 (slug-uuid8-YYYYMMDD)
  * @param {string} createdAt - ISO 날짜 문자열
  * @param {string} title - 문서 제목
  * @param {string} docId - UUID (전체)
@@ -91,33 +94,48 @@ export function generateFilename(createdAt, title, docId) {
     const slug = truncateSlug(slugify(title));
     const uuid8 = docId.substring(0, 8).toLowerCase();
 
-    return `${date}-${slug}-${uuid8}`;
+    return `${slug}-${uuid8}-${date}`;
 }
 
 /**
- * 파일명 파싱 (새 패턴 + 구 패턴 호환)
+ * 파일명 파싱 (다중 패턴 호환)
  * @param {string} filename - 파일명 (.md 포함 가능)
- * @returns {object} { date, slug, uuid8, isLegacy }
+ * @returns {object} { date, slug, uuid8, isLegacy, pattern }
  */
 export function parseFilename(filename) {
     const name = filename.replace(/\.md$/, '');
-    const match = name.match(FILENAME_PATTERN);
 
-    if (!match) {
-        // 구 패턴: slug만 있는 경우 (마이그레이션 전 파일)
+    // 1순위: 새 패턴 (slug-uuid8-YYYYMMDD)
+    const newMatch = name.match(NEW_FILENAME_PATTERN);
+    if (newMatch) {
         return {
-            date: null,
-            slug: name,
-            uuid8: null,
-            isLegacy: true
+            slug: newMatch[1],
+            uuid8: newMatch[2],
+            date: newMatch[3],
+            isLegacy: false,
+            pattern: 'new'
         };
     }
 
+    // 2순위: 마이그레이션 패턴 (YYYYMMDD-slug-uuid8)
+    const migrationMatch = name.match(MIGRATION_FILENAME_PATTERN);
+    if (migrationMatch) {
+        return {
+            date: migrationMatch[1],
+            slug: migrationMatch[2],
+            uuid8: migrationMatch[3],
+            isLegacy: false,
+            pattern: 'migration'
+        };
+    }
+
+    // 3순위: 레거시 (slug만)
     return {
-        date: match[1],      // 20240117
-        slug: match[2],      // 나의-생각-그리고-더 (하이픈 포함 OK)
-        uuid8: match[3],     // a1b2c3d4
-        isLegacy: false
+        slug: name,
+        uuid8: null,
+        date: null,
+        isLegacy: true,
+        pattern: 'legacy'
     };
 }
 
