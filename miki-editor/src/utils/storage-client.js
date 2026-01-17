@@ -3,7 +3,13 @@ import { AuthService } from '../services/auth';
 import { GitHubService } from '../services/github';
 import { generateDocumentId, isTemporaryId } from './id-generator';
 import { parseFrontMatter, stringifyFrontMatter, extractTitle, extractMetadata } from './markdown';
-import { slugify, generateUniqueFilename } from './slugify';
+import {
+  slugify,
+  generateUniqueFilename,
+  parseFilename,
+  generateFilename,
+  isDocumentFile
+} from './slugify';
 
 // 헬퍼: GitHubService 인스턴스 생성 (캐싱 적용)
 let githubInstance = null;
@@ -58,6 +64,65 @@ class DebounceMap {
 
 const saveDebouncer = new DebounceMap();
 
+// 🗑️ 백그라운드 파일 정리 큐
+class CleanupQueue {
+  constructor() {
+    this.orphans = new Set();
+    this.isProcessing = false;
+  }
+
+  add(filename, sha, reason = 'orphan') {
+    this.orphans.add({ filename, sha, reason, addedAt: Date.now() });
+    console.log(`🗑️ [Cleanup] 큐에 추가 (${reason}): ${filename}`);
+  }
+
+  async process() {
+    if (this.isProcessing || this.orphans.size === 0) return;
+
+    this.isProcessing = true;
+
+    try {
+      const github = await getGithub();
+
+      for (const orphan of this.orphans) {
+        try {
+          await github.deleteFile(
+            'miki-data',
+            `miki-editor/posts/${orphan.filename}.md`,
+            `Cleanup: remove ${orphan.reason} ${orphan.filename}`,
+            orphan.sha
+          );
+          console.log(`✅ [Cleanup] 삭제 완료: ${orphan.filename}`);
+          this.orphans.delete(orphan);
+        } catch (e) {
+          // 30초 경과 시 포기
+          const age = Date.now() - orphan.addedAt;
+          if (age > 30000) {
+            console.error(`❌ [Cleanup] 삭제 포기: ${orphan.filename}`, e);
+            this.orphans.delete(orphan);
+          } else {
+            console.warn(`⚠️ [Cleanup] 삭제 실패, 재시도: ${orphan.filename}`, e);
+          }
+        }
+      }
+    } catch (error) {
+      console.error('❌ [Cleanup] GitHub 인스턴스 생성 실패:', error);
+    } finally {
+      this.isProcessing = false;
+    }
+  }
+}
+
+const cleanupQueue = new CleanupQueue();
+
+// 주기적 실행 (10초마다)
+if (typeof window !== 'undefined') {
+  setInterval(() => cleanupQueue.process(), 10000);
+}
+
+// 🔒 Rename Lock (Race Condition 방지)
+const renameInProgress = new Set();
+
 import { dbHelpers, db } from './database';
 
 export const storage = {
@@ -73,11 +138,32 @@ export const storage = {
 
       if (Array.isArray(files)) {
         githubPosts = files
-          .filter(f => f.name.endsWith('.md'))
+          .filter(f => {
+            // ✅ 강화된 필터링: 시스템 파일 제외
+            const isValid = isDocumentFile(f.path, f.name);
+            if (!isValid) {
+              console.log(`⏭️ [getPostList] 비문서 파일 필터링: ${f.name}`);
+            }
+            return isValid;
+          })
           .map(f => {
             const { data: frontMatter, content: body } = parseFrontMatter(f.text);
-            const docId = frontMatter.docId || f.name.replace('.md', '');
             const filename = f.name.replace('.md', '');
+
+            // ✅ 새 파일명 파싱 (구 패턴 호환)
+            const parsed = parseFilename(f.name);
+
+            // docId 결정 우선순위:
+            // 1. Front Matter의 docId
+            // 2. 새 패턴의 uuid8로 매칭 (임시, 나중에 전체 UUID로 업그레이드)
+            // 3. 구 패턴: 파일명 자체를 ID로 사용
+            let docId = frontMatter.docId;
+            if (!docId && parsed.uuid8) {
+              docId = parsed.uuid8;
+            }
+            if (!docId) {
+              docId = filename; // 구 패턴 폴백
+            }
 
             return {
               id: docId,
@@ -91,9 +177,35 @@ export const storage = {
               preview: body.substring(0, 150) + (body.length > 150 ? '...' : ''),
               path: f.path,
               hasDocId: !!frontMatter.docId,
-              source: 'github' // 디버깅용
+              isLegacyFilename: parsed.isLegacy, // 마이그레이션 필요 여부
+              source: 'github'
             };
           });
+
+        // ✅ Self-Healing: 동일 docId 중복 제거 (최신 updatedAt 기준)
+        githubPosts = Object.values(
+          githubPosts.reduce((acc, post) => {
+            if (!acc[post.id]) {
+              acc[post.id] = post;
+            } else {
+              // 중복 발견
+              const existing = acc[post.id];
+              const newer = new Date(post.updatedAt) > new Date(existing.updatedAt) ? post : existing;
+              const older = newer === post ? existing : post;
+
+              console.warn(`⚠️ [Self-Healing] 중복 문서 발견: ${post.id}`);
+              console.warn(`  기존: ${existing.filename} (${existing.updatedAt})`);
+              console.warn(`  신규: ${post.filename} (${post.updatedAt})`);
+              console.warn(`  선택: ${newer.filename}`);
+
+              // 오래된 버전을 Cleanup Queue에 추가
+              cleanupQueue.add(older.filename, older.sha, 'duplicate');
+
+              acc[post.id] = newer;
+            }
+            return acc;
+          }, {})
+        );
       }
     } catch (error) {
       console.warn('GitHub fetch failed (offline?):', error);
@@ -169,19 +281,30 @@ export const storage = {
 
   async getPost(id) {
     const github = await getGithub();
-
-    // ✅ Hybrid Identity: docId로 찾기, 실패하면 filename으로 찾기
     const postList = await this.getPostList();
     const post = postList.find(p => p.id === id);
 
+    // ✅ Optimistic Filename Creation
+    let filename;
     if (!post) {
-      throw new Error(`문서를 찾을 수 없습니다: ${id}`);
+      // 1순위: 로컬 캐시 확인 (IndexedDB)
+      const localDoc = await db.documents.where('docId').equals(id).first();
+      if (localDoc && localDoc.filename) {
+        filename = localDoc.filename;
+        console.log(`📦 [getPost] 로컬 캐시에서 filename 복구: ${filename}`);
+      } else {
+        // 2순위: createdAt 기반 예상 파일명 생성
+        const now = new Date().toISOString();
+        filename = generateFilename(now, '새 메모', id);
+        console.log(`🔮 [getPost] 예상 filename 생성: ${filename}`);
+      }
+    } else {
+      filename = post.filename;
     }
 
-    try {
-      const filename = post.filename || id;
-      console.log(`Fetching post: docId=${id}, filename=${filename}`);
+    console.log(`Fetching post: docId=${id}, filename=${filename}`);
 
+    try {
       const file = await github.getFile('miki-data', `miki-editor/posts/${filename}.md`);
 
       if (!file.content) {
@@ -192,17 +315,53 @@ export const storage = {
       const { data: frontMatter, content: body } = parseFrontMatter(content);
       const metadata = extractMetadata(content);
 
+      // ✅ Lazy Migration: 레거시 파일 감지 및 즉시 마이그레이션
+      let needsMigration = false;
+      if (!frontMatter.docId) {
+        console.warn(`🔄 [Migration] 레거시 파일 감지: ${filename}`);
+        needsMigration = true;
+
+        // UUID 생성 및 주입
+        frontMatter.docId = frontMatter.docId || generateDocumentId();
+        frontMatter.title = frontMatter.title || extractTitle(body) || filename;
+        frontMatter.createdAt = frontMatter.createdAt || new Date().toISOString();
+        frontMatter.updatedAt = new Date().toISOString();
+      }
+
+      // 마이그레이션 필요 시 즉시 저장
+      if (needsMigration) {
+        const updatedContent = stringifyFrontMatter(frontMatter) + body;
+
+        try {
+          await github.createOrUpdateFile(
+            'miki-data',
+            `miki-editor/posts/${filename}.md`,
+            updatedContent,
+            `Migration: add docId to ${filename}`,
+            file.sha
+          );
+          console.log(`✅ [Migration] UUID 주입 완료: ${frontMatter.docId}`);
+        } catch (e) {
+          console.error(`❌ [Migration] 실패: ${filename}`, e);
+          // 실패해도 읽기는 계속 진행
+        }
+      }
+
       return {
-        id: frontMatter.docId || id, // docId 우선
+        id: frontMatter.docId || id,
         filename: filename,
         title: frontMatter.title || metadata.title || id,
-        content: body, // ✅ 메타데이터가 제거된 순수 본문만 반환
-        frontMatter: frontMatter, // ✅ 원본 메타데이터 보존 (저장 시 사용)
+        content: body,
+        frontMatter: frontMatter,
         sha: file.sha,
         metadata,
-        updatedAt: frontMatter.updatedAt || new Date().toISOString()
+        updatedAt: frontMatter.updatedAt || new Date().toISOString(),
+        wasMigrated: needsMigration // 디버깅용
       };
     } catch (error) {
+      if (error.status === 404) {
+        throw new Error(`문서를 찾을 수 없습니다: ${id} (filename: ${filename})`);
+      }
       console.error(`Failed to fetch post ${id}:`, error);
       throw new Error(`문서를 불러올 수 없습니다: ${error.message}`);
     }
@@ -251,116 +410,117 @@ export const storage = {
     };
   },
 
-  // 🔴 [Rename] 기존 로직은 그대로 보존 (파일명 생성, Slug 처리 등 핵심 로직)
+  // 🔴 [Migration] 새 파일명 패턴 적용
   async _savePostToGitHub(post) {
     const github = await getGithub();
-
-    // ✅ 1. docId 확정 (새 문서면 생성, 기존 문서면 유지)
-    // ✅ 1. docId 확정 (이미 UUID이므로 그대로 사용)
     const docId = post.id;
+
+    // 🔒 동일 문서에 대한 동시 Rename 방지
+    if (renameInProgress.has(docId)) {
+      console.log(`⏳ [SAVE] Rename 진행 중, 대기: ${docId}`);
+      await new Promise(resolve => setTimeout(resolve, 1000));
+      return this._savePostToGitHub(post); // 재시도
+    }
+
     console.log(`📝 [SAVE] docId 사용: ${docId}`);
 
-    // ✅ 2. 파일명 결정 (slug 기반)
-    const title = post.title || extractTitle(post.content);
-    const slug = slugify(title);
+    // ✅ 1. 제목 추출
+    const title = post.title || extractTitle(post.content) || '새 메모';
 
-    // ✅ 3. 기존 문서인지 확인 (docId로 검색)
+    // ✅ 2. 기존 문서 확인 (UUID 기반)
     const postList = await this.getPostList();
     const existingPost = postList.find(p => p.id === docId);
 
-    let filename;
-    let oldFilename = null;
+    // ✅ 3. 파일명 결정 (새 패턴: YYYYMMDD-slug-uuid8)
+    const createdAt = existingPost?.createdAt || post.createdAt || new Date().toISOString();
+    const newFilename = generateFilename(createdAt, title, docId);
 
-    // 🟢 [PRD Phase 2] 파일명 동기화 로직
-    // 1. 제목이 없거나 '새 메모'인 경우 -> 기존 파일명 유지 또는 기본값
-    if (!title || title === '새 메모' || title.trim().length < 2) {
-      if (existingPost) {
-        filename = existingPost.filename;
-        console.log(`💾 [SAVE] 제목이 기본값이므로 파일명 유지: ${filename}.md`);
-      } else {
-        // 새 문서인데 제목도 없음 -> 기본값 (하지만 Editor.jsx에서 이미 '새-메모.md'로 설정됨)
-        filename = post.filename || '새-메모';
-      }
+    // ✅ 4. 파일명 변경 여부 확인
+    const oldFilename = existingPost?.filename;
+    const filenameChanged = oldFilename && oldFilename !== newFilename;
+
+    if (filenameChanged) {
+      console.log(`🔄 [SAVE] 파일명 변경: ${oldFilename}.md → ${newFilename}.md`);
+      renameInProgress.add(docId); // Lock 설정
+    } else if (!oldFilename) {
+      console.log(`🆕 [SAVE] 새 파일명: ${newFilename}.md`);
     } else {
-      // 2. 의미 있는 제목이 있는 경우 -> Slug 기반 파일명 생성
-      // 기존 문서가 있고, 그 파일명이 이미 현재 Slug와 같다면 유지
-      if (existingPost && existingPost.filename === slug) {
-        filename = existingPost.filename;
-        console.log(`💾 [SAVE] 파일명 유지 (Slug 일치): ${filename}.md`);
-      } else {
-        // 파일명 변경 필요 (또는 새 문서)
-        // 중복 체크를 위해 다른 문서들의 파일명 목록 수집
-        const existingFilenames = postList
-          .filter(p => p.id !== docId) // 나 자신 제외
-          .map(p => p.filename);
-
-        // 충돌 시 Short UUID 붙임 (slugify.js의 generateUniqueFilename 활용)
-        filename = generateUniqueFilename(slug, existingFilenames.map(f => `${f}.md`)).replace('.md', '');
-
-        if (existingPost && existingPost.filename !== filename) {
-          oldFilename = existingPost.filename;
-          console.log(`🔄 [SAVE] 파일명 변경: ${oldFilename}.md → ${filename}.md`);
-        } else {
-          console.log(`🆕 [SAVE] 새 파일명 결정: ${filename}.md`);
-        }
-      }
+      console.log(`💾 [SAVE] 파일명 유지: ${newFilename}.md`);
     }
 
-    // ✅ 4. Front Matter 주입
-    // 에디터에서 온 content는 본문만 있음.
-    // 기존 frontMatter(post.frontMatter)와 현재 본문에서 파싱한 frontMatter(혹시 사용자가 썼을 수도 있음)를 병합
+    // ✅ 5. Front Matter 구성
     const { data: newFrontMatter, content: body } = parseFrontMatter(post.content || '');
-
-    // 기존 메타데이터 (로드 시 보존된 것)
     const preservedFrontMatter = post.frontMatter || {};
-
     const now = new Date().toISOString();
 
     const updatedFrontMatter = {
-      ...preservedFrontMatter, // 기존 메타데이터 유지 (태그 등)
-      ...newFrontMatter,       // 새로 파싱된 메타데이터 (있다면 덮어씀)
-      docId: docId,            // docId 강제 주입
+      ...preservedFrontMatter,
+      ...newFrontMatter,
+      docId: docId,
       title: title,
-      updatedAt: preservedFrontMatter.updatedAt || post.updatedAt || now,
-      createdAt: preservedFrontMatter.createdAt || post.createdAt || now
+      updatedAt: now,
+      createdAt: preservedFrontMatter.createdAt || createdAt,
+
+      // ✅ permalink 자동 생성 (사용자가 직접 설정하지 않았다면)
+      permalink: preservedFrontMatter.permalink ||
+        newFrontMatter.permalink ||
+        `/posts/${slugify(title)}/`,
+
+      // ✅ slug 필드 추가 (Jekyll _config.yml에서 사용)
+      slug: slugify(title)
     };
 
     const updatedContent = stringifyFrontMatter(updatedFrontMatter) + body;
 
-    // ✅ 5. 파일 저장
+    // ✅ 6. 새 파일 저장 (또는 덮어쓰기)
     const isNewFile = !existingPost;
-    const sha = await github.createOrUpdateFile(
-      'miki-data',
-      `miki-editor/posts/${filename}.md`,
-      updatedContent,
-      `Save: ${title}`,
-      post.sha || (existingPost ? existingPost.sha : undefined),
-      { skipShaLookup: isNewFile }
-    );
+    let newSha;
 
-    // ✅ 6. 파일명 변경 시 구 파일 삭제
-    if (oldFilename) {
+    try {
+      newSha = await github.createOrUpdateFile(
+        'miki-data',
+        `miki-editor/posts/${newFilename}.md`,
+        updatedContent,
+        filenameChanged
+          ? `Rename: ${oldFilename} → ${newFilename} [${docId.substring(0, 8)}]`
+          : `Save: ${title} [${docId.substring(0, 8)}]`,
+        // 파일명 변경 시 새 경로에는 SHA가 없음
+        filenameChanged ? undefined : (post.sha || existingPost?.sha),
+        { skipShaLookup: isNewFile || filenameChanged }
+      );
+    } catch (error) {
+      renameInProgress.delete(docId);
+      throw error;
+    }
+
+    // ✅ 7. 파일명 변경 시 구 파일 삭제 (캐시된 SHA 사용)
+    if (filenameChanged && existingPost?.sha) {
       try {
-        const oldFile = await github.getFile('miki-data', `miki-editor/posts/${oldFilename}.md`);
         await github.deleteFile(
           'miki-data',
           `miki-editor/posts/${oldFilename}.md`,
-          `Rename: ${oldFilename}.md → ${filename}.md`,
-          oldFile.sha
+          `Delete old: ${oldFilename}.md [${docId.substring(0, 8)}]`,
+          existingPost.sha // 캐시된 SHA 사용, 추가 GET 불필요
         );
         console.log(`✅ [SAVE] 구 파일 삭제 완료: ${oldFilename}.md`);
       } catch (e) {
-        console.warn(`⚠️ [SAVE] 구 파일 삭제 실패 (무시): ${oldFilename}.md`, e);
+        // 삭제 실패 시 Cleanup Queue에 추가
+        console.warn(`⚠️ [SAVE] 구 파일 삭제 실패, Cleanup Queue에 추가: ${oldFilename}.md`, e);
+        cleanupQueue.add(oldFilename, existingPost.sha, 'rename-failed');
+      } finally {
+        renameInProgress.delete(docId); // Lock 해제
       }
+    } else {
+      renameInProgress.delete(docId); // Lock 해제 (Rename 아닌 경우)
     }
 
     return {
       ...post,
       id: docId,
-      filename: filename,
+      filename: newFilename,
       title,
-      sha,
-      frontMatter: updatedFrontMatter, // ✅ 업데이트된 메타데이터 반환
+      sha: newSha,
+      frontMatter: updatedFrontMatter,
       updatedAt: updatedFrontMatter.updatedAt,
       createdAt: updatedFrontMatter.createdAt,
       metadata: extractMetadata(updatedContent)
