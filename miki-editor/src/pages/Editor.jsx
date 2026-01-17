@@ -786,10 +786,8 @@ function AppContent() {
 
             {/* 에디터 스켈레톤 */}
             <div className={`bg-white rounded shadow flex flex-col ${isMobile ? 'block flex-grow mb-2' : 'flex-1 min-w-0'
-              }`} style={isMobile ? {} : { overflow: 'hidden' }}>
-              <div className="editor-content-wrapper">
-                <EditorSkeleton />
-              </div>
+              }`} style={isMobile ? {} : { maxWidth: '800px', margin: '0 auto', overflow: 'hidden' }}>
+              <EditorSkeleton />
             </div>
 
             {/* AI 패널 스켈레톤 */}

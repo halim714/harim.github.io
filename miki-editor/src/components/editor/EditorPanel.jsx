@@ -84,6 +84,8 @@ const EditorPanel = ({
       return {
         ...base,
         flex: '1 1 0%',
+        maxWidth: '800px',
+        margin: '0 auto',
         minHeight: 0,
         overflow: 'hidden'
       };
@@ -96,81 +98,78 @@ const EditorPanel = ({
       className={getContainerClass()}
       style={getContainerStyle()}
     >
-      {/* 내부 래퍼: 최대 너비 제한 + 중앙 정렬 */}
-      <div className={isFullscreen ? "editor-content-wrapper-fullscreen" : "editor-content-wrapper"}>
-        {/* 에디터 헤더 */}
-        <div className="mb-4 flex flex-col p-4">
-          <div className="flex justify-between items-center mb-2">
-            <div className="flex items-center">
-              <h2 className="text-lg font-bold">에디터</h2>
-              <span className={`ml-4 text-xs px-2 py-1 rounded ${getSaveStatusStyle()}`}>
-                {getSaveStatusContent()}
+      {/* 에디터 헤더 */}
+      <div className="mb-4 flex flex-col p-4">
+        <div className="flex justify-between items-center mb-2">
+          <div className="flex items-center">
+            <h2 className="text-lg font-bold">에디터</h2>
+            <span className={`ml-4 text-xs px-2 py-1 rounded ${getSaveStatusStyle()}`}>
+              {getSaveStatusContent()}
+            </span>
+            {isPublishing && (
+              <span className="ml-2 text-xs px-2 py-1 rounded bg-purple-100 text-purple-700" title="배포 중">
+                배포 중…
               </span>
-              {isPublishing && (
-                <span className="ml-2 text-xs px-2 py-1 rounded bg-purple-100 text-purple-700" title="배포 중">
-                  배포 중…
-                </span>
-              )}
-              {/* 변경사항 인디케이터 */}
-              {hasUnsavedChanges && !isAutoSaving && !isManualSaving && (
-                <span className="ml-2 w-2 h-2 bg-orange-400 rounded-full" title="저장되지 않은 변경사항"></span>
-              )}
-            </div>
-
-            <div className="flex items-center space-x-2">
-
-              {/* 전체화면 토글 버튼 */}
-              <button
-                onClick={onToggleFullscreen}
-                className="p-1 text-gray-600 hover:text-gray-900 rounded"
-                title="전체화면 토글 (Ctrl+Enter)"
-              >
-                <svg className="w-5 h-5" fill="none" viewBox="0 0 24 24" stroke="currentColor">
-                  <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M4 8V4m0 0h4M4 4l5 5m11-1V4m0 0h-4m4 0l-5 5M4 16v4m0 0h4m-4 0l5-5m11 5v-4m0 4h-4m4 0l-5-5" />
-                </svg>
-              </button>
-
-              {/* 모바일 AI 패널 이동 버튼 */}
-              {isMobile && (
-                <button
-                  onClick={() => setActiveMobilePanel('ai')}
-                  className="px-3 py-1 text-sm bg-blue-600 hover:bg-blue-700 rounded flex items-center ml-1"
-                  title="AI 패널로 이동"
-                >
-                  <svg xmlns="http://www.w3.org/2000/svg" className="h-4 w-4 mr-1" fill="none" viewBox="0 0 24 24" stroke="currentColor">
-                    <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M13 7l5 5m0 0l-5 5m5-5H6" />
-                  </svg>
-                  AI 패널
-                </button>
-              )}
-            </div>
+            )}
+            {/* 변경사항 인디케이터 */}
+            {hasUnsavedChanges && !isAutoSaving && !isManualSaving && (
+              <span className="ml-2 w-2 h-2 bg-orange-400 rounded-full" title="저장되지 않은 변경사항"></span>
+            )}
           </div>
 
-          {/* 제목 입력 */}
-          <input
-            type="text"
-            value={title}
-            onChange={onTitleChange}
-            data-current-doc={currentDocument?.id || ''}
-            placeholder="문서 제목을 입력하세요 (편집기 첫 줄 텍스트가 자동으로 제목이 됩니다)"
-            className="w-full px-3 py-2 text-xl font-medium focus:outline-none mb-2 bg-transparent"
-          />
+          <div className="flex items-center space-x-2">
+
+            {/* 전체화면 토글 버튼 */}
+            <button
+              onClick={onToggleFullscreen}
+              className="p-1 text-gray-600 hover:text-gray-900 rounded"
+              title="전체화면 토글 (Ctrl+Enter)"
+            >
+              <svg className="w-5 h-5" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+                <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M4 8V4m0 0h4M4 4l5 5m11-1V4m0 0h-4m4 0l-5 5M4 16v4m0 0h4m-4 0l5-5m11 5v-4m0 4h-4m4 0l-5-5" />
+              </svg>
+            </button>
+
+            {/* 모바일 AI 패널 이동 버튼 */}
+            {isMobile && (
+              <button
+                onClick={() => setActiveMobilePanel('ai')}
+                className="px-3 py-1 text-sm bg-blue-600 hover:bg-blue-700 rounded flex items-center ml-1"
+                title="AI 패널로 이동"
+              >
+                <svg xmlns="http://www.w3.org/2000/svg" className="h-4 w-4 mr-1" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+                  <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M13 7l5 5m0 0l-5 5m5-5H6" />
+                </svg>
+                AI 패널
+              </button>
+            )}
+          </div>
         </div>
 
-        {/* 에디터 영역: 스크롤은 바깥 래퍼에만 적용하여 본문 정렬이 흔들리지 않도록 처리 */}
-        <div
-          className="flex-grow relative editor-outer-scroll"
-          style={{ overflowY: 'auto', overflowX: 'hidden', scrollbarGutter: 'stable', flex: '1 1 0%', minHeight: 0, height: '100%' }}
-        >
-          <MikiEditor
-            ref={editorRef}
-            key={getEditorKey()}
-            onContextUpdate={onEditorContextUpdate}
-            onContentChange={onEditorChange}
-            onSendToAi={onSendToAi}
-            onNavigateRequest={onNavigateRequest}
-          />
-        </div>
+        {/* 제목 입력 */}
+        <input
+          type="text"
+          value={title}
+          onChange={onTitleChange}
+          data-current-doc={currentDocument?.id || ''}
+          placeholder="문서 제목을 입력하세요 (편집기 첫 줄 텍스트가 자동으로 제목이 됩니다)"
+          className="w-full px-3 py-2 text-xl font-medium focus:outline-none mb-2 bg-transparent"
+        />
+      </div>
+
+      {/* 에디터 영역: 스크롤은 바깥 래퍼에만 적용하여 본문 정렬이 흔들리지 않도록 처리 */}
+      <div
+        className="flex-grow relative editor-outer-scroll"
+        style={{ overflowY: 'auto', overflowX: 'hidden', scrollbarGutter: 'stable', flex: '1 1 0%', minHeight: 0, height: '100%' }}
+      >
+        <MikiEditor
+          ref={editorRef}
+          key={getEditorKey()}
+          onContextUpdate={onEditorContextUpdate}
+          onContentChange={onEditorChange}
+          onSendToAi={onSendToAi}
+          onNavigateRequest={onNavigateRequest}
+        />
       </div>
     </div>
   );
