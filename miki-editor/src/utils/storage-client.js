@@ -239,7 +239,7 @@ export const storage = {
       // 로컬 데이터 포맷팅
       const formattedLocal = {
         id: docId,
-        filename: existing?.filename || docId, // 파일명은 기존 것 유지하거나 ID 사용
+        filename: existing?.filename || localDoc.filename || docId, // 우선순위: GitHub > IndexedDB > docId
         title: localDoc.title,
         updatedAt: localDoc.updatedAt,
         createdAt: localDoc.createdAt || localDoc.updatedAt,
