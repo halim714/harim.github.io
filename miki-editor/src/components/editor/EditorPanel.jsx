@@ -130,18 +130,33 @@ const EditorPanel = ({
               </svg>
             </button>
 
-            {/* 모바일 AI 패널 이동 버튼 */}
+            {/* 모바일 네비게이션 버튼 */}
             {isMobile && (
-              <button
-                onClick={() => setActiveMobilePanel('ai')}
-                className="px-3 py-1 text-sm bg-blue-600 hover:bg-blue-700 rounded flex items-center ml-1"
-                title="AI 패널로 이동"
-              >
-                <svg xmlns="http://www.w3.org/2000/svg" className="h-4 w-4 mr-1" fill="none" viewBox="0 0 24 24" stroke="currentColor">
-                  <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M13 7l5 5m0 0l-5 5m5-5H6" />
-                </svg>
-                AI 패널
-              </button>
+              <>
+                {/* 문서 목록으로 이동 버튼 */}
+                <button
+                  onClick={() => setActiveMobilePanel('list')}
+                  className="px-3 py-1 text-sm bg-gray-600 hover:bg-gray-700 text-white rounded flex items-center"
+                  title="문서 목록으로 이동"
+                >
+                  <svg xmlns="http://www.w3.org/2000/svg" className="h-4 w-4 mr-1" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+                    <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M4 6h16M4 10h16M4 14h16M4 18h16" />
+                  </svg>
+                  목록
+                </button>
+
+                {/* AI 패널로 이동 버튼 */}
+                <button
+                  onClick={() => setActiveMobilePanel('ai')}
+                  className="px-3 py-1 text-sm bg-blue-600 hover:bg-blue-700 text-white rounded flex items-center ml-2"
+                  title="AI 패널로 이동"
+                >
+                  <svg xmlns="http://www.w3.org/2000/svg" className="h-4 w-4 mr-1" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+                    <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M13 7l5 5m0 0l-5 5m5-5H6" />
+                  </svg>
+                  AI
+                </button>
+              </>
             )}
           </div>
         </div>
