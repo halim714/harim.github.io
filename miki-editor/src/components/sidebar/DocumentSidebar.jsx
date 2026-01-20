@@ -150,7 +150,7 @@ const DocumentSidebar = ({
       // 🔥 NEW: 일반 모드에서도 고유 렌더링 키 추가
       let posts = documentsData.map(doc => ({
         ...doc,
-        _renderKey: `normal-${doc.id}-${Date.now()}`
+        _renderKey: `normal-${doc.id}`
       }));
 
       // 🔥 PHANTOM: currentDocument가 임시이고 목록에 없으면 맨 위에 추가
@@ -210,7 +210,7 @@ const DocumentSidebar = ({
               isAiResult: result.isAiGenerated,
               isSemanticResult: !!result.semanticScore,
               // 🔥 NEW: 고유 렌더링 식별자 추가
-              _renderKey: `search-${existingDoc.id}-${searchMode}-${Date.now()}`
+              _renderKey: `search-${existingDoc.id}-${searchMode}`
             };
           } else {
             // 새로운 검색 결과인 경우 (AI 생성 등)
@@ -226,7 +226,7 @@ const DocumentSidebar = ({
               isAiResult: result.isAiGenerated,
               isSemanticResult: !!result.semanticScore,
               // 🔥 NEW: 고유 렌더링 식별자 추가
-              _renderKey: `new-${result.id}-${searchMode}-${Date.now()}`
+              _renderKey: `new-${result.id}-${searchMode}`
             };
           }
 
@@ -248,7 +248,7 @@ const DocumentSidebar = ({
       doc.preview?.toLowerCase().includes(searchQuery.toLowerCase())
     ).map(doc => ({
       ...doc,
-      _renderKey: `basic-${doc.id}-${Date.now()}`
+      _renderKey: `basic-${doc.id}`
     }));
   }, [documentsData, searchQuery, searchResults, searchMode, currentDocument, content, sort]);
 
