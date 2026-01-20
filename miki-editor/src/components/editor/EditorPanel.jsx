@@ -1,8 +1,6 @@
-import { useState, useEffect } from 'react';
 import MikiEditor from '../../MikiEditor';
 import { InlineLoadingSpinner } from '../common/LoadingSpinner';
 import { createLogger } from '../../utils/logger';
-import AttachmentBox from './AttachmentBox';
 
 const logger = createLogger('EditorPanel');
 
@@ -29,20 +27,6 @@ const EditorPanel = ({
   isManualSaving,
   currentDocument
 }) => {
-  // 첨부 박스 접기 상태 (localStorage 연동)
-  const [isAttachmentCollapsed, setIsAttachmentCollapsed] = useState(() => {
-    return localStorage.getItem('attachmentCollapsed') === 'true';
-  });
-
-  useEffect(() => {
-    localStorage.setItem('attachmentCollapsed', String(isAttachmentCollapsed));
-  }, [isAttachmentCollapsed]);
-
-  const handleAttach = () => {
-    // TODO: 첨부 유형 선택 모달 열기
-    console.log('Open attachment modal');
-  };
-
   const getSaveStatusStyle = () => {
     if (isAutoSaving || isManualSaving) {
       return 'bg-blue-100 text-blue-700';
@@ -187,13 +171,6 @@ const EditorPanel = ({
           className="w-full px-3 py-2 text-xl font-medium focus:outline-none mb-2 bg-transparent"
         />
       </div>
-
-      {/* 첨부 박스 */}
-      <AttachmentBox
-        isCollapsed={isAttachmentCollapsed}
-        onToggle={() => setIsAttachmentCollapsed(!isAttachmentCollapsed)}
-        onAttach={handleAttach}
-      />
 
       {/* 에디터 영역: 스크롤은 바깥 래퍼에만 적용하여 본문 정렬이 흔들리지 않도록 처리 */}
       <div
