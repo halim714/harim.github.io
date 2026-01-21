@@ -10,6 +10,7 @@ import { usePhantomDocument } from '../../hooks/usePhantomDocument';
 import { storage } from '../../utils/storage-client'; // 🔥 NEW: storage client import
 import Icon from '../common/Icon';
 import { queryKeys } from '../../config/queryClient';
+import { useConfirm } from '../../hooks/useConfirm';
 
 const removeMarkdownFormatting = (text) => {
   if (!text) return '';
@@ -52,6 +53,9 @@ const DocumentSidebar = ({
 
   // 🎯 실시간 제목 동기화를 위한 상태
   const [realtimeTitles, setRealtimeTitles] = useState(new Map());
+
+  // 🔥 NEW: useConfirm 훅 사용
+  const confirm = useConfirm();
 
   // 🔥 NEW: DocumentSearchManager 인스턴스 생성 및 검색 상태 관리
   const [searchManager] = useState(() => new DocumentSearchManager());
@@ -381,7 +385,13 @@ const DocumentSidebar = ({
   };
 
   const handleDeleteDocument = async (post) => {
-    if (window.confirm(`'${post.title}'을(를) 삭제하시겠습니까?`)) {
+    const ok = await confirm({
+      title: '문서 삭제',
+      message: `'${post.title}'을(를) 삭제하시겠습니까?`,
+      danger: true,
+    });
+
+    if (ok) {
       try {
         // 🔥 Phase 2: Optimistic Delete - 즉시 UI에서 제거
         console.log(`🚀 [DELETE] 삭제 시작: ${post.title}`);

@@ -8,6 +8,7 @@ import '@toast-ui/editor/dist/toastui-editor.css';
 import '@toast-ui/editor/dist/theme/toastui-editor-dark.css'; // Optional: Dark theme
 import DocumentSearchManager from './utils/DocumentSearchManager'; // 추가된 임포트
 import { resolveByIdOrSlug } from './utils/DocumentResolver';
+import { useConfirm } from './hooks/useConfirm';
 
 // debounce 함수 정의
 const debounce = (func, wait) => {
@@ -28,10 +29,10 @@ const slugify = (str) => {
     // 빈 문자열이나 공백만 있는 경우 타임스탬프 기반 ID 생성
     return `doc-${Date.now()}`;
   }
-  
+
   // 1단계: 기본 변환 (소문자로 변환, 양쪽 공백 제거)
   let result = str.toLowerCase().trim();
-  
+
   // 2단계: URL에 안전하지 않은 문자 처리
   result = result
     // 연속된 공백, 특수문자를 하이픈으로 변환 (한글은 보존)
@@ -39,19 +40,19 @@ const slugify = (str) => {
     .replace(/[^\w\u3131-\uD79D-]+/g, '-') // 한글(유니코드 범위)과 영숫자, 언더스코어를 제외한 문자를 하이픈으로 변환
     .replace(/-+/g, '-')  // 중복된 하이픈 제거
     .replace(/^-+|-+$/g, ''); // 시작/끝 하이픈 제거
-  
+
   // 3단계: 결과가 빈 문자열이면 타임스탬프 사용
   if (!result || result === '') {
     return `doc-${Date.now()}`;
   }
-  
+
   return result;
 };
 
 // 마크다운을 WYSIWYG 호환 형식으로 변환하는 함수
 const convertMarkdownToHTML = (markdownText) => {
   if (!markdownText || typeof markdownText !== 'string') return markdownText;
-  
+
   // 헤딩 변환 (# 제목 -> <h1>제목</h1>)
   const headingProcessed = markdownText
     .replace(/^# (.+)$/gm, '<h1>$1</h1>')
@@ -60,33 +61,33 @@ const convertMarkdownToHTML = (markdownText) => {
     .replace(/^#### (.+)$/gm, '<h4>$1</h4>')
     .replace(/^##### (.+)$/gm, '<h5>$1</h5>')
     .replace(/^###### (.+)$/gm, '<h6>$1</h6>');
-    
+
   // 굵게, 기울임, 취소선 변환
   const styleProcessed = headingProcessed
     .replace(/\*\*(.+?)\*\*/g, '<strong>$1</strong>')
     .replace(/\*(.+?)\*/g, '<em>$1</em>')
     .replace(/~~(.+?)~~/g, '<del>$1</del>');
-  
+
   // 목록 변환
   const listProcessed = styleProcessed
     .replace(/^- (.+)$/gm, '<ul><li>$1</li></ul>')
     .replace(/^\* (.+)$/gm, '<ul><li>$1</li></ul>')
     .replace(/^[0-9]+\. (.+)$/gm, '<ol><li>$1</li></ol>');
-  
+
   // 코드 블록 및 인라인 코드
   const codeProcessed = listProcessed
     .replace(/`(.+?)`/g, '<code>$1</code>')
     .replace(/```(.+?)```/gs, '<pre><code>$1</code></pre>');
-  
+
   // 링크 및 이미지 변환
   const linkProcessed = codeProcessed
     .replace(/\[(.+?)\]\((.+?)\)/g, '<a href="$2">$1</a>')
     .replace(/!\[(.+?)\]\((.+?)\)/g, '<img src="$2" alt="$1">');
-  
+
   // 인용문 변환
   const quoteProcessed = linkProcessed
     .replace(/^> (.+)$/gm, '<blockquote>$1</blockquote>');
-  
+
   return quoteProcessed;
 };
 
@@ -100,19 +101,19 @@ const AiSuggestionPopover = ({ suggestion, onAccept, onCancel, position }) => {
   };
 
   return (
-    <div 
-      style={positionStyle} 
+    <div
+      style={positionStyle}
       className="fixed z-50 bg-white border border-gray-200 rounded-lg p-3 shadow-lg max-w-sm"
     >
       <p className="mb-3 text-sm text-gray-700">{suggestion.displayText}</p>
       <div className="flex justify-end space-x-2">
-        <button 
+        <button
           onClick={() => onAccept(suggestion)}
           className="px-4 py-1.5 bg-blue-500 text-white text-xs font-semibold rounded-md hover:bg-blue-600 focus:outline-none focus:ring-2 focus:ring-blue-300 transition-colors"
         >
           Run
         </button>
-        <button 
+        <button
           onClick={() => onCancel(suggestion.suggestionId)}
           className="px-4 py-1.5 bg-gray-200 text-gray-700 text-xs font-semibold rounded-md hover:bg-gray-300 focus:outline-none focus:ring-2 focus:ring-gray-300 transition-colors"
         >
@@ -131,7 +132,7 @@ const LinkCreationPopover = ({ position, onCreateLink, onCancel, selectedText })
   const [error, setError] = useState(null);
   const [useAiSearch, setUseAiSearch] = useState(false); // 기본: 키워드 검색 → 필요 시 AI 토글
   const docSearchManager = useMemo(() => new DocumentSearchManager(), []);
-  
+
   // debounced 검색 함수
   const debouncedSearch = useCallback(
     debounce(async (searchTerm) => {
@@ -140,11 +141,11 @@ const LinkCreationPopover = ({ position, onCreateLink, onCancel, selectedText })
         setLoading(false);
         return;
       }
-      
+
       try {
         setLoading(true);
         logger.info("링크 검색 시작:", searchTerm);
-        
+
         // URL 형식인지 확인
         if (/^https?:\/\//i.test(searchTerm.trim())) {
           setSearchResults([{
@@ -156,7 +157,7 @@ const LinkCreationPopover = ({ position, onCreateLink, onCancel, selectedText })
           setLoading(false);
           return;
         }
-        
+
         // 검색 방식 선택 (AI 또는 키워드)
         let results;
         if (useAiSearch) {
@@ -168,37 +169,37 @@ const LinkCreationPopover = ({ position, onCreateLink, onCancel, selectedText })
           // 키워드 검색만 사용
           results = await docSearchManager.searchByKeyword(searchTerm);
         }
-        
+
         // 검색 결과가 없으면 새 문서 만들기 옵션 제공
         if (results.length === 0) {
           const searchQuery = searchTerm.trim();
-          
+
           // 개선된 slugify 함수 정의 (내부용)
           const slugifyText = (text) => {
             if (!text || text.trim() === '') {
               return `doc-${Date.now()}`;
             }
-            
+
             const result = text.toLowerCase().trim()
               .replace(/[\s\t\r\n]+/g, '-')
               .replace(/[^\w\u3131-\uD79D-]+/g, '-')
               .replace(/-+/g, '-')
               .replace(/^-+|-+$/g, '');
-              
+
             return result || `doc-${Date.now()}`;
           };
-          
-          setSearchResults([{ 
-            id: 'new_' + searchQuery, 
-            title: `"${searchQuery}" 새 문서 생성`, 
+
+          setSearchResults([{
+            id: 'new_' + searchQuery,
+            title: `"${searchQuery}" 새 문서 생성`,
             path: `/doc/${slugifyText(searchQuery)}`,
-            preview: `"${searchQuery}" 문서를 새로 생성합니다.`, 
-            isCreateNew: true 
+            preview: `"${searchQuery}" 문서를 새로 생성합니다.`,
+            isCreateNew: true
           }]);
         } else {
           setSearchResults(results);
         }
-        
+
         setLoading(false);
       } catch (err) {
         logger.error("검색 오류:", err);
@@ -209,7 +210,7 @@ const LinkCreationPopover = ({ position, onCreateLink, onCancel, selectedText })
     }, 300),
     [useAiSearch] // useAiSearch 값이 변경될 때마다 함수 재생성
   );
-  
+
   // 컴포넌트 마운트 시: 기본은 키워드 검색(빠름). 선택 텍스트가 있으면 즉시 키워드 검색만 수행
   useEffect(() => {
     if (selectedText && selectedText.trim().length > 0) {
@@ -224,13 +225,13 @@ const LinkCreationPopover = ({ position, onCreateLink, onCancel, selectedText })
       })();
     }
   }, [selectedText]);
-  
+
   // 입력값 변경 핸들러
   const handleInputChange = (e) => {
     const value = e.target.value;
     setInputValue(value);
     setError(null);
-    
+
     if (value.trim().length > 0) {
       setLoading(true);
       debouncedSearch(value);
@@ -251,42 +252,42 @@ const LinkCreationPopover = ({ position, onCreateLink, onCancel, selectedText })
     const popupWidth = 320;
     const popupHeight = 400;
     const margin = 10;
-    
+
     // 화면 크기
     const viewportWidth = window.innerWidth;
     const viewportHeight = window.innerHeight;
-    
+
     // 기본 위치
     let calculatedTop = position.top;
     let calculatedLeft = position.left;
-    
+
     // 오른쪽 경계 체크
     if (calculatedLeft + popupWidth > viewportWidth - margin) {
       calculatedLeft = viewportWidth - popupWidth - margin;
     }
-    
+
     // 왼쪽 경계 체크
     if (calculatedLeft < margin) {
       calculatedLeft = margin;
     }
-    
+
     // 아래쪽 경계 체크
     if (calculatedTop + popupHeight > viewportHeight - margin) {
       // 팝업을 위로 이동 (커서 위에 표시)
       calculatedTop = position.top - popupHeight - 10;
-      
+
       // 위로 이동했는데도 화면 밖이면 화면 상단에 고정
       if (calculatedTop < margin) {
         calculatedTop = margin;
       }
     }
-    
+
     return {
       top: calculatedTop,
       left: calculatedLeft
     };
   };
-  
+
   const finalPosition = calculatePopupPosition();
 
   return (
@@ -304,21 +305,21 @@ const LinkCreationPopover = ({ position, onCreateLink, onCancel, selectedText })
       maxHeight: '380px',
       overflow: 'auto',
     }}>
-      <div style={{ 
-        display: 'flex', 
-        justifyContent: 'space-between', 
+      <div style={{
+        display: 'flex',
+        justifyContent: 'space-between',
         alignItems: 'center',
-        marginBottom: '10px' 
+        marginBottom: '10px'
       }}>
         <div style={{ fontWeight: 'bold' }}>링크 생성</div>
-        <div style={{ 
-          display: 'flex', 
-          alignItems: 'center', 
+        <div style={{
+          display: 'flex',
+          alignItems: 'center',
           fontSize: '12px',
           color: '#666'
         }}>
           <span style={{ marginRight: '6px' }}>AI 검색</span>
-          <label style={{ 
+          <label style={{
             position: 'relative',
             display: 'inline-block',
             width: '34px',
@@ -331,7 +332,7 @@ const LinkCreationPopover = ({ position, onCreateLink, onCancel, selectedText })
               onChange={() => setUseAiSearch(!useAiSearch)}
               style={{ opacity: 0, width: 0, height: 0 }}
             />
-            <span style={{ 
+            <span style={{
               position: 'absolute',
               top: 0,
               left: 0,
@@ -341,7 +342,7 @@ const LinkCreationPopover = ({ position, onCreateLink, onCancel, selectedText })
               borderRadius: '14px',
               transition: '0.4s'
             }}>
-              <span style={{ 
+              <span style={{
                 position: 'absolute',
                 content: '""',
                 height: '14px',
@@ -356,7 +357,7 @@ const LinkCreationPopover = ({ position, onCreateLink, onCancel, selectedText })
           </label>
         </div>
       </div>
-        
+
       <div style={{ marginBottom: '10px' }}>
         <input
           type="text"
@@ -373,10 +374,10 @@ const LinkCreationPopover = ({ position, onCreateLink, onCancel, selectedText })
           autoFocus
         />
       </div>
-      
+
       {loading ? (
-        <div style={{ 
-          textAlign: 'center', 
+        <div style={{
+          textAlign: 'center',
           padding: '20px',
           display: 'flex',
           justifyContent: 'center',
@@ -401,8 +402,8 @@ const LinkCreationPopover = ({ position, onCreateLink, onCancel, selectedText })
           <span style={{ marginLeft: '8px' }}>검색 중...</span>
         </div>
       ) : error ? (
-        <div style={{ 
-          color: 'red', 
+        <div style={{
+          color: 'red',
           padding: '10px',
           backgroundColor: '#fff8f8',
           borderRadius: '4px',
@@ -413,8 +414,8 @@ const LinkCreationPopover = ({ position, onCreateLink, onCancel, selectedText })
       ) : (
         <div style={{ maxHeight: '200px', overflowY: 'auto' }}>
           {searchResults.length === 0 && inputValue.trim() !== '' ? (
-            <div style={{ 
-              textAlign: 'center', 
+            <div style={{
+              textAlign: 'center',
               padding: '20px',
               color: '#666'
             }}>
@@ -450,10 +451,10 @@ const LinkCreationPopover = ({ position, onCreateLink, onCancel, selectedText })
                 <div style={{ fontWeight: 'bold' }}>
                   {result.title}
                   {result.isUrl && (
-                    <span style={{ 
-                      marginLeft: '4px', 
-                      fontSize: '10px', 
-                      backgroundColor: '#e8f5e9', 
+                    <span style={{
+                      marginLeft: '4px',
+                      fontSize: '10px',
+                      backgroundColor: '#e8f5e9',
                       color: '#43a047',
                       padding: '2px 4px',
                       borderRadius: '4px',
@@ -461,11 +462,11 @@ const LinkCreationPopover = ({ position, onCreateLink, onCancel, selectedText })
                     }}>URL</span>
                   )}
                 </div>
-                
+
                 {result.preview && (
-                  <div style={{ 
-                    fontSize: '12px', 
-                    color: '#666', 
+                  <div style={{
+                    fontSize: '12px',
+                    color: '#666',
                     marginTop: '4px',
                     whiteSpace: 'normal',
                     overflow: 'hidden',
@@ -477,14 +478,14 @@ const LinkCreationPopover = ({ position, onCreateLink, onCancel, selectedText })
                     {result.preview}
                   </div>
                 )}
-                
+
                 {result.isSemanticMatch && result.relevanceScore && (
-                  <div style={{ 
+                  <div style={{
                     display: 'flex',
                     alignItems: 'center',
                     marginTop: '4px',
                   }}>
-                    <span style={{ 
+                    <span style={{
                       fontSize: '10px',
                       color: '#ef6c00',
                       backgroundColor: '#fff3e0',
@@ -497,10 +498,10 @@ const LinkCreationPopover = ({ position, onCreateLink, onCancel, selectedText })
                       <span style={{ marginRight: '2px' }}>✨</span>
                       관련도 {result.relevanceScore}%
                     </span>
-                    
+
                     {result.reason && (
-                      <span style={{ 
-                        fontSize: '10px', 
+                      <span style={{
+                        fontSize: '10px',
                         color: '#757575',
                         marginLeft: '6px',
                         fontStyle: 'italic',
@@ -510,11 +511,11 @@ const LinkCreationPopover = ({ position, onCreateLink, onCancel, selectedText })
                     )}
                   </div>
                 )}
-                
+
                 {result.isCreateNew && (
-                  <div style={{ 
-                    fontSize: '10px', 
-                    color: '#1976d2', 
+                  <div style={{
+                    fontSize: '10px',
+                    color: '#1976d2',
                     marginTop: '4px',
                     display: 'flex',
                     alignItems: 'center',
@@ -529,11 +530,11 @@ const LinkCreationPopover = ({ position, onCreateLink, onCancel, selectedText })
           )}
         </div>
       )}
-      
-      <div style={{ 
-        marginTop: '10px', 
-        display: 'flex', 
-        justifyContent: 'space-between' 
+
+      <div style={{
+        marginTop: '10px',
+        display: 'flex',
+        justifyContent: 'space-between'
       }}>
         <button
           onClick={onCancel}
@@ -547,7 +548,7 @@ const LinkCreationPopover = ({ position, onCreateLink, onCancel, selectedText })
         >
           취소
         </button>
-        
+
         <button
           onClick={() => {
             if (inputValue.trim()) {
@@ -595,8 +596,8 @@ const LinkButton = ({ position, onClick, selectedText }) => {
       title="링크 생성"
     >
       <svg xmlns="http://www.w3.org/2000/svg" width="24" height="24" fill="currentColor" viewBox="0 0 16 16">
-        <path d="M6.354 5.5H4a3 3 0 0 0 0 6h3a3 3 0 0 0 2.83-4H9c-.086 0-.17.01-.25.031A2 2 0 0 1 7 10.5H4a2 2 0 1 1 0-4h1.535c.218-.376.495-.714.82-1z"/>
-        <path d="M9 5.5a3 3 0 0 0-2.83 4h1.098A2 2 0 0 1 9 6.5h3a2 2 0 1 1 0 4h-1.535a4.02 4.02 0 0 1-.82 1H12a3 3 0 1 0 0-6H9z"/>
+        <path d="M6.354 5.5H4a3 3 0 0 0 0 6h3a3 3 0 0 0 2.83-4H9c-.086 0-.17.01-.25.031A2 2 0 0 1 7 10.5H4a2 2 0 1 1 0-4h1.535c.218-.376.495-.714.82-1z" />
+        <path d="M9 5.5a3 3 0 0 0-2.83 4h1.098A2 2 0 0 1 9 6.5h3a2 2 0 1 1 0 4h-1.535a4.02 4.02 0 0 1-.82 1H12a3 3 0 1 0 0-6H9z" />
       </svg>
     </button>
   );
@@ -624,6 +625,9 @@ const MikiEditor = forwardRef(({ onContentChange, onSendToAi, onContextUpdate, o
 
   // 플로팅 툴바 상태
   const [showFloatingToolbar, setShowFloatingToolbar] = useState(true);
+
+  // 🔥 NEW: useConfirm 훅 사용
+  const confirm = useConfirm();
 
   // 에디터 컨텍스트 업데이트를 위한 디바운스 함수
   const debouncedContextUpdate = useCallback(
@@ -710,45 +714,45 @@ const MikiEditor = forwardRef(({ onContentChange, onSendToAi, onContextUpdate, o
           scrollParent.scrollTo({ top: scrollParent.scrollTop + need, behavior: 'smooth' });
         }
       }
-    } catch {}
+    } catch { }
   }, []);
 
   // Handles editor content and selection changes - 디바운스 처리
   const handleEditorActivity = useCallback(
     debounce(() => {
-    if (!editorRef.current) return;
-    const instance = editorRef.current.getInstance();
-    const markdownContent = instance.getMarkdown();
-    const selection = instance.getSelection(); // [[line, char], [line, char]]
-    const selectedText = instance.getSelectedText();
-    let cursorPositionInfo = null;
-    if (selection && selection.length === 2 && selection[0] && selection[0].length === 2) {
-      cursorPositionInfo = selection[0]; // [line, char] for the start of the selection or cursor
-    }
+      if (!editorRef.current) return;
+      const instance = editorRef.current.getInstance();
+      const markdownContent = instance.getMarkdown();
+      const selection = instance.getSelection(); // [[line, char], [line, char]]
+      const selectedText = instance.getSelectedText();
+      let cursorPositionInfo = null;
+      if (selection && selection.length === 2 && selection[0] && selection[0].length === 2) {
+        cursorPositionInfo = selection[0]; // [line, char] for the start of the selection or cursor
+      }
 
-    const selectionInfo = {
-      range: selection,
-      text: selectedText,
-      cursor: cursorPositionInfo,
-    };
+      const selectionInfo = {
+        range: selection,
+        text: selectedText,
+        cursor: cursorPositionInfo,
+      };
 
       // 내용이 변경된 경우에만 상태 업데이트 및 콜백 호출
       if (currentContent !== markdownContent) {
         updateCountRef.current++;
-        
+
         // 개발 로그는 10회마다 출력 (로그 수 감소)
         if (updateCountRef.current % 10 === 0) {
           logger.info(`에디터 내용 업데이트 (${updateCountRef.current}회): 길이=${markdownContent.length}`);
         }
-        
-    setCurrentContent(markdownContent);
+
+        setCurrentContent(markdownContent);
         debouncedContentChange(markdownContent);
       }
 
       setEditorSelection(selectionInfo);
       // 에디터에 포커스가 있으면 툴바 노출
       setShowFloatingToolbar(true);
-    debouncedContextUpdate(markdownContent, selectionInfo);
+      debouncedContextUpdate(markdownContent, selectionInfo);
     }, 50), // 50ms 디바운스로 업데이트 빈도 제한
     [debouncedContextUpdate, debouncedContentChange, currentContent]
   );
@@ -758,24 +762,24 @@ const MikiEditor = forwardRef(({ onContentChange, onSendToAi, onContextUpdate, o
     if (!editorRef.current) return;
     const instance = editorRef.current.getInstance();
     const selectedText = instance.getSelectedText();
-    
+
     if (selectedText && selectedText.trim().length > 0) {
       // 선택 영역 위치 계산
       const selection = window.getSelection();
       if (selection && selection.rangeCount > 0) {
         const range = selection.getRangeAt(0);
         const rect = range.getBoundingClientRect();
-        
+
         // 에디터 요소의 경계 가져오기
         const editorEl = instance.wwEditor?.el || instance.mdEditor?.el;
         const editorRect = editorEl ? editorEl.getBoundingClientRect() : { left: 0, right: window.innerWidth };
-        
+
         // 선택된 텍스트의 중간 지점 계산
         const leftPos = rect.left + (rect.width / 2);
-        
+
         // 선택된 텍스트 저장
         setSelectedTextForLink(selectedText);
-        
+
         // 링크 버튼 위치 설정 (선택 텍스트 중간 지점 기준)
         setLinkButtonPosition({
           top: rect.bottom + window.scrollY + 5, // 텍스트 아래에 약간의 여백 추가
@@ -796,7 +800,7 @@ const MikiEditor = forwardRef(({ onContentChange, onSendToAi, onContextUpdate, o
       // 이전 리스너 모두 제거
       instance.off('change');
       instance.off('caretChange');
-      
+
       // 필수 이벤트만 등록
       instance.on('change', () => {
         hasEditedSinceLoadRef.current = true;
@@ -804,13 +808,13 @@ const MikiEditor = forwardRef(({ onContentChange, onSendToAi, onContextUpdate, o
         // 커서가 하단에 붙지 않도록 자동 스크롤 보정
         ensureCaretBottomBuffer({ minLines: 3 });
       });
-      
+
       // 캐럿 변경은 선택 변경에만 영향을 줌
       instance.on('caretChange', () => {
         handleSelectionChange();
         ensureCaretBottomBuffer({ minLines: 3 });
       });
-      
+
       const editorRoot = instance.wwEditor?.el || instance.mdEditor?.el;
       if (editorRoot) {
         // 키보드 관련 이벤트는 키다운만 사용 (중복 방지)
@@ -823,7 +827,7 @@ const MikiEditor = forwardRef(({ onContentChange, onSendToAi, onContextUpdate, o
                 event.preventDefault();
                 return;
               }
-            } catch {}
+            } catch { }
           }
 
           // Enter 키 처리를 위한 로직 - AI 연동
@@ -832,11 +836,11 @@ const MikiEditor = forwardRef(({ onContentChange, onSendToAi, onContextUpdate, o
             if (currentSelection && currentSelection.length > 0 && currentSelection[0] && currentSelection[0].length > 0) {
               const lineIndex = currentSelection[0][0]; // 0-based line index
               const currentLineText = instance.getMarkdown().split('\n')[lineIndex];
-              
+
               if (currentLineText && currentLineText.trim().length > 0 && onSendToAi) {
                 // 콘솔 로그 최소화
                 // logger.info(`Enter pressed on line ${lineIndex + 1}`);
-                
+
                 onSendToAi({
                   text: currentLineText.trim(),
                   type: 'user_command_editor_enter',
@@ -851,7 +855,7 @@ const MikiEditor = forwardRef(({ onContentChange, onSendToAi, onContextUpdate, o
             }
           }
         };
-        
+
         // 링크 클릭 이벤트 핸들러 추가
         const handleLinkClick = (event) => {
           const link = event.target.closest('a');
@@ -861,11 +865,11 @@ const MikiEditor = forwardRef(({ onContentChange, onSendToAi, onContextUpdate, o
             if (href.startsWith('/doc/')) {
               event.preventDefault();
               event.stopPropagation();
-              
+
               // 문서 경로 추출
               const docPath = href.split('/doc/')[1].replace('/', '');
               logger.info(`내부 문서 링크 클릭: ${docPath}`);
-              
+
               // 부모 컴포넌트(App.jsx)의 네비게이션 함수 호출
               if (onNavigateRequest) {
                 onNavigateRequest(docPath);
@@ -880,19 +884,19 @@ const MikiEditor = forwardRef(({ onContentChange, onSendToAi, onContextUpdate, o
             // 그 외 (mailto: 등)는 기본 동작 허용
           }
         };
-        
+
         // 붙여넣기 이벤트 (주요 이벤트이므로 유지)
         const handlePaste = () => {
           // 붙여넣기 후 약간의 지연을 주어 내용이 반영된 후 호출
           setTimeout(handleEditorActivity, 10);
         };
-        
+
         // 이벤트 리스너 정리 - 필수 이벤트만 등록
         editorRoot.addEventListener('keydown', handleEditorKeyDown);
         editorRoot.addEventListener('paste', handlePaste);
         editorRoot.addEventListener('mouseup', handleSelectionChange);
         editorRoot.addEventListener('click', handleLinkClick); // 링크 클릭 이벤트 추가
-        
+
         return () => {
           editorRoot.removeEventListener('keydown', handleEditorKeyDown);
           editorRoot.removeEventListener('paste', handlePaste);
@@ -913,10 +917,10 @@ const MikiEditor = forwardRef(({ onContentChange, onSendToAi, onContextUpdate, o
 
     let targetRangeForPos = actionRange;
     if (typeof actionRange === 'string') {
-        if (actionRange === 'cursor' || actionRange === 'selection') {
-            targetRangeForPos = editorSelection?.range;
-        }
-        // 'document_start', 'document_end', 'line_number' might need more specific handling
+      if (actionRange === 'cursor' || actionRange === 'selection') {
+        targetRangeForPos = editorSelection?.range;
+      }
+      // 'document_start', 'document_end', 'line_number' might need more specific handling
     }
 
     if (targetRangeForPos && targetRangeForPos.from && Array.isArray(targetRangeForPos.from)) {
@@ -1017,7 +1021,7 @@ const MikiEditor = forwardRef(({ onContentChange, onSendToAi, onContextUpdate, o
             return true;
           }
           return false;
-          
+
         // 노트 추가
         case 'note':
           if (action.content) {
@@ -1025,7 +1029,7 @@ const MikiEditor = forwardRef(({ onContentChange, onSendToAi, onContextUpdate, o
             return true;
           }
           return false;
-          
+
         // 서식 적용 (formatting)
         case 'formatting':
           if (action.target === 'title' && action.style === 'bold') {
@@ -1055,13 +1059,13 @@ const MikiEditor = forwardRef(({ onContentChange, onSendToAi, onContextUpdate, o
           if (style === 'code') { wrap('`', '`'); return true; }
           return false;
         }
-          
+
         // 문서 지우기
         case 'clear_document':
           editorInstance.setMarkdown('');
           logger.info('문서 내용이 모두 삭제되었습니다.');
           return true;
-          
+
         // 기타 마크다운 서식 액션들 (예시)
         case 'format_bold':
         case 'format_italic':
@@ -1126,7 +1130,7 @@ const MikiEditor = forwardRef(({ onContentChange, onSendToAi, onContextUpdate, o
           editorInstance.insertText(block);
           return true;
         }
-          
+
         default:
           logger.warn(`지원되지 않는 액션 타입: ${action.actionType}`);
           return false;
@@ -1209,7 +1213,7 @@ const MikiEditor = forwardRef(({ onContentChange, onSendToAi, onContextUpdate, o
     } else {
       logger.warn("알 수 없는 명령 형식:", pendingCommand);
     }
-    
+
     if (anyActionApplied) {
       handleEditorActivity();
       logger.info("구조화 명령 적용 성공"); // 디버깅 로그 추가
@@ -1238,17 +1242,17 @@ const MikiEditor = forwardRef(({ onContentChange, onSendToAi, onContextUpdate, o
         const instance = editorRef.current.getInstance();
         if (instance.getMode && instance.getMode() !== 'wysiwyg') instance.changeMode('wysiwyg');
         const beforeState = instance.getMarkdown();
-        
+
         let insertFrom = atRange?.from;
         let insertTo = atRange?.to;
-        if (!insertFrom || !insertTo){
-            const currentSel = instance.getSelection();
-            insertFrom = currentSel[0];
-            insertTo = currentSel[0]; // insert at cursor start
+        if (!insertFrom || !insertTo) {
+          const currentSel = instance.getSelection();
+          insertFrom = currentSel[0];
+          insertTo = currentSel[0]; // insert at cursor start
         }
 
         instance.replaceSelection(textToInsert, insertFrom, insertTo);
-        
+
         const afterState = instance.getMarkdown();
         if (beforeState !== afterState) {
           const newHistory = commandHistory.slice(0, historyPointer + 1);
@@ -1260,9 +1264,9 @@ const MikiEditor = forwardRef(({ onContentChange, onSendToAi, onContextUpdate, o
       }
     },
     // App.jsx에서 호출하는 applyStructuredAiCommand 메서드 구현
-    applyStructuredAiCommand(commandAction) {
+    async applyStructuredAiCommand(commandAction) {
       logger.info("applyStructuredAiCommand 호출됨:", commandAction);
-      
+
       // 사용자 확인이 필요한 명령인지 확인
       const requiresConfirmation = true; // 모든 명령에 대해 사용자 확인 필요
 
@@ -1276,7 +1280,13 @@ const MikiEditor = forwardRef(({ onContentChange, onSendToAi, onContextUpdate, o
         }
 
         // 사용자 확인 요청
-        if (window.confirm(`AI가 다음 작업을 수행하려고 합니다:\n\n${actionDesc}\n\n허용하시겠습니까?`)) {
+        const ok = await confirm({
+          title: 'AI 작업 승인',
+          message: `AI가 다음 작업을 수행하려고 합니다:\n\n${actionDesc}\n\n허용하시겠습니까?`,
+          danger: false,
+        });
+
+        if (ok) {
           // 사용자가 확인한 경우에만 명령 실행
           handleStructuredCommand(commandAction);
         } else {
@@ -1304,22 +1314,22 @@ const MikiEditor = forwardRef(({ onContentChange, onSendToAi, onContextUpdate, o
     displayAiSuggestion(suggestionObject) {
       // Expect suggestionObject to be the parsed JSON from AI according to v7 schema
       const isSuggestion = suggestionObject?.isSuggestion === true || suggestionObject?.isSuggestion === 'true';
-      
+
       if (suggestionObject && isSuggestion && suggestionObject.actions && suggestionObject.actions.length > 0) {
         // Determine position based on the first action's range, or a general position
         const firstActionRange = suggestionObject.actions[0].range;
         const pos = calculateSuggestionPosition(firstActionRange);
         setActiveSuggestion({ ...suggestionObject, visible: true, position: pos });
-        
+
         // 사용자에게 제안 내용 알림을 위한 로그
         logger.info("✅ 에디터에 AI 제안이 표시됩니다:", suggestionObject.displayText);
-      } else if (suggestionObject && suggestionObject.suggestionType === 'clarification_needed'){
+      } else if (suggestionObject && suggestionObject.suggestionType === 'clarification_needed') {
         // Handle clarification requests (e.g., show a different UI or send to AiPanel)
         logger.info("Clarification needed from AI:", suggestionObject.displayText, suggestionObject.clarificationDetails);
         // For now, just log it. AiPanel could handle this.
-        if(onSendToAi && suggestionObject.clarificationDetails && suggestionObject.clarificationDetails.query){
-            // Example: Forward clarification to AiPanel to display options
-            // This part needs AiPanel to be able to handle such interactions
+        if (onSendToAi && suggestionObject.clarificationDetails && suggestionObject.clarificationDetails.query) {
+          // Example: Forward clarification to AiPanel to display options
+          // This part needs AiPanel to be able to handle such interactions
         }
         setActiveSuggestion(null); // Don't show standard popover for clarifications
       } else {
@@ -1337,7 +1347,7 @@ const MikiEditor = forwardRef(({ onContentChange, onSendToAi, onContextUpdate, o
       return editorRef.current?.getInstance();
     },
     getCurrentContext() {
-        return { fullContent: currentContent, selection: editorSelection };
+      return { fullContent: currentContent, selection: editorSelection };
     }
   }));
 
@@ -1367,7 +1377,7 @@ const MikiEditor = forwardRef(({ onContentChange, onSendToAi, onContextUpdate, o
         if (savedSelection && Array.isArray(savedSelection) && savedSelection[0] && savedSelection[1]) {
           editor.setSelection(savedSelection[0], savedSelection[1]);
         }
-      } catch {}
+      } catch { }
 
       if (editor.isWysiwygMode()) {
         // WYSIWYG 모드: Toast UI Editor의 addLink 명령 사용
@@ -1379,7 +1389,7 @@ const MikiEditor = forwardRef(({ onContentChange, onSendToAi, onContextUpdate, o
           logger.info(`WYSIWYG 모드에서 링크 삽입 성공: ${linkText} -> ${linkUrl}`);
         } catch (addLinkError) {
           logger.warn('addLink 명령 실패, 대체 방법 시도:', addLinkError);
-          
+
           // 대체 방법: HTML 직접 삽입
           const linkHtml = `<a href="${linkUrl}" target="_blank" rel="noopener noreferrer">${linkText || linkUrl}</a>`;
           editor.insertHTML(linkHtml);
@@ -1393,7 +1403,7 @@ const MikiEditor = forwardRef(({ onContentChange, onSendToAi, onContextUpdate, o
       }
     } catch (error) {
       logger.error("링크 생성 오류:", error);
-      
+
       // 최후의 방법: 클립보드에 복사 후 알림
       try {
         const fallbackText = `[${linkText || linkUrl}](${linkUrl})`;
@@ -1437,7 +1447,7 @@ const MikiEditor = forwardRef(({ onContentChange, onSendToAi, onContextUpdate, o
     const setPublishing = (flag) => {
       try {
         editorRef.current && (editorRef.current.isPublishing = flag);
-      } catch {}
+      } catch { }
     };
     const onStart = () => setPublishing(true);
     const onFinish = () => setPublishing(false);
@@ -1453,49 +1463,51 @@ const MikiEditor = forwardRef(({ onContentChange, onSendToAi, onContextUpdate, o
   // 에디터에 문서 로드하는 함수
   const loadDocumentToEditor = useCallback(async (docData, linkText) => {
     logger.info(`에디터에 문서 로드: ${docData.title || linkText}`);
-    
+
     try {
       // 현재 문서가 변경되었으면 저장 여부 확인
       if (currentContent && currentContent.trim() !== '' && onContentChange) {
-        const shouldSave = window.confirm(
-          '현재 문서에 저장되지 않은 변경사항이 있습니다.\n\n저장하고 새 문서를 여시겠습니까?'
-        );
-        
-        if (shouldSave) {
+        const ok = await confirm({
+          title: '변경사항 저장',
+          message: '현재 문서에 저장되지 않은 변경사항이 있습니다.\n\n저장하고 새 문서를 여시겠습니까?',
+          danger: false,
+        });
+
+        if (ok) {
           // 현재 문서 저장 로직 호출 (App.jsx의 saveCurrentDocument)
           if (window.saveCurrentDocument) {
             await window.saveCurrentDocument();
           }
         }
       }
-      
+
       // 에디터에 새 문서 내용 로드
       if (editorRef.current) {
         const editor = editorRef.current.getInstance();
         const content = docData.content || '';
-        
+
         editor.setMarkdown(content);
         logger.info(`에디터에 내용 로드 완료: ${content.length}자`);
         // Undo 베이스라인 설정
         baselineContentRef.current = content;
         hasEditedSinceLoadRef.current = false;
       }
-      
+
       // 상태 업데이트 (App.jsx의 상태 업데이트 함수들 호출)
       if (window.setCurrentDocument) window.setCurrentDocument(docData);
       if (window.setTitle) window.setTitle(docData.title || linkText || '');
       if (window.setSaveStatus) window.setSaveStatus('저장됨');
-      
+
       // 사용자에게 성공 알림
       if (onContextUpdate) {
-        onContextUpdate({ 
-          message: { 
-            type: 'success', 
-            text: `"${docData.title || linkText}" 문서를 열었습니다.` 
-          } 
+        onContextUpdate({
+          message: {
+            type: 'success',
+            text: `"${docData.title || linkText}" 문서를 열었습니다.`
+          }
         });
       }
-      
+
       logger.info(`문서 로드 완료: ${docData.title || linkText}`);
     } catch (error) {
       logger.error('에디터 문서 로드 오류:', error);
@@ -1506,7 +1518,7 @@ const MikiEditor = forwardRef(({ onContentChange, onSendToAi, onContextUpdate, o
   // 새 문서 생성 함수
   const createNewDocument = useCallback((title) => {
     logger.info(`새 문서 생성: ${title}`);
-    
+
     try {
       // 에디터 초기화
       if (editorRef.current) {
@@ -1514,22 +1526,22 @@ const MikiEditor = forwardRef(({ onContentChange, onSendToAi, onContextUpdate, o
         const initialContent = `# ${title}\n\n`;
         editor.setMarkdown(initialContent);
       }
-      
+
       // 상태 업데이트
       if (window.setCurrentDocument) window.setCurrentDocument(null);
       if (window.setTitle) window.setTitle(title);
       if (window.setSaveStatus) window.setSaveStatus('변경됨');
-      
+
       // 사용자에게 알림
       if (onContextUpdate) {
-        onContextUpdate({ 
-          message: { 
-            type: 'info', 
-            text: `"${title}" 새 문서를 생성했습니다.` 
-          } 
+        onContextUpdate({
+          message: {
+            type: 'info',
+            text: `"${title}" 새 문서를 생성했습니다.`
+          }
         });
       }
-      
+
       logger.info(`새 문서 생성 완료: ${title}`);
     } catch (error) {
       logger.error('새 문서 생성 오류:', error);
@@ -1537,9 +1549,9 @@ const MikiEditor = forwardRef(({ onContentChange, onSendToAi, onContextUpdate, o
   }, [onContextUpdate]);
 
   return (
-    <div style={{ 
-      position: 'relative', 
-      height: '100%', 
+    <div style={{
+      position: 'relative',
+      height: '100%',
       overflow: 'visible',
       display: 'flex',
       flexDirection: 'column',
@@ -1576,9 +1588,9 @@ const MikiEditor = forwardRef(({ onContentChange, onSendToAi, onContextUpdate, o
           heading: (node) => {
             const { level } = node;
             const tagName = `h${level}`;
-            
+
             return {
-              type: 'element', 
+              type: 'element',
               tagName,
               attributes: {},
               children: node.children
@@ -1589,7 +1601,7 @@ const MikiEditor = forwardRef(({ onContentChange, onSendToAi, onContextUpdate, o
             return {
               type: 'element',
               tagName: 'a',
-              attributes: { 
+              attributes: {
                 href: node.destination,
                 title: node.title || '',
                 // 내부 링크와 외부 링크 구분
@@ -1659,11 +1671,11 @@ const MikiEditor = forwardRef(({ onContentChange, onSendToAi, onContextUpdate, o
 
       {/* 하단 중앙 플로팅 툴바 */}
       {showFloatingToolbar && (
-        <div className="miki-floating-toolbar" onMouseDown={(e)=>e.preventDefault()}>
+        <div className="miki-floating-toolbar" onMouseDown={(e) => e.preventDefault()}>
           {/* Heading */}
-          <button title="Heading" onClick={()=>{
+          <button title="Heading" onClick={() => {
             const inst = editorRef.current?.getInstance();
-            if(!inst) return;
+            if (!inst) return;
             if (inst.isWysiwygMode()) {
               inst.exec('heading', { level: 2 });
             } else {
@@ -1672,64 +1684,64 @@ const MikiEditor = forwardRef(({ onContentChange, onSendToAi, onContextUpdate, o
           }}>
             H
           </button>
-          <button title="Bold" onClick={()=>{ editorRef.current?.getInstance()?.exec('bold'); }}>
+          <button title="Bold" onClick={() => { editorRef.current?.getInstance()?.exec('bold'); }}>
             <strong>B</strong>
           </button>
-          <button title="Italic" onClick={()=>{ editorRef.current?.getInstance()?.exec('italic'); }}>
-            <em style={{fontStyle:'italic'}}>I</em>
+          <button title="Italic" onClick={() => { editorRef.current?.getInstance()?.exec('italic'); }}>
+            <em style={{ fontStyle: 'italic' }}>I</em>
           </button>
-          <button title="Strike" onClick={()=>{ editorRef.current?.getInstance()?.exec('strike'); }}>
-            <span style={{textDecoration:'line-through'}}>S</span>
+          <button title="Strike" onClick={() => { editorRef.current?.getInstance()?.exec('strike'); }}>
+            <span style={{ textDecoration: 'line-through' }}>S</span>
           </button>
           <span className="divider" />
-          <button title="Quote" onClick={()=>{ editorRef.current?.getInstance()?.exec('quote'); }}>“”</button>
-          <button title="Bulleted list" onClick={()=>{ editorRef.current?.getInstance()?.exec('bulletList'); }}>•</button>
-          <button title="Ordered list" onClick={()=>{ editorRef.current?.getInstance()?.exec('orderedList'); }}>1.</button>
+          <button title="Quote" onClick={() => { editorRef.current?.getInstance()?.exec('quote'); }}>“”</button>
+          <button title="Bulleted list" onClick={() => { editorRef.current?.getInstance()?.exec('bulletList'); }}>•</button>
+          <button title="Ordered list" onClick={() => { editorRef.current?.getInstance()?.exec('orderedList'); }}>1.</button>
           <span className="divider" />
-          <button title="Checklist" onClick={()=>{ editorRef.current?.getInstance()?.exec('taskList'); }}>☑</button>
-          <button title="Table" onClick={()=>{ editorRef.current?.getInstance()?.exec('table'); }}>▦</button>
-          <button title="Image" onClick={()=>{ editorRef.current?.getInstance()?.exec('image'); }}>🖼</button>
-          <button title="Link" onClick={()=>{
+          <button title="Checklist" onClick={() => { editorRef.current?.getInstance()?.exec('taskList'); }}>☑</button>
+          <button title="Table" onClick={() => { editorRef.current?.getInstance()?.exec('table'); }}>▦</button>
+          <button title="Image" onClick={() => { editorRef.current?.getInstance()?.exec('image'); }}>🖼</button>
+          <button title="Link" onClick={() => {
             // 기존 링크 팝오버 로직 재사용
             const inst = editorRef.current?.getInstance();
-            if(!inst) return;
+            if (!inst) return;
             setSavedSelection(inst.getSelection());
-            setLinkPopoverPosition({ top: window.innerHeight - 160, left: window.innerWidth/2 - 150 });
+            setLinkPopoverPosition({ top: window.innerHeight - 160, left: window.innerWidth / 2 - 150 });
             setShowLinkPopover(true);
           }}>🔗</button>
           <span className="divider" />
-          <button title="Inline code" onClick={()=>{ editorRef.current?.getInstance()?.exec('code'); }}>
+          <button title="Inline code" onClick={() => { editorRef.current?.getInstance()?.exec('code'); }}>
             {'</>'}
           </button>
-          <button title="Code block" onClick={()=>{ editorRef.current?.getInstance()?.exec('codeBlock'); }}>CB</button>
+          <button title="Code block" onClick={() => { editorRef.current?.getInstance()?.exec('codeBlock'); }}>CB</button>
           {/* 도움말 토글 버튼 (우측) */}
           <span className="divider" />
-          <button title="도움말" onClick={()=>{
+          <button title="도움말" onClick={() => {
             window.dispatchEvent(new Event('miki:toggleHelp'));
           }}>?
           </button>
         </div>
       )}
-      
+
       {/* 링크 생성 버튼 */}
       {showLinkButton && (
-        <LinkButton 
+        <LinkButton
           position={linkButtonPosition}
           onClick={handleLinkButtonClick}
           selectedText={selectedTextForLink}
         />
       )}
-      
+
       {/* 링크 생성 팝오버 */}
       {showLinkPopover && (
-        <LinkCreationPopover 
+        <LinkCreationPopover
           position={linkPopoverPosition}
           selectedText={selectedTextForLink}
           onCreateLink={handleLinkCreate}
           onCancel={handleCancelLinkCreation}
         />
       )}
-      
+
       {/* AI 제안 표시용 팝오버 */}
       {activeSuggestion && (
         <AiSuggestionPopover
