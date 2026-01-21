@@ -451,30 +451,59 @@ Happy writing! 🎉
     }
 
     /**
-     * 이미지 업로드 (첨부파일 커버 이미지용)
+     * 첨부파일 업로드 (이중 전략: Repository + CDN)
      * @param {File} file - 업로드할 이미지 파일
-     * @param {string} customPath - 저장 경로 (예: 'miki-editor/attachments/cover-image.jpg')
-     * @returns {string} - 저장된 파일의 GitHub URL
+     * @param {string} repoPath - 저장소 경로
+     * @returns {Object} - { repoUrl, cdnUrl, displayUrl }
      */
-    async uploadImage(file, customPath = null) {
+    async uploadToAttachments(file, repoPath) {
         // 파일을 Base64로 인코딩
         const base64Content = await this.fileToBase64(file);
 
-        // 기본 경로 생성 (날짜 + 원본 파일명)
-        const path = customPath || `miki-editor/attachments/${this.getTodayDate()}-${file.name}`;
-
-        // GitHub에 파일 업로드
+        // 1. 저장소에 업로드 (필수, 항상 성공해야 함)
         await this.createOrUpdateFile(
             'miki-data',
-            path,
+            repoPath,
             base64Content,
-            `Upload attachment: ${file.name}`,
+            `Add attachment: ${file.name}`,
             null,
             { skipShaLookup: false }
         );
 
-        // GitHub raw URL 반환
-        return `https://raw.githubusercontent.com/${this.username}/miki-data/main/${path}`;
+        // jsDelivr CDN URL (저장소 파일 기반)
+        const cdnUrl = `https://cdn.jsdelivr.net/gh/${this.username}/miki-data@main/${repoPath}`;
+
+        // 2. GitHub Issues CDN 업로드 시도 (옵션, 실패 허용)
+        let issuesCdnUrl = null;
+        try {
+            issuesCdnUrl = await this.uploadToIssuesCDN(file);
+        } catch (error) {
+            console.warn('Issues CDN 업로드 실패 (무시됨):', error.message);
+        }
+
+        return {
+            repoUrl: `https://raw.githubusercontent.com/${this.username}/miki-data/main/${repoPath}`,
+            cdnUrl: cdnUrl,
+            issuesCdnUrl: issuesCdnUrl,
+            displayUrl: issuesCdnUrl || cdnUrl // Issues CDN 우선, 없으면 jsDelivr
+        };
+    }
+
+    /**
+     * GitHub Issues CDN 업로드 (비공식 API, 옵션)
+     * @param {File} file - 업로드할 파일
+     * @returns {string} - Issues CDN URL
+     */
+    async uploadToIssuesCDN(file) {
+        // GitHub Issues 이미지 업로드는 비공식 API
+        // 현재는 미구현 (jsDelivr CDN으로 대체)
+        throw new Error('GitHub Issues CDN not implemented - using jsDelivr instead');
+
+        // TODO: 향후 구현 시
+        // 1. 임시 Issue 생성
+        // 2. 이미지 attachment로 업로드
+        // 3. user-images.githubusercontent.com URL 추출
+        // 4. Issue 삭제 (선택적)
     }
 
     /**

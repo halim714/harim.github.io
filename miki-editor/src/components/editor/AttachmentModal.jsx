@@ -10,7 +10,7 @@ const ATTACHMENT_TYPES = [
     { id: 'image', label: '🖼️ 이미지', icon: '🖼️' }
 ];
 
-export default function AttachmentModal({ isOpen, onClose, onSave }) {
+export default function AttachmentModal({ isOpen, onClose, onSave, uploadImage }) {
     const [step, setStep] = useState('select'); // 'select' | 'input'
     const [selectedType, setSelectedType] = useState(null);
     const [formData, setFormData] = useState({});
@@ -67,24 +67,20 @@ export default function AttachmentModal({ isOpen, onClose, onSave }) {
 
         setIsUploading(true);
         try {
-            let coverUrl = null;
-
-            // 커버 이미지가 있으면 업로드
-            if (coverFile) {
-                const token = AuthService.getToken();
-                const github = new GitHubService(token);
-                await github.setUsername();
-
-                coverUrl = await github.uploadImage(coverFile);
-            }
-
-            // 첨부 데이터 생성
-            const attachmentData = {
+            let attachmentData = {
                 type: selectedType,
                 ...formData,
-                ...(coverUrl && { cover: coverUrl }),
                 createdAt: new Date().toISOString()
             };
+
+            // 커버 이미지가 있으면 업로드 (이중 전략: Repository + CDN)
+            if (coverFile && uploadImage) {
+                const uploadResult = await uploadImage(coverFile);
+                attachmentData = {
+                    ...attachmentData,
+                    ...uploadResult  // id, name, repo_path, cdn_url, display_url 등 포함
+                };
+            }
 
             onSave(attachmentData);
             onClose();

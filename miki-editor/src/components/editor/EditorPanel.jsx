@@ -32,8 +32,12 @@ const EditorPanel = ({
   currentDocument,
   content // 추가: useAttachment 훅에 필요
 }) => {
-  // useAttachment 훅 사용
-  const { attachments, addAttachment, removeAttachment } = useAttachment(content, onEditorChange);
+  // useAttachment 훅 사용 (문서 ID 전달)
+  const { attachments, addAttachment, removeAttachment, uploadImage } = useAttachment(
+    content,
+    onEditorChange,
+    currentDocument?.id
+  );
   // 첨부 박스 접기 상태 (localStorage 연동)
   const [isAttachmentCollapsed, setIsAttachmentCollapsed] = useState(() => {
     return localStorage.getItem('attachmentCollapsed') === 'true';
@@ -227,6 +231,7 @@ const EditorPanel = ({
         isOpen={isAttachmentModalOpen}
         onClose={() => setIsAttachmentModalOpen(false)}
         onSave={handleAttachmentSave}
+        uploadImage={uploadImage}
       />
     </div>
   );
