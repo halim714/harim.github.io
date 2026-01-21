@@ -450,6 +450,49 @@ Happy writing! 🎉
 `;
     }
 
+    /**
+     * 이미지 업로드 (첨부파일 커버 이미지용)
+     * @param {File} file - 업로드할 이미지 파일
+     * @param {string} customPath - 저장 경로 (예: 'miki-editor/attachments/cover-image.jpg')
+     * @returns {string} - 저장된 파일의 GitHub URL
+     */
+    async uploadImage(file, customPath = null) {
+        // 파일을 Base64로 인코딩
+        const base64Content = await this.fileToBase64(file);
+
+        // 기본 경로 생성 (날짜 + 원본 파일명)
+        const path = customPath || `miki-editor/attachments/${this.getTodayDate()}-${file.name}`;
+
+        // GitHub에 파일 업로드
+        await this.createOrUpdateFile(
+            'miki-data',
+            path,
+            base64Content,
+            `Upload attachment: ${file.name}`,
+            null,
+            { skipShaLookup: false }
+        );
+
+        // GitHub raw URL 반환
+        return `https://raw.githubusercontent.com/${this.username}/miki-data/main/${path}`;
+    }
+
+    /**
+     * File 객체를 Base64 문자열로 변환
+     */
+    async fileToBase64(file) {
+        return new Promise((resolve, reject) => {
+            const reader = new FileReader();
+            reader.onload = () => {
+                // Data URL에서 Base64 부분만 추출 (data:image/png;base64, 제거)
+                const base64 = reader.result.split(',')[1];
+                resolve(base64);
+            };
+            reader.onerror = reject;
+            reader.readAsDataURL(file);
+        });
+    }
+
     getTodayDate() {
         return new Date().toISOString().split('T')[0];
     }

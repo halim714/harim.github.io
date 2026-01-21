@@ -1,0 +1,667 @@
+두 계획을 분석했습니다. 상세한 통합 구현 계획을 작성해드리겠습니다. [ppl-ai-file-upload.s3.amazonaws](https://ppl-ai-file-upload.s3.amazonaws.com/web/direct-files/attachments/106444062/ac6ef23c-4bcf-4c31-a211-c4a6b5675037/implementation_plan_DOM.md.resolved)
+
+***
+
+# Meki Editor - Global Modal Portal 패턴 통합 구현 계획
+
+## 📋 목차
+1. [문제 정의 및 분석](#1-문제-정의-및-분석)
+2. [아키텍처 설계](#2-아키텍처-설계)
+3. [상세 구현 명세](#3-상세-구현-명세)
+4. [레이어별 의존성 및 위험도](#4-레이어별-의존성-및-위험도)
+5. [단계별 구현 로드맵](#5-단계별-구현-로드맵)
+6. [검증 및 테스트 전략](#6-검증-및-테스트-전략)
+7. [롤백 계획](#7-롤백-계획)
+
+***
+
+## 1. 문제 정의 및 분석
+
+### 1.1 현재 증상
+DocumentSidebar에서 문서 삭제 시 `window.confirm`이 간헐적으로 작동하지 않거나 무시됨
+
+### 1.2 근본 원인 (Root Cause)
+
+```
+┌─────────────────────────────────────────────┐
+│ DocumentSidebar 내부에서 window.confirm     │
+│ 호출 → 부모 컴포넌트가 리렌더되면          │
+│ 삭제 버튼의 DOM 요소가 사라지거나 교체됨   │
+└─────────────────────────────────────────────┘
+                    ↓
+┌─────────────────────────────────────────────┐
+│ window.confirm은 동기 함수이지만            │
+│ DOM이 바뀌는 타이밍에 브라우저가            │
+│ confirm 창을 닫거나 무시할 수 있음         │
+└─────────────────────────────────────────────┘
+```
+
+**발생 시나리오:**
+1. 사용자가 문서 작성 중
+2. Auto-save가 트리거되어 React Query mutation 실행
+3. 캐시 갱신으로 DocumentSidebar 리렌더
+4. 동시에 사용자가 삭제 버튼 클릭
+5. `window.confirm` 호출되지만 DOM 교체로 인해 무시됨
+
+### 1.3 참조 솔루션 (hyperclast/workspace)
+
+Svelte 프로젝트의 modal 구현 패턴 분석:
+- **DOM 독립성**: 모달을 `document.body` 직접 하위 `svelte-modal-root`에 렌더링
+- **Promise 기반 API**: `await confirm({...})` 형태로 비동기 처리
+- **전역 상태 관리**: 모달 상태를 컴포넌트가 아닌 전역 스토어에서 관리
+
+***
+
+## 2. 아키텍처 설계
+
+### 2.1 핵심 설계 원칙
+
+1. **DOM 독립성**: React Portal로 `document.body` 직접 하위에 모달 렌더링
+2. **Promise 기반 흐름**: async/await으로 명확한 사용자 응답 대기
+3. **Context API 활용**: 전역 상태 관리로 컴포넌트 트리와 분리
+4. **단일 책임 원칙**: 각 레이어가 명확한 역할 담당
+
+### 2.2 컴포넌트 다이어그램
+
+```
+App.jsx
+  └─ <ConfirmProvider>
+       ├─ value: { confirm: fn }
+       ├─ <ConfirmModal />  ← Portal to document.body
+       │    └─ z-index: 99999
+       │    └─ Backdrop + Dialog
+       │
+       └─ <AuthProvider>
+            └─ <DocumentSidebar>
+                 └─ useConfirm()
+                      └─ await confirm({ ... })
+```
+
+### 2.3 데이터 흐름
+
+```
+사용자 액션 (삭제 버튼 클릭)
+  ↓
+const ok = await confirm({ title, message, danger })
+  ↓
+ConfirmContext.confirm 호출
+  ↓
+setState({ isOpen: true, ...options })
+  ↓
+ConfirmModal 렌더링 (Portal)
+  ↓
+사용자 선택 (확인/취소)
+  ↓
+Promise resolve(true/false)
+  ↓
+if (ok) { 삭제 로직 실행 }
+```
+
+***
+
+## 3. 상세 구현 명세
+
+### 3.1 [NEW] `src/hooks/useConfirm.js`
+
+**목적**: Context 접근 및 타입 안정성 제공
+
+```jsx
+import { useContext } from 'react';
+import { ConfirmContext } from '../contexts/ConfirmContext';
+
+/**
+ * 전역 확인 모달을 사용하기 위한 훅
+ * @returns {Function} confirm - Promise<boolean>을 반환하는 확인 함수
+ */
+export function useConfirm() {
+  const context = useContext(ConfirmContext);
+  
+  if (!context) {
+    throw new Error('useConfirm must be used within ConfirmProvider');
+  }
+  
+  return context.confirm;
+}
+
+// 사용 예시:
+// const confirm = useConfirm();
+// const ok = await confirm({ 
+//   title: '문서 삭제', 
+//   message: '정말로 삭제하시겠습니까?',
+//   danger: true 
+// });
+// if (ok) { /* 삭제 로직 */ }
+```
+
+### 3.2 [NEW] `src/contexts/ConfirmContext.jsx`
+
+**목적**: 전역 상태 관리 및 Provider 제공
+
+```jsx
+import React, { createContext, useState, useCallback, useRef } from 'react';
+import ConfirmModal from '../components/common/ConfirmModal';
+
+export const ConfirmContext = createContext(null);
+
+export function ConfirmProvider({ children }) {
+  const [modalState, setModalState] = useState({
+    isOpen: false,
+    title: '',
+    message: '',
+    danger: false,
+  });
+  
+  const resolveRef = useRef(null);
+
+  /**
+   * 확인 모달을 표시하고 사용자 응답을 Promise로 반환
+   * @param {Object} options - { title, message, danger }
+   * @returns {Promise<boolean>}
+   */
+  const confirm = useCallback(({ title, message, danger = false }) => {
+    return new Promise((resolve) => {
+      resolveRef.current = resolve;
+      setModalState({
+        isOpen: true,
+        title,
+        message,
+        danger,
+      });
+    });
+  }, []);
+
+  const handleConfirm = useCallback(() => {
+    setModalState((prev) => ({ ...prev, isOpen: false }));
+    if (resolveRef.current) {
+      resolveRef.current(true);
+      resolveRef.current = null;
+    }
+  }, []);
+
+  const handleCancel = useCallback(() => {
+    setModalState((prev) => ({ ...prev, isOpen: false }));
+    if (resolveRef.current) {
+      resolveRef.current(false);
+      resolveRef.current = null;
+    }
+  }, []);
+
+  // Cleanup: 언마운트 시 대기 중인 Promise reject
+  React.useEffect(() => {
+    return () => {
+      if (resolveRef.current) {
+        resolveRef.current(false);
+      }
+    };
+  }, []);
+
+  const value = React.useMemo(() => ({ confirm }), [confirm]);
+
+  return (
+    <ConfirmContext.Provider value={value}>
+      {children}
+      <ConfirmModal
+        isOpen={modalState.isOpen}
+        title={modalState.title}
+        message={modalState.message}
+        danger={modalState.danger}
+        onConfirm={handleConfirm}
+        onCancel={handleCancel}
+      />
+    </ConfirmContext.Provider>
+  );
+}
+```
+
+### 3.3 [NEW] `src/components/common/ConfirmModal.jsx`
+
+**목적**: Portal 기반 UI 모달 컴포넌트
+
+```jsx
+import React, { useEffect, useCallback } from 'react';
+import { createPortal } from 'react-dom';
+
+export default function ConfirmModal({
+  isOpen,
+  title,
+  message,
+  danger = false,
+  onConfirm,
+  onCancel,
+}) {
+  // ESC 키 처리
+  const handleKeyDown = useCallback(
+    (event) => {
+      if (event.key === 'Escape') {
+        onCancel();
+      }
+    },
+    [onCancel]
+  );
+
+  useEffect(() => {
+    if (isOpen) {
+      document.addEventListener('keydown', handleKeyDown);
+      // 포커스 트랩
+      document.body.style.overflow = 'hidden';
+    }
+    
+    return () => {
+      document.removeEventListener('keydown', handleKeyDown);
+      document.body.style.overflow = '';
+    };
+  }, [isOpen, handleKeyDown]);
+
+  if (!isOpen) return null;
+
+  // SSR 대응
+  if (typeof window === 'undefined') return null;
+
+  const modalContent = (
+    <div
+      className="fixed inset-0 z-[99999] flex items-center justify-center"
+      role="dialog"
+      aria-modal="true"
+      aria-labelledby="modal-title"
+    >
+      {/* Backdrop */}
+      <div
+        className="fixed inset-0 bg-black/50 backdrop-blur-sm"
+        onClick={onCancel}
+        aria-hidden="true"
+      />
+      
+      {/* Modal */}
+      <div className="relative bg-white dark:bg-gray-800 rounded-lg shadow-xl max-w-md w-full mx-4 p-6">
+        <h2
+          id="modal-title"
+          className="text-xl font-semibold mb-3 text-gray-900 dark:text-gray-100"
+        >
+          {title}
+        </h2>
+        
+        <p className="text-gray-600 dark:text-gray-300 mb-6">
+          {message}
+        </p>
+        
+        <div className="flex gap-3 justify-end">
+          <button
+            onClick={onCancel}
+            className="px-4 py-2 rounded-lg border border-gray-300 dark:border-gray-600 
+                       hover:bg-gray-100 dark:hover:bg-gray-700 transition-colors"
+            autoFocus={!danger}
+          >
+            취소
+          </button>
+          
+          <button
+            onClick={onConfirm}
+            className={`px-4 py-2 rounded-lg transition-colors ${
+              danger
+                ? 'bg-red-600 hover:bg-red-700 text-white'
+                : 'bg-blue-600 hover:bg-blue-700 text-white'
+            }`}
+            autoFocus={danger}
+          >
+            확인
+          </button>
+        </div>
+      </div>
+    </div>
+  );
+
+  return createPortal(modalContent, document.body);
+}
+```
+
+### 3.4 [MODIFY] `src/App.jsx`
+
+```diff
+import { BrowserRouter } from 'react-router-dom';
+import { QueryClient, QueryClientProvider } from '@tanstack/react-query';
+import { AuthProvider } from './contexts/AuthContext';
++ import { ConfirmProvider } from './contexts/ConfirmContext';
+import AppRoutes from './routes';
+
+const queryClient = new QueryClient();
+
+function App() {
+  return (
+    <QueryClientProvider client={queryClient}>
+      <BrowserRouter>
++       <ConfirmProvider>
+          <AuthProvider>
+            <AppRoutes />
+          </AuthProvider>
++       </ConfirmProvider>
+      </BrowserRouter>
+    </QueryClientProvider>
+  );
+}
+```
+
+**중요**: ConfirmProvider는 AuthProvider보다 상위에 배치 (독립성 보장)
+
+### 3.5 [MODIFY] `src/components/sidebar/DocumentSidebar.jsx:384`
+
+```diff
++ import { useConfirm } from '../../hooks/useConfirm';
+
+function DocumentSidebar() {
++  const confirm = useConfirm();
+
+  const handleDelete = async (post) => {
+-   if (window.confirm(`'${post.title}'을(를) 삭제하시겠습니까?`)) {
++   const ok = await confirm({
++     title: '문서 삭제',
++     message: `'${post.title}'을(를) 삭제하시겠습니까?`,
++     danger: true,
++   });
++   
++   if (ok) {
+      // 기존 삭제 로직
+      await deletePost(post.id);
+    }
+  };
+}
+```
+
+### 3.6 [MODIFY] `src/components/editor/MikiEditor.jsx`
+
+**Line 1279 (handleClearEditor):**
+```diff
++ import { useConfirm } from '../../hooks/useConfirm';
+
+function MikiEditor() {
++  const confirm = useConfirm();
+
+  const handleClearEditor = async () => {
+-   if (window.confirm('에디터 내용을 모두 지우시겠습니까?')) {
++   const ok = await confirm({
++     title: '내용 지우기',
++     message: '에디터 내용을 모두 지우시겠습니까?',
++     danger: true,
++   });
++   
++   if (ok) {
+      // 기존 클리어 로직
+    }
+  };
+}
+```
+
+**Line 1460 (handleDiscardChanges):**
+```diff
+  const handleDiscardChanges = async () => {
+-   if (window.confirm('변경사항을 취소하시겠습니까?')) {
++   const ok = await confirm({
++     title: '변경사항 취소',
++     message: '저장하지 않은 변경사항이 사라집니다. 계속하시겠습니까?',
++     danger: false,
++   });
++   
++   if (ok) {
+      // 기존 취소 로직
+    }
+  };
+```
+
+***
+
+## 4. 레이어별 의존성 및 위험도
+
+| Layer | 대상 | 의존성 | 변경 범위 | 위험도 |
+|-------|------|--------|----------|--------|
+| **0** | `useConfirm.js` | React hooks만 | 신규 파일 | 🟢 낮음 |
+| **1** | `ConfirmContext.jsx` | React, createPortal | 신규 파일 | 🟢 낮음 |
+| **2** | `ConfirmModal.jsx` | Portal, Tailwind | 신규 파일 | 🟢 낮음 |
+| **3** | `App.jsx` | 기존 Provider 구조 | Provider 추가 (1줄) | 🟡 중간 |
+| **4-A** | `DocumentSidebar.jsx:384` | React Query, storage | 함수 시그니처 변경 | 🟡 중간 |
+| **4-B** | `MikiEditor.jsx:1279` | useImperativeHandle | async 함수 변환 | 🟡 중간 |
+| **4-C** | `MikiEditor.jsx:1460` | 이미 async 함수 | 최소 변경 | 🟢 낮음 |
+
+### 4.1 핵심 위험 요소 및 완화 전략
+
+| 위험 | 영향 | 완화 방법 |
+|-----|------|----------|
+| **Promise 누수** (언마운트 시) | 메모리 누수 | useEffect cleanup에서 자동 reject |
+| **Context 리렌더 전파** | 성능 저하 | `useCallback` + `useMemo`로 메모이제이션 |
+| **z-index 충돌** | 모달이 가려짐 | 기존 최대값(9999)보다 높은 99999 사용 |
+| **SSR 오류** | Next.js 등 적용 시 | `typeof window !== 'undefined'` 체크 |
+| **포커스 트랩 누락** | 접근성 문제 | ESC 키 + 배경 클릭 + autoFocus |
+| **비동기 경쟁 상태** | 여러 모달 동시 호출 | 모달 큐잉 시스템 (선택적) |
+
+***
+
+## 5. 단계별 구현 로드맵
+
+### Phase 1: 기반 구조 구축 (30분)
+
+**목표**: Portal 시스템과 Context 설정
+
+1. **Step 1.1** - `useConfirm.js` 작성
+   - Context import 및 에러 처리
+   - JSDoc 타입 주석 추가
+
+2. **Step 1.2** - `ConfirmContext.jsx` 작성
+   - useState + useRef 조합으로 Promise 관리
+   - useCallback으로 메모이제이션
+   - cleanup 로직 구현
+
+3. **Step 1.3** - `ConfirmModal.jsx` 작성
+   - Portal 구조 설정
+   - Tailwind 스타일링
+   - ESC 키 리스너
+
+**검증**: 
+```jsx
+// 임시 테스트 컴포넌트
+function TestConfirm() {
+  const confirm = useConfirm();
+  const test = async () => {
+    const ok = await confirm({ title: 'Test', message: 'Working?' });
+    console.log('Result:', ok);
+  };
+  return <button onClick={test}>Test Modal</button>;
+}
+```
+
+### Phase 2: 통합 및 Provider 설치 (15분)
+
+**목표**: App.jsx에 Provider 추가
+
+1. **Step 2.1** - `App.jsx` 수정
+   - ConfirmProvider import
+   - AuthProvider 상위에 배치
+
+2. **Step 2.2** - 초기 렌더링 테스트
+   - 개발 서버 재시작
+   - Console 에러 확인
+   - React DevTools로 Context 확인
+
+**검증**: React DevTools에서 ConfirmProvider가 트리에 존재하는지 확인
+
+### Phase 3: 기존 코드 마이그레이션 (30분)
+
+**목표**: window.confirm 제거 및 커스텀 모달 적용
+
+1. **Step 3.1** - `DocumentSidebar.jsx` 수정
+   - useConfirm import
+   - handleDelete async 변환
+   - 에러 핸들링 추가
+
+2. **Step 3.2** - `MikiEditor.jsx:1279` 수정
+   - handleClearEditor async 확인
+   - confirm 호출 구조 변경
+
+3. **Step 3.3** - `MikiEditor.jsx:1460` 수정
+   - handleDiscardChanges 수정 (이미 async)
+
+**검증**: 각 변경 후 해당 기능 수동 테스트
+
+### Phase 4: 통합 테스트 (20분)
+
+**목표**: 실제 사용 시나리오 검증
+
+시나리오 목록:
+1. 문서 작성 중 자동 저장 발생 → 동시에 삭제 클릭
+2. 에디터 내용 지우기 클릭 → 모달 표시 → 취소
+3. 변경사항 취소 클릭 → 모달 표시 → 확인
+4. ESC 키로 모달 닫기
+5. 배경 클릭으로 모달 닫기
+
+***
+
+## 6. 검증 및 테스트 전략
+
+### 6.1 자동화 테스트 (선택적)
+
+```bash
+npm test
+```
+
+**테스트 케이스** (`ConfirmModal.test.jsx`):
+```jsx
+import { render, screen, fireEvent } from '@testing-library/react';
+import { ConfirmProvider, useConfirm } from '../contexts/ConfirmContext';
+
+describe('ConfirmModal', () => {
+  test('confirm 호출 시 모달이 표시됨', async () => {
+    const TestComponent = () => {
+      const confirm = useConfirm();
+      return <button onClick={() => confirm({ title: 'Test', message: 'Msg' })}>Open</button>;
+    };
+    
+    render(
+      <ConfirmProvider>
+        <TestComponent />
+      </ConfirmProvider>
+    );
+    
+    fireEvent.click(screen.getByText('Open'));
+    expect(screen.getByText('Test')).toBeInTheDocument();
+  });
+
+  test('확인 버튼 클릭 시 Promise가 true 반환', async () => {
+    // ... 테스트 구현
+  });
+
+  test('ESC 키 누르면 모달이 닫힘', async () => {
+    // ... 테스트 구현
+  });
+});
+```
+
+### 6.2 수동 검증 체크리스트
+
+#### ✅ 기능 검증
+- [ ] 문서 삭제 모달이 정상 표시됨
+- [ ] 에디터 클리어 모달이 정상 표시됨
+- [ ] 변경사항 취소 모달이 정상 표시됨
+- [ ] 확인 버튼 클릭 시 액션 실행됨
+- [ ] 취소 버튼 클릭 시 액션 취소됨
+
+#### ✅ 버그 재현 시나리오
+- [ ] **핵심**: 자동 저장 중 삭제 버튼 클릭 → 모달이 유지됨
+- [ ] 연속으로 빠르게 삭제 버튼 클릭 → 모달이 한 번만 표시됨
+- [ ] 모달 표시 중 네트워크 끊김 → 모달 상태 유지
+
+#### ✅ UX 검증
+- [ ] ESC 키로 모달 닫기 작동
+- [ ] 배경 클릭으로 모달 닫기 작동
+- [ ] 위험 액션(danger=true)은 빨간색 버튼
+- [ ] 일반 액션은 파란색 버튼
+- [ ] 모달 표시 시 배경 스크롤 방지
+- [ ] 모달 닫힌 후 포커스 복원
+
+#### ✅ 접근성 검증
+- [ ] role="dialog" 속성 존재
+- [ ] aria-modal="true" 설정
+- [ ] aria-labelledby로 제목 연결
+- [ ] 키보드만으로 모든 조작 가능
+- [ ] 스크린 리더로 읽기 테스트
+
+### 6.3 성능 모니터링
+
+React DevTools Profiler로 측정:
+- ConfirmProvider 리렌더 빈도
+- Modal 렌더링 시간
+- Context 값 변경 시 하위 컴포넌트 영향
+
+**목표**: ConfirmProvider 자체는 confirm 함수가 메모이제이션되어 있어 자식 컴포넌트를 불필요하게 리렌더하지 않음
+
+***
+
+## 7. 롤백 계획
+
+### 7.1 즉시 롤백 (Critical Bug 발견 시)
+
+```bash
+# Git revert
+git revert <commit-hash>
+git push origin main
+
+# 또는 특정 파일만 복구
+git checkout <commit-hash> -- src/components/sidebar/DocumentSidebar.jsx
+```
+
+### 7.2 단계적 롤백
+
+만약 특정 파일에서만 문제가 발생한다면:
+
+1. **DocumentSidebar.jsx만 롤백**:
+```diff
+- const confirm = useConfirm();
+- const ok = await confirm({...});
++ if (window.confirm(`'${post.title}'을(를) 삭제하시겠습니까?`)) {
+```
+
+2. **나머지 파일은 유지**: MikiEditor.jsx는 새 시스템 사용 계속
+
+3. **점진적 재적용**: 문제 해결 후 다시 마이그레이션
+
+### 7.3 모니터링 지표
+
+**배포 후 24시간 동안 모니터링:**
+- [ ] 삭제 실패율 (0% 목표)
+- [ ] 모달 표시 성공률 (100% 목표)
+- [ ] Console 에러 발생 (0건 목표)
+- [ ] 사용자 피드백 (부정적 0건 목표)
+
+**롤백 트리거**: 삭제 실패율 > 5% 또는 Critical 에러 > 3건
+
+***
+
+## 📊 요약 정보
+
+### 변경 파일 목록
+- ✨ **3개 신규 파일**
+  - `src/hooks/useConfirm.js`
+  - `src/contexts/ConfirmContext.jsx`
+  - `src/components/common/ConfirmModal.jsx`
+
+- 📝 **4개 수정 파일**
+  - `src/App.jsx` (+3줄)
+  - `src/components/sidebar/DocumentSidebar.jsx` (~10줄)
+  - `src/components/editor/MikiEditor.jsx` (2곳, ~20줄)
+
+### 예상 작업 시간
+- 구현: **1.5시간**
+- 테스트: **30분**
+- 문서화: **20분**
+- **총 2시간 20분**
+
+### 리스크 레벨
+🟡 **중간** - 아키텍처 수준 변경이지만 격리된 기능이라 영향 범위 제한적
+
+***
+
+> [!IMPORTANT]
+> 이 변경은 **아키텍처 수준**의 개선입니다. 기존 `window.confirm` 3곳을 모두 커스텀 모달로 교체하여 DOM 안정성을 확보합니다. 구현 후 핵심 버그 재현 시나리오를 반드시 테스트하세요.
+
+> [!TIP]
+> 추후 확장 가능성: 이 패턴을 활용해 Alert, Prompt, Toast 등 다른 전역 UI 컴포넌트도 같은 방식으로 구현 가능합니다.
+
+***
+
+통합 계획이 완성되었습니다! 구현 중 궁금한 점이나 추가 설명이 필요한 부분이 있다면 말씀해주세요.
