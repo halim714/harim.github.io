@@ -7,6 +7,7 @@ import LoginPage from './pages/LoginPage';
 import CallbackPage from './pages/CallbackPage';
 import VerificationPage from './pages/VerificationPage';
 import { AuthService } from './services/auth';
+import { ConfirmProvider } from './contexts/ConfirmContext';
 
 const LoadingScreen = () => (
   <div className="flex items-center justify-center h-screen bg-gray-900 text-white">
@@ -145,9 +146,11 @@ function AppContent() {
 export default function App() {
   return (
     <BrowserRouter>
-      <AuthProvider>
-        <AppContent />
-      </AuthProvider>
+      <ConfirmProvider>
+        <AuthProvider>
+          <AppContent />
+        </AuthProvider>
+      </ConfirmProvider>
     </BrowserRouter>
   );
 }
