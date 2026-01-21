@@ -1,17 +1,37 @@
 import { useState, useEffect, useCallback } from 'react';
 import matter from 'gray-matter';
+import { AuthService } from '../services/auth';
+import { GitHubService } from '../services/github';
+
+/**
+ * 파일명 정규화: abc123-screenshot.png
+ */
+const generateAttachmentId = () => Math.random().toString(36).substring(2, 10);
+
+const slugifyFilename = (name) => {
+    const ext = name.split('.').pop();
+    const base = name.replace(/\.[^/.]+$/, '');
+    const slugged = base.toLowerCase()
+        .replace(/[^a-z0-9가-힣]/g, '-')
+        .replace(/-+/g, '-')
+        .slice(0, 30);
+    return `${generateAttachmentId()}-${slugged}.${ext}`;
+};
 
 /**
  * useAttachment Hook
- * Front Matter를 통해 문서의 첨부 정보 관리
+ * Front Matter를 통해 문서의 첨부 정보 관리 (이중 업로드 전략)
  * 
  * @param {string} content - 마크다운 콘텐츠
  * @param {function} onContentChange - 콘텐츠 변경 콜백
- * @returns {object} - { attachments, addAttachment, removeAttachment, updateAttachment }
+ * @param {string} docId - 현재 문서 ID
+ * @returns {object} - { attachments, addAttachment, removeAttachment, updateAttachment, uploadImage }
  */
-export function useAttachment(content, onContentChange) {
+export function useAttachment(content, onContentChange, docId) {
     const [attachments, setAttachments] = useState([]);
     const [frontMatter, setFrontMatter] = useState({});
+    const [isUploading, setIsUploading] = useState(false);
+    const [error, setError] = useState(null);
 
     // Front Matter 파싱
     useEffect(() => {
@@ -40,6 +60,53 @@ export function useAttachment(content, onContentChange) {
     const generateMarkdown = useCallback((newFrontMatter, markdownBody) => {
         return matter.stringify(markdownBody, newFrontMatter);
     }, []);
+
+    /**
+     * 이미지 업로드 (이중 전략: Repository + CDN)
+     */
+    const uploadImage = useCallback(async (file) => {
+        if (file.size > 10 * 1024 * 1024) {
+            throw new Error('10MB 초과');
+        }
+
+        if (!docId) {
+            throw new Error('문서 ID가 필요합니다');
+        }
+
+        setIsUploading(true);
+        setError(null);
+
+        try {
+            const token = AuthService.getToken();
+            const github = new GitHubService(token);
+            await github.setUsername();
+
+            const safeName = slugifyFilename(file.name);
+            const repoPath = `miki-editor/attachments/${docId}/${safeName}`;
+
+            // 이중 업로드: Repository + CDN 시도
+            const urls = await github.uploadToAttachments(file, repoPath);
+
+            // 첨부 인덱스 생성
+            const attachment = {
+                id: safeName.split('-')[0],
+                name: file.name,
+                repo_path: repoPath,
+                cdn_url: urls.cdnUrl,
+                issues_cdn_url: urls.issuesCdnUrl,
+                display_url: urls.displayUrl,
+                created_at: new Date().toISOString()
+            };
+
+            return attachment;
+
+        } catch (e) {
+            setError(e.message);
+            throw e;
+        } finally {
+            setIsUploading(false);
+        }
+    }, [docId]);
 
     /**
      * 첨부 추가
@@ -120,6 +187,9 @@ export function useAttachment(content, onContentChange) {
         addAttachment,
         removeAttachment,
         updateAttachment,
+        uploadImage,
+        isUploading,
+        error,
         frontMatter
     };
 }
