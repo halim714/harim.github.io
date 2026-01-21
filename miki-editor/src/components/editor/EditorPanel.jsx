@@ -3,6 +3,8 @@ import MikiEditor from '../../MikiEditor';
 import { InlineLoadingSpinner } from '../common/LoadingSpinner';
 import { createLogger } from '../../utils/logger';
 import AttachmentBox from './AttachmentBox';
+import AttachmentModal from './AttachmentModal';
+import { useAttachment } from '../../hooks/useAttachment';
 
 const logger = createLogger('EditorPanel');
 
@@ -27,20 +29,30 @@ const EditorPanel = ({
   hasUnsavedChanges,
   isAutoSaving,
   isManualSaving,
-  currentDocument
+  currentDocument,
+  content // 추가: useAttachment 훅에 필요
 }) => {
+  // useAttachment 훅 사용
+  const { attachments, addAttachment, removeAttachment } = useAttachment(content, onEditorChange);
   // 첨부 박스 접기 상태 (localStorage 연동)
   const [isAttachmentCollapsed, setIsAttachmentCollapsed] = useState(() => {
     return localStorage.getItem('attachmentCollapsed') === 'true';
   });
+
+  // 첨부 모달 상태
+  const [isAttachmentModalOpen, setIsAttachmentModalOpen] = useState(false);
 
   useEffect(() => {
     localStorage.setItem('attachmentCollapsed', String(isAttachmentCollapsed));
   }, [isAttachmentCollapsed]);
 
   const handleAttach = () => {
-    // TODO: 첨부 유형 선택 모달 열기
-    console.log('Open attachment modal');
+    setIsAttachmentModalOpen(true);
+  };
+
+  const handleAttachmentSave = (attachmentData) => {
+    addAttachment(attachmentData);
+    console.log('첨부 추가됨:', attachmentData);
   };
 
   const getSaveStatusStyle = () => {
@@ -209,6 +221,13 @@ const EditorPanel = ({
           onNavigateRequest={onNavigateRequest}
         />
       </div>
+
+      {/* 첨부 모달 */}
+      <AttachmentModal
+        isOpen={isAttachmentModalOpen}
+        onClose={() => setIsAttachmentModalOpen(false)}
+        onSave={handleAttachmentSave}
+      />
     </div>
   );
 };
