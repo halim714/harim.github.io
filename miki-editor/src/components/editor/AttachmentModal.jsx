@@ -1,7 +1,7 @@
 import React, { useState, useEffect } from 'react';
 import { createPortal } from 'react-dom';
 import { AuthService } from '../../services/auth';
-import { GitHubService } from '../../services/github';
+import { GitHubService, SessionExpiredError } from '../../services/github';
 
 const ATTACHMENT_TYPES = [
     { id: 'book', label: '📚 책', icon: '📚' },
@@ -73,7 +73,7 @@ export default function AttachmentModal({ isOpen, onClose, onSave, uploadImage }
                 createdAt: new Date().toISOString()
             };
 
-            // 커버 이미지가 있으면 업로드 (이중 전략: Repository + CDN)
+            // 커버 이미지가 있으면 업로드 (Issues CDN 우선)
             if (coverFile && uploadImage) {
                 const uploadResult = await uploadImage(coverFile);
                 attachmentData = {
@@ -86,7 +86,20 @@ export default function AttachmentModal({ isOpen, onClose, onSave, uploadImage }
             onClose();
         } catch (error) {
             console.error('첨부 저장 실패:', error);
-            alert('첨부 저장에 실패했습니다: ' + error.message);
+
+            if (error instanceof SessionExpiredError) {
+                const shouldLogin = window.confirm(
+                    '무제한 이미지 업로드를 위해 GitHub 로그인이 필요합니다.\n\n' +
+                    'github.com에서 로그인하시겠습니까?\n' +
+                    '(새 탭에서 열립니다. 로그인 후 다시 이미지를 업로드해주세요)'
+                );
+
+                if (shouldLogin) {
+                    window.open('https://github.com/login', '_blank');
+                }
+            } else {
+                alert('첨부 저장에 실패했습니다: ' + error.message);
+            }
         } finally {
             setIsUploading(false);
         }

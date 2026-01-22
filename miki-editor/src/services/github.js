@@ -1,6 +1,16 @@
 import { Octokit } from 'octokit';
 
 /**
+ * GitHub 세션 만료 에러
+ */
+export class SessionExpiredError extends Error {
+    constructor(message) {
+        super(message);
+        this.name = 'SessionExpiredError';
+    }
+}
+
+/**
  * GitHub Service
  * 기존 server/onboarding.js를 프론트엔드로 이동
  * 100% 동일한 로직 (검증 완료)
@@ -451,59 +461,115 @@ Happy writing! 🎉
     }
 
     /**
-     * 첨부파일 업로드 (이중 전략: Repository + CDN)
+     * 첨부파일 업로드 (Issues CDN 우선, Repository Fallback)
      * @param {File} file - 업로드할 이미지 파일
-     * @param {string} repoPath - 저장소 경로
-     * @returns {Object} - { repoUrl, cdnUrl, displayUrl }
+     * @param {string} repoPath - 저장소 경로 (Fallback용)
+     * @returns {Object} - { repoUrl, cdnUrl, issuesCdnUrl, displayUrl }
      */
     async uploadToAttachments(file, repoPath) {
-        // 파일을 Base64로 인코딩
-        const base64Content = await this.fileToBase64(file);
-
-        // 1. 저장소에 업로드 (필수, 항상 성공해야 함)
-        await this.createOrUpdateFile(
-            'miki-data',
-            repoPath,
-            base64Content,
-            `Add attachment: ${file.name}`,
-            null,
-            { skipShaLookup: false }
-        );
-
-        // jsDelivr CDN URL (저장소 파일 기반)
-        const cdnUrl = `https://cdn.jsdelivr.net/gh/${this.username}/miki-data@main/${repoPath}`;
-
-        // 2. GitHub Issues CDN 업로드 시도 (옵션, 실패 허용)
-        let issuesCdnUrl = null;
+        // Issues CDN 우선 시도 (저장소 용량 0 사용)
         try {
-            issuesCdnUrl = await this.uploadToIssuesCDN(file);
+            const issuesCdnUrl = await this.uploadToIssuesCDN(file);
+            return {
+                repoUrl: null,
+                cdnUrl: issuesCdnUrl,
+                issuesCdnUrl: issuesCdnUrl,
+                displayUrl: issuesCdnUrl
+            };
         } catch (error) {
-            console.warn('Issues CDN 업로드 실패 (무시됨):', error.message);
-        }
+            // SessionExpiredError는 상위로 전파 (사용자 처리)
+            if (error instanceof SessionExpiredError) {
+                throw error;
+            }
 
-        return {
-            repoUrl: `https://raw.githubusercontent.com/${this.username}/miki-data/main/${repoPath}`,
-            cdnUrl: cdnUrl,
-            issuesCdnUrl: issuesCdnUrl,
-            displayUrl: issuesCdnUrl || cdnUrl // Issues CDN 우선, 없으면 jsDelivr
-        };
+            // 기타 에러: Repository Fallback
+            console.warn('Issues CDN 실패, Repository 업로드로 전환:', error.message);
+
+            const base64Content = await this.fileToBase64(file);
+            await this.createOrUpdateFile(
+                'miki-data',
+                repoPath,
+                base64Content,
+                `Add attachment: ${file.name}`,
+                null,
+                { skipShaLookup: false }
+            );
+
+            const cdnUrl = `https://cdn.jsdelivr.net/gh/${this.username}/miki-data@main/${repoPath}`;
+            return {
+                repoUrl: `https://raw.githubusercontent.com/${this.username}/miki-data/main/${repoPath}`,
+                cdnUrl: cdnUrl,
+                issuesCdnUrl: null,
+                displayUrl: cdnUrl
+            };
+        }
     }
 
     /**
-     * GitHub Issues CDN 업로드 (비공식 API, 옵션)
+     * GitHub Issues CDN 업로드 (3단계 프로세스)
      * @param {File} file - 업로드할 파일
-     * @returns {string} - Issues CDN URL
+     * @returns {string} - Issues CDN URL (https://github.com/user-attachments/assets/{uuid})
      */
     async uploadToIssuesCDN(file) {
-        // GitHub Issues 이미지 업로드는 비공식 API
-        // 현재는 미구현 (jsDelivr CDN으로 대체)
-        throw new Error('GitHub Issues CDN not implemented - using jsDelivr instead');
+        // 1단계: 업로드 정책 요청
+        const policyResp = await fetch('https://github.com/upload/policies/assets', {
+            method: 'POST',
+            credentials: 'include',
+            headers: {
+                'Content-Type': 'application/json',
+                'GitHub-Verified-Fetch': 'true',
+                'X-Requested-With': 'XMLHttpRequest'
+            },
+            body: JSON.stringify({
+                name: file.name,
+                size: file.size,
+                content_type: file.type
+            })
+        });
 
-        // TODO: 향후 구현 시
-        // 1. 임시 Issue 생성
-        // 2. 이미지 attachment로 업로드
-        // 3. user-images.githubusercontent.com URL 추출
-        // 4. Issue 삭제 (선택적)
+        if (policyResp.status === 401) {
+            throw new SessionExpiredError('GitHub 세션이 만료되었습니다. github.com에서 로그인이 필요합니다.');
+        }
+
+        if (!policyResp.ok) {
+            throw new Error(`Policy request failed: ${policyResp.status}`);
+        }
+
+        const policy = await policyResp.json();
+
+        // 2단계: AWS S3 업로드
+        const formData = new FormData();
+        Object.entries(policy.form).forEach(([key, value]) => {
+            formData.append(key, value);
+        });
+        formData.append('file', file);
+
+        const s3Resp = await fetch(policy.upload_url, {
+            method: 'POST',
+            body: formData
+        });
+
+        if (!s3Resp.ok) {
+            throw new Error('S3 upload failed');
+        }
+
+        // 3단계: 업로드 확정
+        const finalResp = await fetch(policy.asset_upload_url, {
+            method: 'PUT',
+            credentials: 'include',
+            headers: {
+                'Accept': 'application/json',
+                'GitHub-Verified-Fetch': 'true',
+                'X-Requested-With': 'XMLHttpRequest'
+            }
+        });
+
+        if (!finalResp.ok) {
+            throw new Error('Asset finalization failed');
+        }
+
+        const result = await finalResp.json();
+        return result.asset.url; // https://github.com/user-attachments/assets/{uuid}
     }
 
     /**
