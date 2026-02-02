@@ -8,7 +8,7 @@ const AppLayout = ({
   activeMobilePanel,
   setActiveMobilePanel,
   editorPanelClass,
-  
+
   // DocumentSidebar props
   documentsData,
   currentDocument,
@@ -21,7 +21,7 @@ const AppLayout = ({
   onPublish,
   setMessage,
   content,
-  
+
   // EditorPanel props
   title,
   saveStatus,
@@ -38,7 +38,7 @@ const AppLayout = ({
   hasUnsavedChanges,
   isAutoSaving,
   isManualSaving,
-  
+
   // AiPanelContainer props
   aiPanelRef,
   currentDocumentId,
@@ -70,6 +70,11 @@ const AppLayout = ({
           onNavigateRequest={onNavigateRequest}
           onPublish={onPublish}
           isPublishing={isPublishing}
+          currentDocument={currentDocument}
+          hasUnsavedChanges={hasUnsavedChanges}
+          isAutoSaving={isAutoSaving}
+          isManualSaving={isManualSaving}
+          content={content}
         />
       </div>
     );
@@ -95,9 +100,9 @@ const AppLayout = ({
         setMessage={setMessage}
         content={content}
       />
-      
+
       {/* 에디터 패널 */}
-        <EditorPanel
+      <EditorPanel
         title={title}
         saveStatus={saveStatus}
         isFullscreen={isFullscreen}
@@ -113,14 +118,15 @@ const AppLayout = ({
         onEditorChange={onEditorChange}
         onSendToAi={onSendToAi}
         onNavigateRequest={onNavigateRequest}
-          currentDocument={currentDocument}
-          hasUnsavedChanges={hasUnsavedChanges}
+        currentDocument={currentDocument}
+        hasUnsavedChanges={hasUnsavedChanges}
         isAutoSaving={isAutoSaving}
         isManualSaving={isManualSaving}
-          onPublish={onPublish}
-          isPublishing={isPublishing}
+        onPublish={onPublish}
+        isPublishing={isPublishing}
+        content={content}
       />
-      
+
       {/* AI 패널 */}
       <AiPanelContainer
         isMobile={isMobile}

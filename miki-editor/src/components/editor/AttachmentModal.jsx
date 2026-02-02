@@ -1,385 +1,146 @@
-import React, { useState, useEffect } from 'react';
+import { useState } from 'react';
 import { createPortal } from 'react-dom';
-import { AuthService } from '../../services/auth';
-import { GitHubService, SessionExpiredError } from '../../services/github';
+import { Upload, Sparkles, AlertCircle, X, Loader2 } from 'lucide-react';
+import { SessionExpiredError } from '../../services/github';
 
-const ATTACHMENT_TYPES = [
-    { id: 'book', label: '📚 책', icon: '📚' },
-    { id: 'movie', label: '🎬 영화', icon: '🎬' },
-    { id: 'link', label: '🔗 링크', icon: '🔗' },
-    { id: 'image', label: '🖼️ 이미지', icon: '🖼️' }
-];
+export default function AttachmentModal({ isOpen, onClose, onAttach }) {
+    const [tier, setTier] = useState('BASE');
+    const [isDragging, setIsDragging] = useState(false);
+    const [isProcessing, setIsProcessing] = useState(false);
 
-export default function AttachmentModal({ isOpen, onClose, onSave, uploadImage }) {
-    const [step, setStep] = useState('select'); // 'select' | 'input'
-    const [selectedType, setSelectedType] = useState(null);
-    const [formData, setFormData] = useState({});
-    const [coverFile, setCoverFile] = useState(null);
-    const [isUploading, setIsUploading] = useState(false);
-
-    // 모달 열릴 때 초기화
-    useEffect(() => {
-        if (isOpen) {
-            setStep('select');
-            setSelectedType(null);
-            setFormData({});
-            setCoverFile(null);
-        }
-    }, [isOpen]);
-
-    // ESC 키 처리
-    useEffect(() => {
-        const handleKeyDown = (e) => {
-            if (e.key === 'Escape' && isOpen) {
-                onClose();
-            }
-        };
-
-        if (isOpen) {
-            document.addEventListener('keydown', handleKeyDown);
-            document.body.style.overflow = 'hidden';
-        }
-
-        return () => {
-            document.removeEventListener('keydown', handleKeyDown);
-            document.body.style.overflow = '';
-        };
-    }, [isOpen, onClose]);
-
-    const handleTypeSelect = (type) => {
-        setSelectedType(type);
-        setStep('input');
-    };
-
-    const handleInputChange = (field, value) => {
-        setFormData(prev => ({ ...prev, [field]: value }));
-    };
-
-    const handleCoverUpload = (e) => {
+    const handleFileSelect = async (e) => {
         const file = e.target.files?.[0];
         if (file) {
-            setCoverFile(file);
+            await handleUpload(file);
         }
     };
 
-    const handleSave = async () => {
-        if (!selectedType) return;
-
-        setIsUploading(true);
+    const handleUpload = async (file) => {
+        setIsProcessing(true);
         try {
-            let attachmentData = {
-                type: selectedType,
-                ...formData,
-                createdAt: new Date().toISOString()
-            };
-
-            // 커버 이미지가 있으면 업로드 (Issues CDN 우선)
-            if (coverFile && uploadImage) {
-                const uploadResult = await uploadImage(coverFile);
-                attachmentData = {
-                    ...attachmentData,
-                    ...uploadResult  // id, name, repo_path, cdn_url, display_url 등 포함
-                };
-            }
-
-            onSave(attachmentData);
+            await onAttach(file, tier);
             onClose();
         } catch (error) {
-            console.error('첨부 저장 실패:', error);
-
+            console.error('첨부 실패:', error);
             if (error instanceof SessionExpiredError) {
-                const shouldLogin = window.confirm(
-                    '무제한 이미지 업로드를 위해 GitHub 로그인이 필요합니다.\n\n' +
-                    'github.com에서 로그인하시겠습니까?\n' +
-                    '(새 탭에서 열립니다. 로그인 후 다시 이미지를 업로드해주세요)'
-                );
-
-                if (shouldLogin) {
+                if (window.confirm('무제한 이미지 업로드를 위해 GitHub 로그인이 필요합니다. 이동하시겠습니까?')) {
                     window.open('https://github.com/login', '_blank');
                 }
             } else {
-                alert('첨부 저장에 실패했습니다: ' + error.message);
+                alert('첨부 실패: ' + error.message);
             }
         } finally {
-            setIsUploading(false);
-        }
-    };
-
-    const renderTypeSelection = () => (
-        <div className="space-y-4">
-            <h3 className="text-lg font-semibold mb-4">첨부 유형 선택</h3>
-            <div className="grid grid-cols-2 gap-3">
-                {ATTACHMENT_TYPES.map((type) => (
-                    <button
-                        key={type.id}
-                        onClick={() => handleTypeSelect(type.id)}
-                        className="p-6 border-2 border-gray-200 rounded-lg hover:border-blue-400 
-                       hover:bg-blue-50 transition-all flex flex-col items-center gap-2"
-                    >
-                        <span className="text-4xl">{type.icon}</span>
-                        <span className="text-sm font-medium">{type.label}</span>
-                    </button>
-                ))}
-            </div>
-        </div>
-    );
-
-    const renderBookForm = () => (
-        <div className="space-y-4">
-            <h3 className="text-lg font-semibold mb-4">📚 책 정보 입력</h3>
-
-            <div>
-                <label className="block text-sm font-medium mb-1">제목 *</label>
-                <input
-                    type="text"
-                    value={formData.title || ''}
-                    onChange={(e) => handleInputChange('title', e.target.value)}
-                    className="w-full px-3 py-2 border rounded-lg focus:border-blue-400 focus:outline-none"
-                    placeholder="책 제목"
-                />
-            </div>
-
-            <div>
-                <label className="block text-sm font-medium mb-1">저자</label>
-                <input
-                    type="text"
-                    value={formData.author || ''}
-                    onChange={(e) => handleInputChange('author', e.target.value)}
-                    className="w-full px-3 py-2 border rounded-lg focus:border-blue-400 focus:outline-none"
-                    placeholder="저자명"
-                />
-            </div>
-
-            <div>
-                <label className="block text-sm font-medium mb-1">커버 이미지</label>
-                <input
-                    type="file"
-                    accept="image/*"
-                    onChange={handleCoverUpload}
-                    className="w-full px-3 py-2 border rounded-lg"
-                />
-                {coverFile && (
-                    <p className="text-sm text-gray-500 mt-1">선택된 파일: {coverFile.name}</p>
-                )}
-            </div>
-
-            <div>
-                <label className="block text-sm font-medium mb-1">메모</label>
-                <textarea
-                    value={formData.note || ''}
-                    onChange={(e) => handleInputChange('note', e.target.value)}
-                    className="w-full px-3 py-2 border rounded-lg focus:border-blue-400 focus:outline-none"
-                    placeholder="간단한 메모..."
-                    rows={3}
-                />
-            </div>
-        </div>
-    );
-
-    const renderMovieForm = () => (
-        <div className="space-y-4">
-            <h3 className="text-lg font-semibold mb-4">🎬 영화 정보 입력</h3>
-
-            <div>
-                <label className="block text-sm font-medium mb-1">제목 *</label>
-                <input
-                    type="text"
-                    value={formData.title || ''}
-                    onChange={(e) => handleInputChange('title', e.target.value)}
-                    className="w-full px-3 py-2 border rounded-lg focus:border-blue-400 focus:outline-none"
-                    placeholder="영화 제목"
-                />
-            </div>
-
-            <div>
-                <label className="block text-sm font-medium mb-1">감독</label>
-                <input
-                    type="text"
-                    value={formData.director || ''}
-                    onChange={(e) => handleInputChange('director', e.target.value)}
-                    className="w-full px-3 py-2 border rounded-lg focus:border-blue-400 focus:outline-none"
-                    placeholder="감독명"
-                />
-            </div>
-
-            <div>
-                <label className="block text-sm font-medium mb-1">포스터 이미지</label>
-                <input
-                    type="file"
-                    accept="image/*"
-                    onChange={handleCoverUpload}
-                    className="w-full px-3 py-2 border rounded-lg"
-                />
-                {coverFile && (
-                    <p className="text-sm text-gray-500 mt-1">선택된 파일: {coverFile.name}</p>
-                )}
-            </div>
-
-            <div>
-                <label className="block text-sm font-medium mb-1">메모</label>
-                <textarea
-                    value={formData.note || ''}
-                    onChange={(e) => handleInputChange('note', e.target.value)}
-                    className="w-full px-3 py-2 border rounded-lg focus:border-blue-400 focus:outline-none"
-                    placeholder="간단한 메모..."
-                    rows={3}
-                />
-            </div>
-        </div>
-    );
-
-    const renderLinkForm = () => (
-        <div className="space-y-4">
-            <h3 className="text-lg font-semibold mb-4">🔗 링크 정보 입력</h3>
-
-            <div>
-                <label className="block text-sm font-medium mb-1">URL *</label>
-                <input
-                    type="url"
-                    value={formData.url || ''}
-                    onChange={(e) => handleInputChange('url', e.target.value)}
-                    className="w-full px-3 py-2 border rounded-lg focus:border-blue-400 focus:outline-none"
-                    placeholder="https://example.com"
-                />
-            </div>
-
-            <div>
-                <label className="block text-sm font-medium mb-1">제목</label>
-                <input
-                    type="text"
-                    value={formData.title || ''}
-                    onChange={(e) => handleInputChange('title', e.target.value)}
-                    className="w-full px-3 py-2 border rounded-lg focus:border-blue-400 focus:outline-none"
-                    placeholder="링크 제목"
-                />
-            </div>
-
-            <div>
-                <label className="block text-sm font-medium mb-1">메모</label>
-                <textarea
-                    value={formData.note || ''}
-                    onChange={(e) => handleInputChange('note', e.target.value)}
-                    className="w-full px-3 py-2 border rounded-lg focus:border-blue-400 focus:outline-none"
-                    placeholder="간단한 메모..."
-                    rows={3}
-                />
-            </div>
-        </div>
-    );
-
-    const renderImageForm = () => (
-        <div className="space-y-4">
-            <h3 className="text-lg font-semibold mb-4">🖼️ 이미지 첨부</h3>
-
-            <div>
-                <label className="block text-sm font-medium mb-1">이미지 파일 *</label>
-                <input
-                    type="file"
-                    accept="image/*"
-                    onChange={handleCoverUpload}
-                    className="w-full px-3 py-2 border rounded-lg"
-                    required
-                />
-                {coverFile && (
-                    <p className="text-sm text-gray-500 mt-1">선택된 파일: {coverFile.name}</p>
-                )}
-            </div>
-
-            <div>
-                <label className="block text-sm font-medium mb-1">캡션</label>
-                <input
-                    type="text"
-                    value={formData.caption || ''}
-                    onChange={(e) => handleInputChange('caption', e.target.value)}
-                    className="w-full px-3 py-2 border rounded-lg focus:border-blue-400 focus:outline-none"
-                    placeholder="이미지 설명"
-                />
-            </div>
-        </div>
-    );
-
-    const renderInputForm = () => {
-        switch (selectedType) {
-            case 'book':
-                return renderBookForm();
-            case 'movie':
-                return renderMovieForm();
-            case 'link':
-                return renderLinkForm();
-            case 'image':
-                return renderImageForm();
-            default:
-                return null;
-        }
-    };
-
-    const canSave = () => {
-        if (!selectedType) return false;
-
-        switch (selectedType) {
-            case 'book':
-            case 'movie':
-                return formData.title?.trim().length > 0;
-            case 'link':
-                return formData.url?.trim().length > 0;
-            case 'image':
-                return coverFile !== null;
-            default:
-                return false;
+            setIsProcessing(false);
         }
     };
 
     if (!isOpen) return null;
-    if (typeof window === 'undefined') return null;
 
-    const modalContent = (
-        <div
-            className="fixed inset-0 z-[99999] flex items-center justify-center"
-            role="dialog"
-            aria-modal="true"
-        >
-            {/* Backdrop */}
-            <div
-                className="fixed inset-0 bg-black/50 backdrop-blur-sm"
-                onClick={onClose}
-            />
+    return createPortal(
+        <div className="fixed inset-0 z-[99999] flex items-center justify-center p-4">
+            <div className="fixed inset-0 bg-black/60 backdrop-blur-sm" onClick={onClose} />
 
-            {/* Modal */}
-            <div className="relative bg-white dark:bg-gray-800 rounded-lg shadow-xl max-w-md w-full mx-4 p-6">
-                {step === 'select' ? renderTypeSelection() : renderInputForm()}
+            <div className="relative bg-white dark:bg-gray-900 rounded-3xl shadow-2xl max-w-lg w-full overflow-hidden border border-white/20">
+                {/* 닫기 버튼 */}
+                <button
+                    onClick={onClose}
+                    className="absolute top-4 right-4 text-gray-400 hover:text-gray-600 transition-colors"
+                    disabled={isProcessing}
+                >
+                    <X className="w-6 h-6" />
+                </button>
 
-                <div className="flex gap-3 justify-end mt-6 pt-4 border-t">
-                    {step === 'input' && (
+                <div className="p-8">
+                    <header className="mb-8 text-center">
+                        <h2 className="text-2xl font-bold text-gray-800 dark:text-white mb-2">
+                            지능형 첨부 분석
+                        </h2>
+                        <p className="text-gray-500 dark:text-gray-400 text-sm">
+                            AI가 파일의 내용을 파악하여 알아서 정리해줍니다.
+                        </p>
+                    </header>
+
+                    {/* 모델 티어 선택 (Cursor AI 컨셉) */}
+                    <div className="flex gap-2 p-1 bg-gray-100 dark:bg-gray-800 rounded-2xl mb-8">
                         <button
-                            onClick={() => setStep('select')}
-                            className="px-4 py-2 rounded-lg border border-gray-300 hover:bg-gray-100 transition-colors"
-                            disabled={isUploading}
+                            onClick={() => setTier('BASE')}
+                            disabled={isProcessing}
+                            className={`flex-1 py-3 px-4 rounded-xl text-sm font-semibold transition-all flex items-center justify-center gap-2
+                ${tier === 'BASE'
+                                    ? 'bg-white text-blue-600 shadow-sm'
+                                    : 'text-gray-500 hover:text-gray-700'}`}
                         >
-                            ← 뒤로
+                            <Sparkles className="w-4 h-4" /> Standard (Qwen)
                         </button>
-                    )}
+                        <button
+                            onClick={() => setTier('PREMIUM')}
+                            disabled={isProcessing}
+                            className={`flex-1 py-3 px-4 rounded-xl text-sm font-semibold transition-all flex items-center justify-center gap-2
+                ${tier === 'PREMIUM'
+                                    ? 'bg-gradient-to-r from-purple-500 to-indigo-600 text-white shadow-lg'
+                                    : 'text-gray-500 hover:text-gray-700'}`}
+                        >
+                            <Sparkles className="w-4 h-4 fill-current" /> Premium (Claude)
+                        </button>
+                    </div>
 
-                    <button
-                        onClick={onClose}
-                        className="px-4 py-2 rounded-lg border border-gray-300 hover:bg-gray-100 transition-colors"
-                        disabled={isUploading}
+                    {/* 업로드 영역 */}
+                    <label
+                        className={`group relative flex flex-col items-center justify-center h-64 border-2 border-dashed rounded-3xl cursor-pointer transition-all
+              ${isDragging
+                                ? 'border-blue-500 bg-blue-50/50'
+                                : 'border-gray-200 hover:border-blue-300 hover:bg-gray-50/50'}
+              ${isProcessing ? 'pointer-events-none opacity-60' : ''}`}
+                        onDragOver={(e) => { e.preventDefault(); setIsDragging(true); }}
+                        onDragLeave={() => setIsDragging(false)}
+                        onDrop={(e) => {
+                            e.preventDefault();
+                            setIsDragging(false);
+                            const file = e.dataTransfer.files[0];
+                            if (file) handleUpload(file);
+                        }}
                     >
-                        취소
-                    </button>
+                        <input
+                            type="file"
+                            className="hidden"
+                            onChange={handleFileSelect}
+                            disabled={isProcessing}
+                        />
 
-                    {step === 'input' && (
-                        <button
-                            onClick={handleSave}
-                            className="px-4 py-2 rounded-lg bg-blue-600 hover:bg-blue-700 text-white transition-colors disabled:bg-gray-400"
-                            disabled={!canSave() || isUploading}
-                        >
-                            {isUploading ? '업로드 중...' : '저장'}
-                        </button>
-                    )}
+                        {isProcessing ? (
+                            <div className="flex flex-col items-center gap-4">
+                                <Loader2 className="w-12 h-12 animate-spin text-blue-500" />
+                                <div className="text-center">
+                                    <p className="font-bold text-gray-700">AI 분석 시작됨</p>
+                                    <p className="text-xs text-gray-400 mt-1">
+                                        창을 닫으셔도 백그라운드에서 분석이 계속됩니다.
+                                    </p>
+                                </div>
+                            </div>
+                        ) : (
+                            <div className="flex flex-col items-center gap-4">
+                                <div className="w-16 h-16 bg-blue-50 text-blue-500 rounded-full flex items-center justify-center group-hover:scale-110 transition-transform">
+                                    <Upload className="w-8 h-8" />
+                                </div>
+                                <div className="text-center">
+                                    <p className="font-bold text-gray-700 dark:text-gray-200">
+                                        파일을 드래그하거나 클릭
+                                    </p>
+                                    <p className="text-sm text-gray-400 mt-1">
+                                        이미지, PDF, 문서 등 모든 데이터
+                                    </p>
+                                </div>
+                            </div>
+                        )}
+                    </label>
+
+                    <footer className="mt-8 flex items-center gap-2 text-[10px] text-gray-400">
+                        <AlertCircle className="w-3 h-3" />
+                        <span>고성능 모델(Premium) 사용 시 토큰 비용이 추가될 수 있습니다.</span>
+                    </footer>
                 </div>
             </div>
-        </div>
+        </div>,
+        document.body
     );
-
-    return createPortal(modalContent, document.body);
 }
