@@ -45,10 +45,10 @@ Meki = 개인 주권 에이전트 인프라 (1단계: GitHub 기반 마크다운
 
 | 태스크 ID | 담당 Role | 작업 내용 | 상태 |
 |---|---|---|---|
-| P3-T1 | `api_dev` | `VITE_USE_WS_PROXY` env + `ws-client.js` | ⬜ 미시작 |
-| P3-T2 | `api_dev` | `github.js` Feature Flag 브랜치 | ⬜ 미시작 |
+| P3-T1 | `api_dev` | `VITE_USE_WS_PROXY` env + `ws-client.js` | ✅ 완료 |
+| P3-T2 | `api_dev` | `github.js` Feature Flag 브랜치 | ✅ 완료 |
 | P3-T3 | `api_dev` | `auth.js` WS 연결 상태 기반 교체 | ⬜ 미시작 |
-| P3-T4 | `frontend_dev` | `MigrationNotice.jsx` 재로그인 배너 | ⬜ 미시작 |
+| P3-T4 | `frontend_dev` | `MigrationNotice.jsx` 재로그인 배너 | ✅ 완료 |
 | P3-T5 | `test_verify` | Flag OFF/ON 동작 검증 + 서버/앱 실제 구동(vite dev) 후 WS 연결 상태 확인 (런타임 테스트 필수) | ⬜ 미시작 |
 
 ---

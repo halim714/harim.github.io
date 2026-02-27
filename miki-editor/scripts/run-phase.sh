@@ -101,7 +101,41 @@ case $PHASE in
       "$MIKI_DIR" test_verify "p2-t5-verify"
     ;;
 
-  3|4|5)
+  3)
+    echo "태스크 배정 중..."
+
+    # P3-T1 ~ P3-T4 병렬 실행 (서로 다른 파일 영향)
+    "$SWARM" "$MODEL" \
+      "PLAN.md와 PROGRESS.md를 읽고 P3-T1을 수행하라: ws-client.js 작성 및 VITE_USE_WS_PROXY 환경변수 연동." \
+      "$MIKI_DIR" api_dev "p3-t1-client" &
+    PID1=$!
+
+    "$SWARM" "$MODEL" \
+      "PLAN.md와 PROGRESS.md를 읽고 P3-T2를 수행하라: src/services/github.js를 Feature Flag(VITE_USE_WS_PROXY) 기반으로 WS/HTTP 분기 라우팅하도록 리팩토링하라." \
+      "$MIKI_DIR" api_dev "p3-t2-github" &
+    PID2=$!
+
+    "$SWARM" "$MODEL" \
+      "PLAN.md와 PROGRESS.md를 읽고 P3-T3를 수행하라: src/services/auth.js를 WS 접속 상태 기반으로 동작이 분리되도록 리팩토링하라." \
+      "$MIKI_DIR" api_dev "p3-t3-auth" &
+    PID3=$!
+
+    "$SWARM" "$MODEL" \
+      "PLAN.md와 PROGRESS.md를 읽고 P3-T4를 수행하라: 기존 인증 기반에서 WS Proxy 기반으로 전환 시 안내할 MigrationNotice.jsx 배너 컴포넌트를 만들고 메인 화면에 적용하라." \
+      "$MIKI_DIR" frontend_dev "p3-t4-notice" &
+    PID4=$!
+
+    wait $PID1 $PID2 $PID3 $PID4
+    echo "▶ P3-T1~T4 완료. health-check 실행..."
+    "$MIKI_DIR/scripts/health-check.sh" "p3-t1t4"
+
+    # P3-T5: Phase 3 전체 런타임 검증
+    "$SWARM" "sonnet" \
+      "PLAN.md와 PROGRESS.md를 읽고 P3-T5를 수행하라: Flag OFF/ON 시나리오와 서버/웹 구동(npm run dev) 테스트 후 WS 연결 상태가 올바른지 오프라인/온라인 동작 런타임 테스트를 수행하라." \
+      "$MIKI_DIR" test_verify "p3-t5-verify"
+    ;;
+
+  4|5)
     echo "Phase $PHASE: 아직 구현 전입니다. PLAN.md를 참고하여 수동 배정하세요."
     ;;
 
