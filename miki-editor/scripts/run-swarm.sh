@@ -94,7 +94,7 @@ touch "$RAW_FILE"
 claude -p --model "$MODEL" --dangerously-skip-permissions \
   --add-dir "$WORK_DIR" \
   --add-dir "$WORK_DIR/miki-editor" \
-  -- "$FULL_PROMPT" > "$RAW_FILE" 2>&1 &
+  -- "$FULL_PROMPT" < /dev/null > "$RAW_FILE" 2>&1 &
 CLAUDE_PID=$!
 
 echo "Started swarm agent with $MODEL (PID: $CLAUDE_PID)"
@@ -103,35 +103,34 @@ echo "Worktree: ${WORKTREE_DIR:-none (direct)}"
 echo "Logs: $DIR/$LOG_FILE"
 echo "Raw output: $RAW_FILE"
 
-# ─── 유휴 감지 루프: .raw 파일 크기가 15초간 변하지 않으면 종료 ───
-IDLE_LIMIT=15
-LAST_SIZE=0
-IDLE_COUNT=0
+# ─── Claude CLI 자연 종료 대기 (최대 300초 타임아웃) ───
+# claude -p는 비대화식 → 응답 완료 후 스스로 종료
+# idle detection 불필요 + 오히려 응답 전에 죽이는 문제 발생
+MAX_WAIT=300
 
-while kill -0 $CLAUDE_PID 2>/dev/null; do
-  CURRENT_SIZE=$(wc -c < "$RAW_FILE" 2>/dev/null || echo 0)
-  if [ "$CURRENT_SIZE" -eq "$LAST_SIZE" ]; then
-    IDLE_COUNT=$((IDLE_COUNT + 1))
-  else
-    IDLE_COUNT=0
-    LAST_SIZE=$CURRENT_SIZE
-  fi
+echo "Waiting for agent to complete (timeout: ${MAX_WAIT}s)..." >> "$DIR/$LOG_FILE"
 
-  if [ "$IDLE_COUNT" -ge "$IDLE_LIMIT" ]; then
-    echo "" >> "$DIR/$LOG_FILE"
-    echo "[idle-detection] ${IDLE_LIMIT}초간 출력 없음 — 작업 완료 판단, 에이전트 종료" >> "$DIR/$LOG_FILE"
-    kill $CLAUDE_PID 2>/dev/null
-    wait $CLAUDE_PID 2>/dev/null
-    break
-  fi
-  sleep 1
-done
+# 타임아웃 워치독: MAX_WAIT 초 후에 프로세스가 살아있으면 강제 종료
+(sleep $MAX_WAIT && kill -0 $CLAUDE_PID 2>/dev/null && \
+  echo "[timeout] ${MAX_WAIT}초 초과 — 에이전트 강제 종료" >> "$DIR/$LOG_FILE" && \
+  kill $CLAUDE_PID 2>/dev/null) &
+WATCHDOG_PID=$!
 
-# .raw 내용을 메인 로그에 합치기 (제어 문자 제거)
+# 에이전트 자연 종료 대기
+wait $CLAUDE_PID 2>/dev/null
+AGENT_EXIT=$?
+
+# 워치독 정리
+kill $WATCHDOG_PID 2>/dev/null
+wait $WATCHDOG_PID 2>/dev/null
+
+echo "[agent] 종료 (exit=$AGENT_EXIT)" >> "$DIR/$LOG_FILE"
+
+# .raw 내용을 메인 로그에 합치기
 if [ -f "$RAW_FILE" ] && [ -s "$RAW_FILE" ]; then
   echo "" >> "$DIR/$LOG_FILE"
   echo "[agent-output]" >> "$DIR/$LOG_FILE"
-  strings "$RAW_FILE" >> "$DIR/$LOG_FILE"
+  cat "$RAW_FILE" >> "$DIR/$LOG_FILE"
 fi
 
 # ─── Git Worktree Merge 검증 + 병합 ───

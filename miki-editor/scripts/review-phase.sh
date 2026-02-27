@@ -129,6 +129,7 @@ echo "" >> "$REPORT"
 TOTAL=0
 HAS_OUTPUT=0
 HAS_CHANGES=0
+HAS_TIMEOUT=0
 for RAW in "$MIKI_DIR"/logs/swarm_p${PHASE}-*.log.raw; do
   [ -f "$RAW" ] || continue
   TOTAL=$((TOTAL + 1))
@@ -137,16 +138,22 @@ done
 for LOG in "$MIKI_DIR"/logs/swarm_p${PHASE}-*.log; do
   [ -f "$LOG" ] || continue
   grep -q "\[merge\] ✅" "$LOG" && HAS_CHANGES=$((HAS_CHANGES + 1))
+  grep -q "\[timeout\]" "$LOG" && HAS_TIMEOUT=$((HAS_TIMEOUT + 1))
 done
 
 echo "- 전체 에이전트: $TOTAL" >> "$REPORT"
 echo "- 출력 생성: $HAS_OUTPUT" >> "$REPORT"
 echo "- 코드 변경(merge): $HAS_CHANGES" >> "$REPORT"
+echo "- 타임아웃(강제종료): $HAS_TIMEOUT" >> "$REPORT"
 echo "" >> "$REPORT"
 
-if [ "$HAS_OUTPUT" -eq 0 ]; then
+if [ "$HAS_TIMEOUT" -gt 0 ]; then
+  echo "🔴 **CRITICAL**: 에이전트 타임아웃 발생 ($HAS_TIMEOUT/$TOTAL)" >> "$REPORT"
+  echo "→ 원인: 에이전트가 300초 내에 응답하지 못함 (복잡한 작업 또는 API 응답 지연)" >> "$REPORT"
+  echo "→ 권장 조치: PLAN.md 작업을 더 작게 쪼개거나, 모델 변경 후 선택적 재실행" >> "$REPORT"
+elif [ "$HAS_OUTPUT" -eq 0 ]; then
   echo "🔴 **CRITICAL**: 모든 에이전트 출력 없음 → script 캡처 실패 또는 에이전트 미작동" >> "$REPORT"
-  echo "→ 권장 조치: run-swarm.sh script 래핑 확인 후 재실행" >> "$REPORT"
+  echo "→ 권장 조치: run-swarm.sh 출력이 .raw에 기록되는지 확인 후 재실행" >> "$REPORT"
 elif [ "$HAS_OUTPUT" -lt "$TOTAL" ]; then
   echo "🟡 **WARNING**: 일부 에이전트 출력 없음 ($HAS_OUTPUT/$TOTAL)" >> "$REPORT"
   echo "→ 권장 조치: 실패한 에이전트 로그 확인 후 선택적 재실행" >> "$REPORT"
