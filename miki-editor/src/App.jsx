@@ -8,6 +8,7 @@ import CallbackPage from './pages/CallbackPage';
 import VerificationPage from './pages/VerificationPage';
 import { AuthService } from './services/auth';
 import { ConfirmProvider } from './contexts/ConfirmContext';
+import MigrationNotice from './components/MigrationNotice';
 
 const LoadingScreen = () => (
   <div className="flex items-center justify-center h-screen bg-gray-900 text-white">
@@ -135,7 +136,12 @@ function AppContent() {
       {/* 로그인 + 설정 완료 */}
       {user && !needsSetup && (
         <>
-          <Route path="/editor" element={<Editor />} />
+          <Route path="/editor" element={
+            <>
+              <MigrationNotice />
+              <Editor />
+            </>
+          } />
           <Route path="*" element={<Navigate to="/editor" replace />} />
         </>
       )}
