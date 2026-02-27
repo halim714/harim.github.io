@@ -29,6 +29,9 @@ if git status --porcelain .gitignore 2>/dev/null | grep -q "."; then
   echo "✅ .gitignore 커밋"
 fi
 
+# ─── 0.5. 개별 에이전트 상태 로그 수집 (PROGRESS.md 단방향 갱신) ───
+"$PROJECT_DIR/miki-editor/scripts/aggregate-progress.sh"
+
 # ─── 1. 인프라 파일 커밋 (에이전트 설정) ───
 INFRA_FILES=""
 for DIR in ".agents" ".claude" "CLAUDE.md" "AGENTS.md" "PLAN.md" "PROGRESS.md" "miki-editor/scripts"; do
