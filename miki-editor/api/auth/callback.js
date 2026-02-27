@@ -1,8 +1,16 @@
 export default async function handler(req, res) {
-    const { code } = req.query;
+    const { code, code_verifier, state } = req.query;
 
     if (!code) {
         return res.status(400).json({ error: 'No code provided' });
+    }
+
+    if (!code_verifier) {
+        return res.status(400).json({ error: 'No code_verifier provided (PKCE required)' });
+    }
+
+    if (!state) {
+        return res.status(400).json({ error: 'No state parameter provided (CSRF protection required)' });
     }
 
     try {
@@ -15,7 +23,8 @@ export default async function handler(req, res) {
             body: JSON.stringify({
                 client_id: process.env.GITHUB_CLIENT_ID,
                 client_secret: process.env.GITHUB_CLIENT_SECRET,
-                code: code
+                code: code,
+                code_verifier: code_verifier
             })
         });
 
