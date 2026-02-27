@@ -13,7 +13,7 @@
 
 ## 현재 활성 태스크
 
-_Phase 1 완료. Phase 2 준비 중._
+**Phase 2 진행 중** — P2-T1 완료, P2-T2 대기 중
 
 ---
 
@@ -21,6 +21,7 @@ _Phase 1 완료. Phase 2 준비 중._
 
 | 태스크 ID | 완료 시각 | 담당 에이전트 | 결과 |
 |---|---|---|---|
+| P2-T1 | 2026-02-27 | api_dev | ✅ `ws-proxy/` 디렉토리 생성, package.json (Express + ws + jsonwebtoken + @octokit/rest), src/index.js (HTTP + WebSocket 서버 부트스트랩), README.md 작성 |
 | P1-T6 | 2026-02-26 | test_verify | ✅ Phase 1 전체 검증 완료 (XSS 차단, DOMPurify 적용, PKCE 적용, 빌드 성공, 보안 감사) |
 | P1-T2 | 2026-02-26 | api_dev | ✅ `src/utils/sanitize.js` 생성 완료 (DOMPurify + sanitizeHtml 함수) |
 | P1-T3 | 2026-02-26 | frontend_dev | ✅ 마크다운 렌더러에 sanitize.js 적용 완료 (MikiEditor.jsx, IsolatedPreview.jsx, conflict.js) |
@@ -59,6 +60,7 @@ _Phase 1 완료. Phase 2 준비 중._
 [2026-02-26] frontend_dev @ P1-T4: src/components/IsolatedPreview.jsx 생성 (blob URL + iframe sandbox, 자동 cleanup, 다크모드 지원) → 성공
 [2026-02-26] api_dev @ P1-T5: api/auth/callback.js에 PKCE code_verifier + state 검증 적용, CallbackPage.jsx에 CSRF 보호 로직 추가 → 성공
 [2026-02-26] api_dev @ P1-T1: vercel.json의 CSP 헤더 검증 완료 (이미 정확히 설정되어 있음) → 성공
+[2026-02-27] api_dev @ P2-T1: ws-proxy/ 디렉토리 생성, package.json + src/index.js (Express + ws 부트스트랩) + README.md 작성 → 성공
 [2026-02-26] test_verify @ P1-T6: Phase 1 전체 검증 (XSS 차단, DOMPurify 적용, PKCE 적용, iframe sandbox, CSP headers, 빌드 성공, 보안 감사) → 성공
 
 ---
