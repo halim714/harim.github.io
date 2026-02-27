@@ -59,11 +59,26 @@ DocumentSidebar  ← 문서 목록 + KnowledgeGraph.jsx
 ## 자기검증 체크리스트
 
 ```bash
-# 1. 빌드 확인 (이것만 허용)
+# 1. 빌드 확인
 npm run build
+
+# 2. 새 컴포넌트의 RTL 테스트 실행
+npm test -- --watchAll=false 2>&1 | tail -30
+```
+
+### RTL 테스트 필수 작성 규칙 **[필수]**
+새 컴포넌트를 만들거나 기존 컴포넌트를 **의미 있게 수정**했다면, 해당 컴포넌트의 RTL(React Testing Library) 테스트를 **반드시 함께 작성**해야 합니다.
+
+- 테스트 파일 위치: `src/__tests__/components/{컴포넌트명}.test.jsx`
+- 인증이 필요한 컴포넌트는 `mockAuth` 헬퍼를 사용하세요:
+```javascript
+import { injectDummyAuth, clearDummyAuth } from '../helpers/mockAuth';
+beforeEach(() => injectDummyAuth());
+afterEach(() => clearDummyAuth());
 ```
 
 - [ ] 컴포넌트가 예상된 props를 받는가?
+- [ ] RTL 테스트가 존재하고 통과하는가?
 - [ ] Zustand store 구독이 올바른가?
 - [ ] 모바일 레이아웃(`useResponsiveLayout`) 깨지지 않는가?
 - [ ] 에디터 기능이 정상 작동하는가?

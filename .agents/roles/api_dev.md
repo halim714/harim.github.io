@@ -75,7 +75,19 @@ npm test -- --testPathPattern="services|sync|store" --watchAll=false 2>&1 | tail
 git diff src/services/github.js | head -50
 ```
 
+### 서비스 테스트 필수 작성 규칙 **[필수]**
+새로운 서비스 함수나 모듈을 만들거나 기존 서비스를 **의미 있게 수정**했다면, 해당 서비스의 통합 테스트를 **반드시 함께 작성**해야 합니다.
+
+- 테스트 파일 위치: `src/__tests__/services/{서비스명}.test.js`
+- 인증이 필요한 서비스는 `mockAuth` 헬퍼를 사용하세요:
+```javascript
+import { injectDummyAuth, clearDummyAuth } from '../helpers/mockAuth';
+beforeEach(() => injectDummyAuth());
+afterEach(() => clearDummyAuth());
+```
+
 - [ ] GitHub API 호출에 SHA 처리가 올바른가?
+- [ ] 서비스 테스트가 존재하고 통과하는가?
 - [ ] SyncManager singleton을 올바르게 사용하는가?
 - [ ] 오프라인 상태에서도 크래시 없이 작동하는가?
 - [ ] IndexedDB 트랜잭션이 안전하게 처리되는가?
