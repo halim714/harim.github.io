@@ -58,6 +58,27 @@ else
   FAIL=1
 fi
 
+# ─── 3.5. 런타임 부팅 검증 (Phase 3+ 특화) ───
+echo ""
+echo "🚀 런타임 부팅 검증 중..."
+# ws-proxy 서버 구동 테스트
+if [ -f "$PROJECT_DIR/ws-proxy/src/index.js" ]; then
+  cd "$PROJECT_DIR/ws-proxy" && node src/index.js > /dev/null 2>&1 &
+  WS_PID=$!
+  sleep 3 # 부팅 대기
+  if curl -s http://localhost:8080/health | grep -q '"status":"ok"'; then
+    echo "✅ ws-proxy 서버 부팅 및 /health 응답 성공"
+  else
+    echo "❌ ws-proxy 서버 부팅 실패 또는 /health 무응답"
+    REPORT="$REPORT\n❌ ws-proxy 부팅 실패"
+    FAIL=1
+  fi
+  kill $WS_PID 2>/dev/null
+  wait $WS_PID 2>/dev/null
+else
+  echo "⚠️ ws-proxy 서버 없음 (Phase 2 이전이거나 누락됨)"
+fi
+
 # ─── 4. git diff 삭제량 검증 ───
 cd "$PROJECT_DIR" || exit 1
 ADD=$(git diff --numstat 2>/dev/null | awk '{s+=$1}END{print s+0}')
