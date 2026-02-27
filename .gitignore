@@ -13,3 +13,16 @@ node_modules
 # Ignore the miki-wiki content repository
 
 miki-wiki/
+
+# Agent Infrastructure (auto-generated)
+miki-editor/logs/
+miki-editor/build.log
+*.log.raw
+P1-T*-COMPLETION.md
+miki-editor/P1-T*-COMPLETION.md
+miki-editor/P*-T*-COMPLETION.md
+miki-editor/docs/P*-*
+task.md.resolved
+*.resolved
+.DS_Store
+.worktrees/
