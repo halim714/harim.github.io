@@ -13,7 +13,7 @@
 
 ## 현재 활성 태스크
 
-**Phase 2 진행 중** — P2-T1 완료, P2-T2 대기 중
+**Phase 2 진행 중** — P2-T1 완료, P2-T2 완료, P2-T3 완료, P2-T4 대기 중
 
 ---
 
@@ -21,6 +21,8 @@
 
 | 태스크 ID | 완료 시각 | 담당 에이전트 | 결과 |
 |---|---|---|---|
+| P2-T3 | 2026-02-27 | api_dev | ✅ `ws-proxy/src/ws-handler.js` 구현 (WebSocket 핸들러, 9개 GitHub API 액션 릴레이, SHA 자동처리, 에러 매핑, 하트비트, 1MB 사이즈 가드) |
+| P2-T2 | 2026-02-27 | api_dev | ✅ `ws-proxy/src/server.js` 생성 (Express HTTP 서버, POST /api/session JWT 발급, GET /api/session 검증, DELETE /api/session, GET /health), ESM 모듈, 전체 엔드포인트 테스트 통과 |
 | P2-T1 | 2026-02-27 | api_dev | ✅ `ws-proxy/` 디렉토리 생성, package.json (Express + ws + jsonwebtoken + @octokit/rest), src/index.js (HTTP + WebSocket 서버 부트스트랩), README.md 작성 |
 | P1-T6 | 2026-02-26 | test_verify | ✅ Phase 1 전체 검증 완료 (XSS 차단, DOMPurify 적용, PKCE 적용, 빌드 성공, 보안 감사) |
 | P1-T2 | 2026-02-26 | api_dev | ✅ `src/utils/sanitize.js` 생성 완료 (DOMPurify + sanitizeHtml 함수) |
@@ -60,6 +62,8 @@
 [2026-02-26] frontend_dev @ P1-T4: src/components/IsolatedPreview.jsx 생성 (blob URL + iframe sandbox, 자동 cleanup, 다크모드 지원) → 성공
 [2026-02-26] api_dev @ P1-T5: api/auth/callback.js에 PKCE code_verifier + state 검증 적용, CallbackPage.jsx에 CSRF 보호 로직 추가 → 성공
 [2026-02-26] api_dev @ P1-T1: vercel.json의 CSP 헤더 검증 완료 (이미 정확히 설정되어 있음) → 성공
+[2026-02-27] api_dev @ P2-T3: ws-proxy/src/ws-handler.js 구현 (handleWsConnection, 9개 GitHub API 액션 릴레이, SHA 자동처리, 하트비트 30s, 1MB 가드) → 성공
+[2026-02-27] api_dev @ P2-T2: ws-proxy/src/server.js 생성 (Express HTTP, JWT 세션 /api/session, /health 헬스체크, ESM, 엔드포인트 테스트 전체 통과) → 성공
 [2026-02-27] api_dev @ P2-T1: ws-proxy/ 디렉토리 생성, package.json + src/index.js (Express + ws 부트스트랩) + README.md 작성 → 성공
 [2026-02-26] test_verify @ P1-T6: Phase 1 전체 검증 (XSS 차단, DOMPurify 적용, PKCE 적용, iframe sandbox, CSP headers, 빌드 성공, 보안 감사) → 성공
 

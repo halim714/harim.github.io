@@ -31,9 +31,9 @@ Meki = 개인 주권 에이전트 인프라 (1단계: GitHub 기반 마크다운
 
 | 태스크 ID | 담당 Role | 작업 내용 | 상태 |
 |---|---|---|---|
-| P2-T1 | `api_dev` | 프로젝트 루트에 `ws-proxy/` 디렉토리 생성 + Node.js 초기화 (package.json, src/index.js) | ⬜ 미시작 |
-| P2-T2 | `api_dev` | `ws-proxy/src/server.js` — Express HTTP 서버 + JWT 세션 + /health 엔드포인트 | ⬜ 미시작 |
-| P2-T3 | `api_dev` | `ws-proxy/src/ws-handler.js` — WebSocket 핸들러 + GitHub API relay | ⬜ 미시작 |
+| P2-T1 | `api_dev` | 프로젝트 루트에 `ws-proxy/` 디렉토리 생성 + Node.js 초기화 (package.json, src/index.js) | ✅ 완료 |
+| P2-T2 | `api_dev` | `ws-proxy/src/server.js` — Express HTTP 서버 + JWT 세션 + /health 엔드포인트 | ✅ 완료 |
+| P2-T3 | `api_dev` | `ws-proxy/src/ws-handler.js` — WebSocket 핸들러 + GitHub API relay | ✅ 완료 |
 | P2-T4 | `api_dev` | `ws-proxy/Dockerfile` + `ws-proxy/fly.toml` (Node.js 20 Alpine, 포트 8080) | ⬜ 미시작 |
 | P2-T5 | `test_verify` | ws-proxy/ 전체 구조 검증, HTTP 엔드포인트, WS 핸들러 정합성 확인 | ⬜ 미시작 |
 
