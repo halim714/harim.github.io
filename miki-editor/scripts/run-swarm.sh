@@ -137,13 +137,16 @@ fi
 if [ -n "$WORKTREE_DIR" ] && [ -d "$WORKTREE_DIR" ]; then
   cd "$WORKTREE_DIR" || exit 1
 
-  # 변경 사항이 있는지 확인 (untracked 파일 포함)
-  CHANGES=$(git status --porcelain 2>/dev/null | wc -l)
+  # 변경 사항이 있는지 확인 (untracked 파일 또는 새 커밋)
+  UNCOMMITTED=$(git status --porcelain 2>/dev/null | wc -l)
+  NEW_COMMITS=$(git rev-list --count main..HEAD 2>/dev/null || echo 0)
 
-  if [ "$CHANGES" -gt 0 ]; then
-    # 변경 사항 커밋
-    git add -A 2>> "$DIR/$LOG_FILE"
-    git commit -m "agent/$LOG_NAME: 자동 커밋 by swarm runner" 2>> "$DIR/$LOG_FILE"
+  if [ "$UNCOMMITTED" -gt 0 ] || [ "$NEW_COMMITS" -gt 0 ]; then
+    # 변경 사항 커밋 (uncommitted가 있다면)
+    if [ "$UNCOMMITTED" -gt 0 ]; then
+      git add -A 2>> "$DIR/$LOG_FILE"
+      git commit -m "agent/$LOG_NAME: 자동 커밋 by swarm runner" 2>> "$DIR/$LOG_FILE"
+    fi
 
     # 삭제량 검증: 삭제가 추가보다 2배 이상 많으면 경고 (merge는 하되 로그에 기록)
     cd "$PROJECT_ROOT" || exit 1
