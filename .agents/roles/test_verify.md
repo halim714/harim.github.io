@@ -26,25 +26,36 @@ npm run build 2>&1
 # 기대: 오류 없이 성공, 경고는 허용
 ```
 
-### 2. 런타임 부팅 검증 (Runtime Validation) **[필수]**
-단순 코드 분석이나 정적 빌드에 그치지 않고, 수정한 앱이나 서버가 **실제로 구동되는지** 반드시 확인해야 합니다.
+### 2. Shallow Boot Test (앱 크래시 방지 최소 보증) **[필수]**
+GitHub OAuth 콜백 때문에 로컬에서 `npm run dev`로 전체 앱을 브라우저에서 테스트하는 것은 **불가능**합니다.
+대신, Jest/JSDOM 환경에서 React 앱이 최소한 마운트되는지 확인합니다.
 ```bash
-# 예시: 프론트엔드 구동 테스트
-npm run dev -- --port 3000 &
-sleep 3
-curl -s http://localhost:3000 > /dev/null && echo "Boot OK"
-
-# 예시: 백엔드/프록시 구동 테스트
-node src/index.js &
-sleep 3
-curl -s http://localhost:8080/health
+npx jest src/__tests__/shallow-boot.test.jsx --no-cache 2>&1
+# 기대: App 컴포넌트가 import 에러나 React 런타임 에러 없이 마운트됨
 ```
-- **기대**: 서버가 크래시 없이 백그라운드에서 유지되고, 주요 엔드포인트(HTTP/WS)가 정상 응답해야 함.
+- 이 테스트가 실패하면 → White Screen of Death(WSOD) 위험 → **절대 merge 금지**
 
-### 3. 기능 테스트
+### 2.5. ws-proxy 서버 부팅 검증 (백엔드 변경 시에만)
+`ws-proxy/` 디렉토리에 변경이 있을 경우에만 실행합니다.
+```bash
+cd ws-proxy && node src/index.js &
+sleep 3
+curl -s http://localhost:8080/health | grep '"status":"ok"'
+```
+
+### 3. RTL 통합 테스트 **[필수]**
+에이전트가 새 컴포넌트나 기능을 추가/수정했다면, 해당 컴포넌트의 RTL(React Testing Library) 테스트가 **반드시 존재**하고 **통과**해야 합니다.
 ```bash
 npm test -- --watchAll=false 2>&1
-# 기대: 모든 기존 테스트 통과 (새 코드로 인한 기존 테스트 실패 없음)
+# 기대: 모든 기존 테스트 + 새 RTL 테스트 통과
+```
+
+인증이 필요한 컴포넌트를 테스트할 때는 더미 유저를 주입하세요:
+```javascript
+import { injectDummyAuth, clearDummyAuth } from '../helpers/mockAuth';
+
+beforeEach(() => injectDummyAuth());
+afterEach(() => clearDummyAuth());
 ```
 
 ### 3. Meki 가치 체크 (반드시 수행)

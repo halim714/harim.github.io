@@ -58,7 +58,22 @@ else
   FAIL=1
 fi
 
-# ─── 3.5. 런타임 부팅 검증 (Phase 3+ 특화) ───
+# ─── 3.5. Shallow Boot Test (앱 크래시 방지 최소 보증) ───
+echo ""
+echo "🧪 Shallow Boot Test (JSDOM) 실행 중..."
+cd "$MIKI_DIR" || exit 1
+BOOT_OUTPUT=$(npx jest src/__tests__/shallow-boot.test.jsx --no-cache --forceExit 2>&1)
+BOOT_EXIT=$?
+if [ $BOOT_EXIT -eq 0 ]; then
+  echo "✅ Shallow Boot Test 통과 (앱 크래시 없음)"
+else
+  echo "❌ Shallow Boot Test 실패 — WSOD 위험!"
+  echo "$BOOT_OUTPUT" | tail -15
+  REPORT="$REPORT\n❌ Shallow Boot Test 실패"
+  FAIL=1
+fi
+
+# ─── 3.6. 런타임 부팅 검증 (ws-proxy 백엔드만) ───
 echo ""
 echo "🚀 런타임 부팅 검증 중..."
 # ws-proxy 서버 구동 테스트
