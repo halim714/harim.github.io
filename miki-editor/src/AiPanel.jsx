@@ -1,6 +1,7 @@
 import React, { useState, useCallback, useEffect, forwardRef, useImperativeHandle, useRef, useMemo } from 'react';
 import ReactMarkdown from 'react-markdown';
 import { createLogger } from './utils/logger';
+import { sanitizeHtml } from './utils/sanitize';
 
 import DocumentSummaryManager from './utils/DocumentSummaryManager';
 import DocumentSearchManager from './utils/DocumentSearchManager';
@@ -992,7 +993,8 @@ const AiPanel = forwardRef(({
     // 🎯 문서별 독립적 대화: currentDocumentId 추가 (하위 호환성 보장)
     const userMessage = {
       type: 'user',
-      text: commandText,
+      // XSS 방지: 사용자 입력도 정제 (대화 히스토리 렌더링 시 안전)
+      text: sanitizeHtml(commandText),
       ...(currentDocumentId && { documentId: currentDocumentId }) // currentDocumentId가 있을 때만 추가
     };
     setConversation(prev => [...prev, userMessage]);
@@ -1083,7 +1085,8 @@ const AiPanel = forwardRef(({
             // 🎯 AI 제안 처리 로직 (검증된 응답으로)
             if (parsedResponse && parsedResponse.isSuggestion && parsedResponse.displayText) {
               logger.info("💡 [SUGGESTION] 검증된 AI 제안:", parsedResponse);
-              aiTextToDisplayInPanel = `💡 제안: ${parsedResponse.displayText}`;
+              // XSS 방지: AI 응답 텍스트 정제
+              aiTextToDisplayInPanel = `💡 제안: ${sanitizeHtml(parsedResponse.displayText)}`;
 
               // onDisplaySuggestion 콜백이 있으면 제안을 표시합니다
               if (onDisplaySuggestion) {
@@ -1091,16 +1094,17 @@ const AiPanel = forwardRef(({
                 onDisplaySuggestion(parsedResponse);
               }
             } else {
-              // 일반 텍스트 응답
-              aiTextToDisplayInPanel = parsedResponse.displayText;
+              // 일반 텍스트 응답 - XSS 방지 처리
+              aiTextToDisplayInPanel = sanitizeHtml(parsedResponse.displayText);
             }
           }
         } catch (e) {
           logger.error("AI 응답 파싱 오류:", e);
-          // JSON 파싱 실패 시 원본 텍스트를 응답으로 사용
+          // JSON 파싱 실패 시 원본 텍스트를 응답으로 사용 - XSS 방지 처리
           if (typeof rawAiResponse === 'string') {
-            aiTextToDisplayInPanel = rawAiResponse.substring(0, 500) +
+            const truncatedResponse = rawAiResponse.substring(0, 500) +
               (rawAiResponse.length > 500 ? '...' : '');
+            aiTextToDisplayInPanel = sanitizeHtml(truncatedResponse);
           } else {
             aiTextToDisplayInPanel = "AI 응답 처리 중 오류 발생. 다시 시도해주세요.";
           }
@@ -1124,7 +1128,8 @@ const AiPanel = forwardRef(({
 
       const errorMessage = {
         type: 'ai',
-        text: '요청 처리 중 오류가 발생했습니다: ' + error.message,
+        // XSS 방지: 에러 메시지도 정제 (error.message가 외부 입력일 수 있음)
+        text: sanitizeHtml('요청 처리 중 오류가 발생했습니다: ' + error.message),
         isError: true,
         ...(currentDocumentId && { documentId: currentDocumentId })
       };
@@ -1357,12 +1362,13 @@ const AiPanel = forwardRef(({
     // Most suggestion interactions will happen in MikiEditor's UI.
     // setActiveSuggestion(null); // Assuming activeSuggestion state is still used for panel-specific suggestions
     if (accept && suggestion.command_on_accept && onApplyAiCommand) {
-      const userMessage = { type: 'user', text: `(Accepted suggestion: ${suggestion.message})` };
-      const aiMessage = { type: 'ai', text: `Okay, applying suggestion: ${suggestion.message}` };
+      // XSS 방지: suggestion.message 정제
+      const userMessage = { type: 'user', text: sanitizeHtml(`(Accepted suggestion: ${suggestion.message})`) };
+      const aiMessage = { type: 'ai', text: sanitizeHtml(`Okay, applying suggestion: ${suggestion.message}`) };
       setConversation(prev => [...prev, userMessage, aiMessage]);
       onApplyAiCommand(suggestion.command_on_accept);
     } else if (!accept) {
-      const userMessage = { type: 'user', text: `(Declined suggestion: ${suggestion.message})` };
+      const userMessage = { type: 'user', text: sanitizeHtml(`(Declined suggestion: ${suggestion.message})`) };
       setConversation(prev => [...prev, userMessage]);
     }
   };
@@ -1501,12 +1507,18 @@ const AiPanel = forwardRef(({
                 {entry.type === 'ai' ? (
                   <ReactMarkdown
                     components={{
-                      a: ({ href, children }) => (
-                        <a href={href} target="_blank" rel="noopener noreferrer">
-                          {children}
-                        </a>
-                      ),
-                      img: () => null // 이미지 비활성화로 보안 강화
+                      a: ({ href, children }) => {
+                        // XSS 방지: javascript: 프로토콜 차단
+                        const safeHref = href && /^https?:\/\//i.test(href) ? href : '#';
+                        return (
+                          <a href={safeHref} target="_blank" rel="noopener noreferrer">
+                            {children}
+                          </a>
+                        );
+                      },
+                      img: () => null, // 이미지 비활성화로 보안 강화
+                      // HTML 태그 차단 (ReactMarkdown은 기본적으로 안전하지만 명시적으로)
+                      html: () => null
                     }}
                   >
                     {entry.text}
@@ -1542,8 +1554,9 @@ const AiPanel = forwardRef(({
             <div className="documents-list">
               {relatedDocuments.map((doc, idx) => (
                 <div key={idx} className="document-item" onClick={() => handleUseRelatedDocument(doc)}>
-                  <div className="document-title">{doc.title}</div>
-                  {doc.preview && <div className="document-preview">{doc.preview}</div>}
+                  {/* XSS 방지: 문서 메타데이터 정제 */}
+                  <div className="document-title" dangerouslySetInnerHTML={{ __html: sanitizeHtml(doc.title) }} />
+                  {doc.preview && <div className="document-preview" dangerouslySetInnerHTML={{ __html: sanitizeHtml(doc.preview) }} />}
                   {doc.isSemanticMatch && <div className="match-type">AI 추천</div>}
                 </div>
               ))}
@@ -1558,7 +1571,8 @@ const AiPanel = forwardRef(({
             <div className="documents-list">
               {selectedDocuments.map((doc, idx) => (
                 <div key={idx} className="document-item selected">
-                  <div className="document-title">{doc.title}</div>
+                  {/* XSS 방지: 문서 제목 정제 */}
+                  <div className="document-title" dangerouslySetInnerHTML={{ __html: sanitizeHtml(doc.title) }} />
                   <button
                     onClick={() => {
                       setSelectedDocuments(prev => prev.filter((_, i) => i !== idx));

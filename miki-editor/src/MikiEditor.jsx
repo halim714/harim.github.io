@@ -9,6 +9,7 @@ import '@toast-ui/editor/dist/theme/toastui-editor-dark.css'; // Optional: Dark 
 import DocumentSearchManager from './utils/DocumentSearchManager'; // 추가된 임포트
 import { resolveByIdOrSlug } from './utils/DocumentResolver';
 import { useConfirm } from './hooks/useConfirm';
+import { sanitizeHtml } from './utils/sanitize';
 
 // debounce 함수 정의
 const debounce = (func, wait) => {
@@ -88,7 +89,8 @@ const convertMarkdownToHTML = (markdownText) => {
   const quoteProcessed = linkProcessed
     .replace(/^> (.+)$/gm, '<blockquote>$1</blockquote>');
 
-  return quoteProcessed;
+  // XSS 방지: DOMPurify로 정제
+  return sanitizeHtml(quoteProcessed);
 };
 
 // --- AI Suggestion Popover Component ---
@@ -1596,38 +1598,53 @@ const MikiEditor = forwardRef(({ onContentChange, onSendToAi, onContextUpdate, o
               children: node.children
             };
           },
-          // 링크 렌더러 개선 - 클릭 가능하도록 설정
+          // 링크 렌더러 개선 - 클릭 가능하도록 설정 + XSS 방지
           link: (node) => {
+            // XSS 방지: javascript: 프로토콜 차단
+            const safeDestination = node.destination && /^(https?|mailto|tel):/.test(node.destination)
+              ? node.destination
+              : '#';
+            const safeTitle = node.title ? String(node.title).replace(/[<>"']/g, '') : '';
+
             return {
               type: 'element',
               tagName: 'a',
               attributes: {
-                href: node.destination,
-                title: node.title || '',
+                href: safeDestination,
+                title: safeTitle,
                 // 내부 링크와 외부 링크 구분
-                target: node.destination.startsWith('http') ? '_blank' : '_self',
-                rel: node.destination.startsWith('http') ? 'noopener noreferrer' : null,
+                target: safeDestination.startsWith('http') ? '_blank' : '_self',
+                rel: safeDestination.startsWith('http') ? 'noopener noreferrer' : null,
                 // 클릭 가능하도록 스타일 추가
                 style: 'color: #2563eb; text-decoration: underline; cursor: pointer;'
               },
               children: node.children
             };
           },
-          // 이미지 렌더러 추가
+          // 이미지 렌더러 추가 + XSS 방지
           image: (node) => {
+            // XSS 방지: data:, http(s):만 허용
+            const safeDestination = node.destination && /^(https?|data):/.test(node.destination)
+              ? node.destination
+              : '';
+            const safeTitle = node.title ? String(node.title).replace(/[<>"']/g, '') : '';
+
             return {
               type: 'element',
               tagName: 'img',
               attributes: {
-                src: node.destination,
-                alt: node.title || '',
-                title: node.title || ''
+                src: safeDestination,
+                alt: safeTitle,
+                title: safeTitle
               },
               children: []
             };
           },
-          // 코드 블록 렌더러 추가
+          // 코드 블록 렌더러 추가 (XSS 방지: text 노드는 자동 이스케이프됨)
           codeBlock: (node) => {
+            // data-language는 안전하게 처리 (알파벳+숫자만)
+            const safeLang = node.info ? String(node.info).replace(/[^a-zA-Z0-9-_]/g, '') : '';
+
             return {
               type: 'element',
               tagName: 'pre',
@@ -1636,7 +1653,7 @@ const MikiEditor = forwardRef(({ onContentChange, onSendToAi, onContextUpdate, o
                 type: 'element',
                 tagName: 'code',
                 attributes: {
-                  'data-language': node.info || ''
+                  'data-language': safeLang
                 },
                 children: [{
                   type: 'text',
@@ -1645,7 +1662,7 @@ const MikiEditor = forwardRef(({ onContentChange, onSendToAi, onContextUpdate, o
               }]
             };
           },
-          // 인라인 코드 렌더러 추가
+          // 인라인 코드 렌더러 추가 (XSS 방지: text 노드는 자동 이스케이프됨)
           code: (node) => {
             return {
               type: 'element',

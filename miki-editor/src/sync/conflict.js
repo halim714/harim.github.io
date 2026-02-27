@@ -1,4 +1,5 @@
 import { createLogger } from '../utils/logger';
+import { sanitizeHtml } from '../utils/sanitize';
 const logger = createLogger('conflict');
 /**
  * ConflictResolver - 문서 충돌 해결 모듈
@@ -225,22 +226,28 @@ export class ConflictResolver {
   createConflictModal(documentId, local, server) {
     const modal = document.createElement('div');
     modal.className = 'conflict-resolution-modal';
+
+    // XSS 방지: 사용자 입력 데이터 정제
+    const safeTitle = sanitizeHtml(local.title || documentId);
+    const safeLocalContent = sanitizeHtml(this.truncateContent(local.content));
+    const safeServerContent = sanitizeHtml(this.truncateContent(server.content));
+
     modal.innerHTML = `
       <div class="modal-overlay">
         <div class="modal-content">
           <h3>📄 문서 충돌 감지</h3>
-          <p>문서 "${local.title || documentId}"에서 충돌이 발생했습니다.</p>
-          
+          <p>문서 "${safeTitle}"에서 충돌이 발생했습니다.</p>
+
           <div class="conflict-comparison">
             <div class="local-version">
               <h4>🖥️ 로컬 버전</h4>
-              <div class="content-preview">${this.truncateContent(local.content)}</div>
+              <div class="content-preview">${safeLocalContent}</div>
               <small>수정: ${new Date(local.updatedAt).toLocaleString()}</small>
             </div>
-            
+
             <div class="server-version">
               <h4>☁️ 서버 버전</h4>
-              <div class="content-preview">${this.truncateContent(server.content)}</div>
+              <div class="content-preview">${safeServerContent}</div>
               <small>수정: ${new Date(server.updatedAt).toLocaleString()}</small>
             </div>
           </div>
