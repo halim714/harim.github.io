@@ -16,6 +16,7 @@ export default function CallbackPage() {
         isProcessing.current = true;
 
         const code = searchParams.get('code');
+        const state = searchParams.get('state');
 
         if (!code) {
             setError('No authorization code received');
@@ -23,10 +24,32 @@ export default function CallbackPage() {
             return;
         }
 
+        // CSRF Protection: Validate state parameter
+        const storedState = sessionStorage.getItem('oauth_state');
+        if (!state || state !== storedState) {
+            setError('Invalid state parameter - possible CSRF attack');
+            setStatus('error');
+            sessionStorage.removeItem('oauth_state');
+            sessionStorage.removeItem('pkce_code_verifier');
+            return;
+        }
+
+        // PKCE: Retrieve code_verifier
+        const codeVerifier = sessionStorage.getItem('pkce_code_verifier');
+        if (!codeVerifier) {
+            setError('Missing PKCE code_verifier');
+            setStatus('error');
+            return;
+        }
+
+        // Clear session storage
+        sessionStorage.removeItem('oauth_state');
+        sessionStorage.removeItem('pkce_code_verifier');
+
         // Vercel Function URL (Relative path works for both Dev and Prod)
         const apiUrl = '/api/auth/callback';
 
-        fetch(`${apiUrl}?code=${code}`)
+        fetch(`${apiUrl}?code=${code}&code_verifier=${encodeURIComponent(codeVerifier)}&state=${encodeURIComponent(state)}`)
             .then(res => {
                 if (!res.ok) {
                     throw new Error(`HTTP ${res.status}: ${res.statusText}`);

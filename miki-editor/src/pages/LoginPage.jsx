@@ -2,17 +2,58 @@ import React from 'react';
 import { Github } from 'lucide-react';
 import '../index.css';
 
+/**
+ * Generate cryptographically random string for PKCE
+ */
+function generateRandomString(length) {
+    const charset = 'ABCDEFGHIJKLMNOPQRSTUVWXYZabcdefghijklmnopqrstuvwxyz0123456789-._~';
+    const randomValues = new Uint8Array(length);
+    crypto.getRandomValues(randomValues);
+    return Array.from(randomValues)
+        .map(v => charset[v % charset.length])
+        .join('');
+}
+
+/**
+ * Generate code_challenge from code_verifier using SHA-256
+ */
+async function generateCodeChallenge(verifier) {
+    const encoder = new TextEncoder();
+    const data = encoder.encode(verifier);
+    const hash = await crypto.subtle.digest('SHA-256', data);
+
+    // Base64URL encode
+    return btoa(String.fromCharCode(...new Uint8Array(hash)))
+        .replace(/\+/g, '-')
+        .replace(/\//g, '_')
+        .replace(/=/g, '');
+}
+
 export default function LoginPage() {
-    const handleLogin = () => {
+    const handleLogin = async () => {
         const clientId = import.meta.env.VITE_GITHUB_CLIENT_ID;
         const redirectUri = `${window.location.origin}/callback`;
 
-        // GitHub OAuth Web Flow
+        // PKCE: Generate code_verifier (random string 43-128 chars)
+        const codeVerifier = generateRandomString(128);
+        const codeChallenge = await generateCodeChallenge(codeVerifier);
+
+        // CSRF protection: Generate random state
+        const state = generateRandomString(32);
+
+        // Store for callback verification
+        sessionStorage.setItem('pkce_code_verifier', codeVerifier);
+        sessionStorage.setItem('oauth_state', state);
+
+        // GitHub OAuth Web Flow with PKCE
         window.location.href =
             `https://github.com/login/oauth/authorize?` +
             `client_id=${clientId}&` +
             `redirect_uri=${redirectUri}&` +
-            `scope=repo user`;
+            `scope=repo user&` +
+            `state=${state}&` +
+            `code_challenge=${codeChallenge}&` +
+            `code_challenge_method=S256`;
     };
 
     return (
