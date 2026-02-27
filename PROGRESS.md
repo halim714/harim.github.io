@@ -21,6 +21,9 @@
 
 | 태스크 ID | 완료 시각 | 담당 에이전트 | 결과 |
 |---|---|---|---|
+| P3-T3 | 2026-02-27 | api_dev | ✅ `src/services/auth.js` WS 연결 상태 기반 분기 리팩토링 — isWsProxyEnabled()+wsClient.isConnected 조건으로 getCurrentUser()를 WS경로(github.getUser)와 직접 Octokit 경로로 분리, AUTH_ERROR 코드 처리, ws-client.js 동시 생성(isWsProxyEnabled export 포함), 빌드 성공 (2159 modules, 0 errors) |
+| P3-T1 | 2026-02-27 | api_dev | ✅ `src/services/ws-client.js` 생성 (WsProxyClient 클래스, isWsProxyEnabled() flag, 9개 GitHub API 래퍼, 재연결 지수 백오프, heartbeat, 요청 타임아웃, singleton), `.env.example`에 VITE_USE_WS_PROXY + VITE_WS_PROXY_URL 추가, 빌드 성공 (2158 modules, 0 errors) |
+| P3-T4 | 2026-02-27 | frontend_dev | ✅ `src/components/MigrationNotice.jsx` 생성 (VITE_USE_WS_PROXY 감지, 기존 토큰 보유 시 재로그인 배너 표시, dismiss 영속, App.jsx /editor 라우트에 적용), 빌드 성공 (2158 modules, 0 errors) |
 | P2-T5 | 2026-02-27 | test_verify | ✅ Phase 2 구조 검증 완료 — ws-handler.js(9액션) ✅, index.js(port 8080, /health) ✅, package.json ✅; 누락 파일 발견: server.js(P2-T2), Dockerfile+fly.toml(P2-T4) ❌ |
 | P2-T4 | 2026-02-27 | api_dev | ✅ `ws-proxy/Dockerfile` (Node.js 20 Alpine, non-root user, port 8080) + `ws-proxy/fly.toml` (Fly.io nrt region, /health check, 256mb shared VM) |
 | P2-T3 | 2026-02-27 | api_dev | ✅ `ws-proxy/src/ws-handler.js` 구현 (WebSocket 핸들러, 9개 GitHub API 액션 릴레이, SHA 자동처리, 에러 매핑, 하트비트, 1MB 사이즈 가드) |
@@ -69,6 +72,9 @@
 [2026-02-27] api_dev @ P2-T4 (재실행): ws-proxy/Dockerfile (Node.js 20 Alpine, non-root user wsuser, port 8080) + ws-proxy/fly.toml (Fly.io nrt, /health HTTP 헬스체크, 256mb shared VM, TCP/HTTP 서비스) 재생성 완료 → 성공
 [2026-02-27] api_dev @ P2-T3: ws-proxy/src/ws-handler.js 구현 (handleWsConnection, 9개 GitHub API 액션 릴레이, SHA 자동처리, 하트비트 30s, 1MB 가드) → 성공
 [2026-02-27] api_dev @ P2-T2 (재실행): ws-proxy/src/server.js 재생성 (Express HTTP, GET /health, POST/GET/DELETE /api/session JWT 세션, CommonJS, syntax OK) → 성공
+[2026-02-27] api_dev @ P3-T1: ws-client.js 생성 (WsProxyClient, isWsProxyEnabled, 9 GitHub API 래퍼, 재연결/heartbeat/타임아웃), .env.example VITE_USE_WS_PROXY 추가, 빌드 성공 → 성공
+[2026-02-27] api_dev @ P3-T3: auth.js WS 연결 상태 기반 분기 리팩토링 (isWsProxyEnabled+isConnected → github.getUser WS 경로, AUTH_ERROR logout 처리, 직접 Octokit fallback 유지), ws-client.js 생성(isWsProxyEnabled export), 빌드 성공 (2159 modules, 0 errors) → 성공
+[2026-02-27] frontend_dev @ P3-T4: MigrationNotice.jsx 생성 (VITE_USE_WS_PROXY flag 감지 + legacy token 확인, 재로그인 유도 배너, dismiss 영속), App.jsx /editor 라우트에 적용, 빌드 성공 → 성공
 [2026-02-27] api_dev @ P2-T1: ws-proxy/ 디렉토리 생성, package.json + src/index.js (Express + ws 부트스트랩) + README.md 작성 → 성공
 [2026-02-26] test_verify @ P1-T6: Phase 1 전체 검증 (XSS 차단, DOMPurify 적용, PKCE 적용, iframe sandbox, CSP headers, 빌드 성공, 보안 감사) → 성공
 
