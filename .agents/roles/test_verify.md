@@ -26,7 +26,22 @@ npm run build 2>&1
 # 기대: 오류 없이 성공, 경고는 허용
 ```
 
-### 2. 기능 테스트
+### 2. 런타임 부팅 검증 (Runtime Validation) **[필수]**
+단순 코드 분석이나 정적 빌드에 그치지 않고, 수정한 앱이나 서버가 **실제로 구동되는지** 반드시 확인해야 합니다.
+```bash
+# 예시: 프론트엔드 구동 테스트
+npm run dev -- --port 3000 &
+sleep 3
+curl -s http://localhost:3000 > /dev/null && echo "Boot OK"
+
+# 예시: 백엔드/프록시 구동 테스트
+node src/index.js &
+sleep 3
+curl -s http://localhost:8080/health
+```
+- **기대**: 서버가 크래시 없이 백그라운드에서 유지되고, 주요 엔드포인트(HTTP/WS)가 정상 응답해야 함.
+
+### 3. 기능 테스트
 ```bash
 npm test -- --watchAll=false 2>&1
 # 기대: 모든 기존 테스트 통과 (새 코드로 인한 기존 테스트 실패 없음)
