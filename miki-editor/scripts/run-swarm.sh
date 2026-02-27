@@ -85,17 +85,16 @@ else
 fi
 
 # ─── Claude CLI 실행 (백그라운드 + 유휴 감지) ───
-# script -q로 pseudo-terminal 강제 → 출력이 .raw에 즉시 기록됨
+# claude -p 출력을 직접 .raw에 기록 (파이프/script 모두 macOS에서 버퍼링 문제)
 # idle detection은 .raw 파일 크기로 모니터링
 WORK_DIR="${WORKTREE_DIR:-$PROJECT_ROOT}"
 RAW_FILE="$DIR/$LOG_FILE.raw"
 touch "$RAW_FILE"
 
-script -q "$RAW_FILE" \
-  claude -p --model "$MODEL" --dangerously-skip-permissions \
+claude -p --model "$MODEL" --dangerously-skip-permissions \
   --add-dir "$WORK_DIR" \
   --add-dir "$WORK_DIR/miki-editor" \
-  -- "$FULL_PROMPT" &
+  -- "$FULL_PROMPT" > "$RAW_FILE" 2>&1 &
 CLAUDE_PID=$!
 
 echo "Started swarm agent with $MODEL (PID: $CLAUDE_PID)"
