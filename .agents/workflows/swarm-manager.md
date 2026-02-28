@@ -17,6 +17,25 @@ description: Deploy a parallel swarm of Claude agents to execute tasks.
 - 동일한 파일을 동시에 수정하지 않도록 태스크의 범위를 명확히 쪼개는 것이 매우 중요합니다.
 - 각 태스크 프롬프트에 **반드시 참조해야 할 룰 파일**을 명시하세요: `[mekirule.md 원칙 준수, .agents/rules/ 내 관련 룰 파일 적용]`
 
+### 2.1 배선 지시 의무화 (Wiring Instructions) ⚠️
+새 모듈(파일)을 생성하는 태스크에는 **반드시 "그 모듈을 어디서 호출할 것인가"를 프롬프트에 포함**하라.
+- 올바른 예: *"server.js를 만들고, **index.js에서 createApp()을 import하여 HTTP 서버로 사용하도록 수정하라**"*
+- 잘못된 예: *"server.js를 만들어라"* (호출 지점 미명시)
+
+### 2.2 공유 파일 감지 및 순차 분리 (Shared File Isolation) ⚠️
+병렬 태스크들이 **동일한 파일을 수정해야 하는 경우**, 다음 절차를 따르라:
+1. 병렬 태스크 프롬프트에서 **공유 파일 수정 지시를 제거**한다
+2. 각 에이전트는 자신의 스코프 파일만 생성/수정한다
+3. 병렬 실행 완료 후, **별도의 순차 배선(Wiring) 태스크**를 추가 실행하여 공유 파일(`index.js`, `App.jsx` 등)에서 병렬 산출물을 통합한다
+
+```
+# 올바른 패턴
+P2-T2 (병렬): server.js 생성 (createApp export)
+P2-T3 (병렬): ws-handler.js 생성 (handleWsConnection export)
+  → wait
+P2-T2.5 (순차): index.js에서 createApp과 handleWsConnection을 import하여 통합
+```
+
 ## 3. 병렬 스웜 실행 (Execution)
 - OpenRouter를 사용할 경우 `.env` 파일에 `OPENROUTER_API_KEY`가 설정되어 있어야 합니다.
 - 각 태스크에 대해 적절한 모델을 선택합니다:

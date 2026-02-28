@@ -94,7 +94,52 @@ else
   echo "⚠️ ws-proxy 서버 없음 (Phase 2 이전이거나 누락됨)"
 fi
 
-# ─── 4. git diff 삭제량 검증 ───
+# ─── 4. 배선 검증 (Wiring Verification — Dead Export 감지) ───
+echo ""
+echo "🔌 배선 검증 (Dead Export 감지) 중..."
+DEAD_EXPORTS=0
+
+# ws-proxy: server.js의 createApp이 index.js에서 사용되는지
+if [ -f "$PROJECT_DIR/ws-proxy/src/server.js" ]; then
+  if ! grep -q "createApp\|require.*server\|from.*server" "$PROJECT_DIR/ws-proxy/src/index.js" 2>/dev/null; then
+    echo "❌ Dead Export: ws-proxy/src/server.js의 createApp()이 index.js에서 호출되지 않음"
+    REPORT="$REPORT\n❌ Dead Export: server.js → index.js 배선 누락"
+    DEAD_EXPORTS=$((DEAD_EXPORTS + 1))
+  else
+    echo "✅ server.js → index.js 배선 정상"
+  fi
+fi
+
+# ws-proxy: ws-handler.js의 handleWsConnection이 index.js에서 사용되는지
+if [ -f "$PROJECT_DIR/ws-proxy/src/ws-handler.js" ]; then
+  if ! grep -q "handleWsConnection\|require.*ws-handler\|from.*ws-handler" "$PROJECT_DIR/ws-proxy/src/index.js" 2>/dev/null; then
+    echo "❌ Dead Export: ws-proxy/src/ws-handler.js가 index.js에서 호출되지 않음"
+    REPORT="$REPORT\n❌ Dead Export: ws-handler.js → index.js 배선 누락"
+    DEAD_EXPORTS=$((DEAD_EXPORTS + 1))
+  else
+    echo "✅ ws-handler.js → index.js 배선 정상"
+  fi
+fi
+
+# miki-editor: ws-client.js의 isWsProxyEnabled가 services에서 사용되는지
+if [ -f "$MIKI_DIR/src/services/ws-client.js" ]; then
+  WS_USAGE=$(grep -rn "isWsProxyEnabled\|getWsClient\|ws-client" "$MIKI_DIR/src/services/" "$MIKI_DIR/src/pages/" --include="*.js" --include="*.jsx" 2>/dev/null | grep -v "ws-client.js" | wc -l | tr -d ' ')
+  if [ "$WS_USAGE" -eq 0 ]; then
+    echo "❌ Dead Export: ws-client.js의 함수들이 다른 서비스에서 사용되지 않음"
+    REPORT="$REPORT\n❌ Dead Export: ws-client.js 배선 누락"
+    DEAD_EXPORTS=$((DEAD_EXPORTS + 1))
+  else
+    echo "✅ ws-client.js 배선 정상 (${WS_USAGE}건 참조)"
+  fi
+fi
+
+if [ $DEAD_EXPORTS -gt 0 ]; then
+  echo "⚠️  배선 누락 $DEAD_EXPORTS건 감지 — 순차 배선(Wiring) 태스크 필요"
+  echo "[DEAD_EXPORT] $DEAD_EXPORTS건" >> "$MIKI_DIR/logs/wiring_alerts.log"
+  FAIL=1
+fi
+
+# ─── 5. git diff 삭제량 검증 ───
 cd "$PROJECT_DIR" || exit 1
 ADD=$(git diff --numstat 2>/dev/null | awk '{s+=$1}END{print s+0}')
 DEL=$(git diff --numstat 2>/dev/null | awk '{s+=$2}END{print s+0}')

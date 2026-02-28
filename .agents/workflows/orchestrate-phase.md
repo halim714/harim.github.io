@@ -94,9 +94,14 @@ fi
 3. `agent-improvement` 워크플로우 실행 (실패 분류 → 룰/SOP 개선)
 4. 개선된 하니스로 Step 2부터 재실행
 
-### 탈출 조건
-- 동일 Phase 재실행 **3회 초과** → 사용자에게 에스컬레이션 (notify_user)
-- 재실행 시마다 PROGRESS.md에 시도 횟수 기록
+### 🟡 WARNING: Dead Export 감지 (wiring_alerts.log에 기록)
+**원인 분석**: 에이전트가 모듈을 생성했으나 진입점(Entry Point)에서 import/require되지 않아 Dead Code가 됨
+**행동:**
+1. `wiring_alerts.log`에서 어떤 모듈이 미연결인지 확인
+2. PLAN.md에 `P{N}-T{X}-wiring` 순차 배선 태스크를 자동 생성
+3. 프롬프트 예시: *"index.js에서 server.js의 createApp()을 import하고, 기존 http.createServer를 Express app으로 교체하라"*
+4. 배선 태스크를 **순차 실행** (병렬 금지 — 진입점 파일은 단일 에이전트만 수정)
+5. 재실행 후 `health-check.sh`로 배선 정상 여부 재검증
 
 ## Step 5: 행동 실행
 
