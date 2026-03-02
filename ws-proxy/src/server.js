@@ -25,6 +25,32 @@ const { Octokit } = require('@octokit/rest');
 const JWT_SECRET = process.env.JWT_SECRET || 'meki-dev-secret-change-in-production';
 const JWT_EXPIRES = process.env.JWT_EXPIRES || '8h';
 
+// ─── Server-side Session Store (UP-3: ghToken을 JWT에서 제거) ───────────────
+// key: sessionId (uuid), value: { ghToken, login, createdAt }
+const sessionStore = new Map();
+
+/**
+ * Retrieve the GitHub token for a given session ID.
+ * Used by ws-handler.js to authenticate GitHub API calls.
+ * @param {string} sessionId
+ * @returns {string|null}
+ */
+function getGitHubToken(sessionId) {
+    const entry = sessionStore.get(sessionId);
+    return entry ? entry.ghToken : null;
+}
+
+// Clean up expired sessions every hour
+setInterval(() => {
+    const now = Date.now();
+    const maxAge = 8 * 60 * 60 * 1000; // 8h
+    for (const [id, entry] of sessionStore) {
+        if (now - entry.createdAt > maxAge) {
+            sessionStore.delete(id);
+        }
+    }
+}, 60 * 60 * 1000);
+
 // ─── Helpers ───────────────────────────────────────────────────────────────
 
 /**
@@ -106,18 +132,34 @@ router.post('/api/session', express.json(), async (req, res) => {
         return res.status(502).json({ error: 'GitHub API unavailable', code: 'GITHUB_UNAVAILABLE' });
     }
 
+    // UP-3: GitHub 토큰을 JWT에 넣지 않고 서버 메모리에 저장
+    const crypto = require('crypto');
+    const sessionId = crypto.randomUUID();
+
+    sessionStore.set(sessionId, {
+        ghToken: githubToken,
+        login: user.login,
+        createdAt: Date.now()
+    });
+
     const payload = {
         sub: String(user.id),
         login: user.login,
-        // Store the GitHub token in the JWT so WS handler can use it.
-        // In production, prefer encrypting or storing server-side.
-        ghToken: githubToken
+        sid: sessionId   // JWT에는 sessionId만 포함 (ghToken 제거)
     };
 
     const sessionToken = jwt.sign(payload, JWT_SECRET, { expiresIn: JWT_EXPIRES });
 
+    // UP-1: HttpOnly 쿠키로 세션 토큰 설정
+    res.cookie('meki_session', sessionToken, {
+        httpOnly: true,
+        secure: process.env.NODE_ENV === 'production',
+        sameSite: 'strict',
+        maxAge: 8 * 60 * 60 * 1000, // 8h
+        path: '/'
+    });
+
     return res.status(201).json({
-        sessionToken,
         expiresIn: JWT_EXPIRES,
         user: { login: user.login, id: user.id, avatar_url: user.avatar_url }
     });
@@ -182,4 +224,4 @@ function createApp() {
     return app;
 }
 
-module.exports = { createApp };
+module.exports = { createApp, getGitHubToken };

@@ -36,6 +36,21 @@ P2-T3 (병렬): ws-handler.js 생성 (handleWsConnection export)
 P2-T2.5 (순차): index.js에서 createApp과 handleWsConnection을 import하여 통합
 ```
 
+### 2.3 파괴적 변경 사전 분석 (Impact Analysis) ⚠️
+핵심 API(인증, 저장, 라우팅)의 **동작 방식을 변경**하는 태스크에는, 반드시 **변경 대상 함수의 호출자를 먼저 파악**하고 모든 호출자가 변경 후에도 정상 동작하는지 확인하라.
+
+**오케스트레이터 의무**: 태스크 프롬프트 작성 전 아래 명령으로 영향 범위를 파악하고, 영향받는 파일을 프롬프트에 명시:
+```bash
+# 예: localStorage 토큰 제거 전, 토큰 호출자 전수 조사
+grep -rn "AuthService.getToken\|getToken()" src/ --include="*.js" --include="*.jsx" | grep -v __tests__
+```
+
+**스웜 에이전트 의무**: 핵심 함수의 반환값이나 동작을 변경했다면, 완료 전 호출자를 grep하여 깨지는 곳이 없는지 자기검증:
+```bash
+# 내가 수정한 함수의 모든 호출자가 여전히 정상인지
+grep -rn "수정한함수명" src/ --include="*.js" --include="*.jsx"
+```
+
 ## 3. 병렬 스웜 실행 (Execution)
 - OpenRouter를 사용할 경우 `.env` 파일에 `OPENROUTER_API_KEY`가 설정되어 있어야 합니다.
 - 각 태스크에 대해 적절한 모델을 선택합니다:

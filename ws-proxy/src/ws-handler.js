@@ -22,6 +22,7 @@
 'use strict';
 
 const { Octokit } = require('@octokit/rest');
+const { getGitHubToken } = require('./server');
 
 // ─── Constants ─────────────────────────────────────────────────────────────
 
@@ -295,13 +296,23 @@ const ACTION_HANDLERS = {
  * Returns a JSON string to send back to the client.
  */
 async function dispatch(msg) {
-    const { id, action, token, payload = {} } = msg;
+    const { id, action, token, sessionId, payload = {} } = msg;
 
     if (action === 'ping') {
         return ok(id, { pong: true, ts: Date.now() });
     }
 
-    if (!token) {
+    // UP-3: sessionId가 있으면 서버측 세션 저장소에서 GitHub 토큰 조회
+    // token이 있으면 레거시 호환 (Phase 4 전환 완료 시 제거)
+    let resolvedToken = token;
+    if (sessionId && !token) {
+        resolvedToken = getGitHubToken(sessionId);
+        if (!resolvedToken) {
+            return fail(id, 'Invalid or expired session', 'SESSION_EXPIRED');
+        }
+    }
+
+    if (!resolvedToken) {
         return fail(id, 'Missing authentication token', 'UNAUTHENTICATED');
     }
 
@@ -311,7 +322,7 @@ async function dispatch(msg) {
     }
 
     try {
-        const octokit = makeOctokit(token);
+        const octokit = makeOctokit(resolvedToken);
 
         // Resolve username for actions that need it
         let username = null;
