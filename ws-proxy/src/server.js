@@ -17,6 +17,7 @@
 'use strict';
 
 const express = require('express');
+const cookieParser = require('cookie-parser');
 const jwt = require('jsonwebtoken');
 const { Octokit } = require('@octokit/rest');
 
@@ -80,7 +81,8 @@ async function verifyGitHubToken(githubToken) {
  * Attaches decoded payload to req.session on success.
  */
 function requireSession(req, res, next) {
-    const token = extractBearer(req);
+    // UP-1: Authorization header 또는 HttpOnly 쿠키에서 JWT 추출
+    const token = extractBearer(req) || (req.cookies && req.cookies.meki_session);
     if (!token) {
         return res.status(401).json({ error: 'Missing Authorization header', code: 'UNAUTHENTICATED' });
     }
@@ -206,6 +208,9 @@ function createApp() {
 
     // Security: hide Express fingerprint
     app.disable('x-powered-by');
+
+    // UP-6: Parse HttpOnly session cookies
+    app.use(cookieParser());
 
     // Routes
     app.use('/', router);
