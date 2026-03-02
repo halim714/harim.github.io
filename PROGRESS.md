@@ -13,9 +13,11 @@
 
 | ID | 출처 | 내용 | 상태 |
 |---|---|---|---|
-| UP-1 | P1-T6 | HttpOnly cookie 전환 + `AuthService.getToken()` 호출자 10곳 리팩토링 + ws-client.js Feature Flag 연결 + MigrationNotice 로직 정리 | 🔴 미이행 |
+| UP-1 | P1-T6 | HttpOnly cookie 전환 + `AuthService.getToken()` 호출자 10곳 리팩토링 + ws-client.js Feature Flag 연결 + MigrationNotice 로직 정리 | 🟡 P4 대기 |
 | UP-2 | 보안감사 | callback.js CORS `*` → origin 제한 | ✅ 이행 완료 |
 | UP-3 | 보안감사 | JWT payload ghToken 제거 → 서버측 sessionStore 저장 | ✅ 이행 완료 |
+| UP-5 | 보안감사 | callback.js CORS 순서 버그 — 토큰 교환 전 origin 검증 | ✅ 이행 완료 |
+| UP-6 | 보안감사 | ws-proxy cookie-parser 설치 + 세션 쿠키 읽기 준비 | ✅ 이행 완료 |
 
 ---
 
