@@ -116,8 +116,8 @@ if [ -f "$MIKI_DIR/src/services/auth.js" ]; then
   HAS_LOCALSTORAGE=$(grep -c "localStorage.getItem\|localStorage.setItem" "$MIKI_DIR/src/services/auth.js" 2>/dev/null || echo 0)
   CALLERS=$(grep -rn "AuthService.getToken\|getToken()" "$MIKI_DIR/src/" --include="*.js" --include="*.jsx" 2>/dev/null | grep -v __tests__ | grep -v "auth.js" | wc -l | tr -d ' ')
   
-  if [ "$HAS_LOCALSTORAGE" -gt 0 ]; then
-    echo "  ⚠️ auth.js가 여전히 localStorage 사용 ($HAS_LOCALSTORAGE곳) — 호출자 ${CALLERS}곳 영향"
+  if [ "${HAS_LOCALSTORAGE}" -gt 0 ]; then
+    echo "  ⚠️ auth.js가 여전히 localStorage 사용 (${HAS_LOCALSTORAGE}곳) — 호출자 ${CALLERS}곳 영향"
     echo "     → UP-1 (🟡 P4 대기) 해소 시 리팩토링 필요"
   else
     echo "  ✅ auth.js: localStorage 미사용"
