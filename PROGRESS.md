@@ -13,10 +13,9 @@
 
 | ID | 출처 | 내용 | 상태 |
 |---|---|---|---|
-| UP-1 | P1-T6 | Token Storage: localStorage → HttpOnly cookie 전환 | 🔴 미이행 |
-| UP-2 | 보안감사 | callback.js:35 `Access-Control-Allow-Origin: *` → origin 제한 필요 | 🔴 미이행 |
-| UP-3 | 보안감사 | server.js:114 JWT payload에 ghToken 평문 내장 → 서버측 저장 전환 | 🔴 미이행 |
-| UP-4 | P3-T2 | ws-client.js Feature Flag이 github.js/auth.js에 미연결 | 🟡 P4 대기 |
+| UP-1 | P1-T6 | HttpOnly cookie 전환 + `AuthService.getToken()` 호출자 10곳 리팩토링 + ws-client.js Feature Flag 연결 + MigrationNotice 로직 정리 | 🔴 미이행 |
+| UP-2 | 보안감사 | callback.js CORS `*` → origin 제한 | ✅ 이행 완료 |
+| UP-3 | 보안감사 | JWT payload ghToken 제거 → 서버측 sessionStore 저장 | ✅ 이행 완료 |
 
 ---
 
