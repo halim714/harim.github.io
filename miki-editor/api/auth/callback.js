@@ -14,7 +14,7 @@ export default async function handler(req, res) {
     }
 
     // CORS: origin 검증을 토큰 교환 전에 수행 (UP-2 순서 버그 수정)
-    const origin = req.headers.origin || req.headers.referer || '';
+    const origin = req.headers.origin || '';
     const allowedOrigins = [
         process.env.ALLOWED_ORIGIN || 'https://meki.vercel.app',
         /^https:\/\/meki-.*\.vercel\.app$/   // Vercel preview deploys
