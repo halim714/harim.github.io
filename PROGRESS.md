@@ -5,6 +5,21 @@
 
 ---
 
+## ⚠️ 미이행 약속 (Unfulfilled Promises)
+
+> 이전 Phase에서 발견되었으나 아직 이행되지 않은 항목들.
+> **오케스트레이터**: 다음 Phase 프롬프트 작성 시 이 섹션의 항목을 반드시 태스크에 반영하라.
+> **검증 에이전트**: Phase 완료 검증 시 이 섹션의 항목이 해소되었는지 확인하라.
+
+| ID | 출처 | 내용 | 상태 |
+|---|---|---|---|
+| UP-1 | P1-T6 | Token Storage: localStorage → HttpOnly cookie 전환 | 🔴 미이행 |
+| UP-2 | 보안감사 | callback.js:35 `Access-Control-Allow-Origin: *` → origin 제한 필요 | 🔴 미이행 |
+| UP-3 | 보안감사 | server.js:114 JWT payload에 ghToken 평문 내장 → 서버측 저장 전환 | 🔴 미이행 |
+| UP-4 | P3-T2 | ws-client.js Feature Flag이 github.js/auth.js에 미연결 | 🟡 P4 대기 |
+
+---
+
 ## 현재 진행 Phase
 
 **Phase 1: Security Foundation** — ✅ 완료
@@ -55,6 +70,15 @@
 
 ---
 
+## P2-Wiring 완료 (2026-03-01)
+
+- ✅ `ws-proxy/src/index.js`: `const { createApp } = require('./server')` 추가, `http.createServer(app)` Express 연결
+- ✅ `/health` 엔드포인트: `{"status":"ok","service":"meki-ws-proxy","ts":...}` 정상 응답
+- ✅ `/api/session` GET: 토큰 없을 시 `{"error":"Missing Authorization header","code":"UNAUTHENTICATED"}` 정상 응답
+- ✅ c4-wiring-verification 룰 준수: createApp 배선 grep 확인 완료
+
+---
+
 ## 에이전트 세션 로그
 
 각 에이전트는 세션 종료 시 아래에 간략한 요약을 추가해 주세요:
@@ -75,6 +99,7 @@
 [2026-02-27] api_dev @ P3-T1: ws-client.js 생성 (WsProxyClient, isWsProxyEnabled, 9 GitHub API 래퍼, 재연결/heartbeat/타임아웃), .env.example VITE_USE_WS_PROXY 추가, 빌드 성공 → 성공
 [2026-02-27] api_dev @ P3-T3: auth.js WS 연결 상태 기반 분기 리팩토링 (isWsProxyEnabled+isConnected → github.getUser WS 경로, AUTH_ERROR logout 처리, 직접 Octokit fallback 유지), ws-client.js 생성(isWsProxyEnabled export), 빌드 성공 (2159 modules, 0 errors) → 성공
 [2026-02-27] frontend_dev @ P3-T4: MigrationNotice.jsx 생성 (VITE_USE_WS_PROXY flag 감지 + legacy token 확인, 재로그인 유도 배너, dismiss 영속), App.jsx /editor 라우트에 적용, 빌드 성공 → 성공
+[2026-03-01] api_dev @ P2-wiring: ws-proxy/src/index.js에 createApp() 배선 — Express app을 http.createServer()에 연결, /health + /api/session 실구동 검증 완료 → 성공
 [2026-02-27] api_dev @ P2-T1: ws-proxy/ 디렉토리 생성, package.json + src/index.js (Express + ws 부트스트랩) + README.md 작성 → 성공
 [2026-02-26] test_verify @ P1-T6: Phase 1 전체 검증 (XSS 차단, DOMPurify 적용, PKCE 적용, iframe sandbox, CSP headers, 빌드 성공, 보안 감사) → 성공
 

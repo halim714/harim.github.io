@@ -38,6 +38,21 @@ fi
 - audit-agents.sh가 🔴 CRITICAL을 반환하면 → **수정 후 재시작**
 - 미커밋 변경이 있으면 → `commit-phase.sh` 실행 후 계속
 
+### 미이행 약속 스캔 (c5-cross-phase-promises 룰)
+Phase 실행 전 이전 Phase에서 남긴 미이행 약속을 확인한다:
+
+// turbo
+```bash
+PROMISES=$(grep -c "🔴 미이행" PROGRESS.md 2>/dev/null || echo 0)
+if [ "$PROMISES" -gt 0 ]; then
+  echo "⚠️ 미이행 약속 ${PROMISES}건 — Phase 프롬프트에 반드시 반영하라"
+  grep "🔴 미이행" PROGRESS.md
+fi
+```
+
+- `🔴 미이행` 항목이 있으면 → 해당 항목을 **현재 Phase 태스크 프롬프트에 직접 포함**
+- 현재 Phase에서 해결 불가능하면 → `🟡 P{N} 대기`로 상태 변경 후 사유 기록
+
 ## Step 2: Phase 실행
 
 // turbo
