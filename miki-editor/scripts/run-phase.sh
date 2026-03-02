@@ -130,8 +130,10 @@ case $PHASE in
     "$MIKI_DIR/scripts/health-check.sh" "p3-t1t4"
 
     # P3-T5: Phase 3 전체 런타임 검증
+    # ⚠️ npm run dev 금지 (CLAUDE.md 규칙 2: 종료되지 않는 프로세스 실행 금지)
+    # → 소스 파일 정적 검증으로 대체
     "$SWARM" "sonnet" \
-      "PLAN.md와 PROGRESS.md를 읽고 P3-T5를 수행하라: Flag OFF/ON 시나리오와 서버/웹 구동(npm run dev) 테스트 후 WS 연결 상태가 올바른지 오프라인/온라인 동작 런타임 테스트를 수행하라." \
+      "PLAN.md와 PROGRESS.md를 읽고 P3-T5를 수행하라: Flag OFF/ON 시나리오를 정적으로 검증하라. (1) VITE_USE_WS_PROXY 환경변수 분기 코드가 ws-client.js와 github.js에 올바르게 구현되어 있는지 소스 파일을 읽고 확인하라. (2) npm run build로 빌드 성공 여부를 확인하라. (3) WS 연결 관련 오프라인/온라인 로직이 auth.js에 분기되어 있는지 확인하라. npm run dev는 실행하지 마라." \
       "$MIKI_DIR" test_verify "p3-t5-verify"
     ;;
 

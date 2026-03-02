@@ -110,9 +110,13 @@ MAX_WAIT=300
 
 echo "Waiting for agent to complete (timeout: ${MAX_WAIT}s)..." >> "$DIR/$LOG_FILE"
 
+# 타임아웃 플래그 파일 (race condition 없이 워치독 → 메인 프로세스 간 신호 전달)
+TIMEOUT_FLAG="$DIR/logs/.timeout_${LOG_NAME}_${TIMESTAMP}"
+
 # 타임아웃 워치독: MAX_WAIT 초 후에 프로세스가 살아있으면 강제 종료
 (sleep $MAX_WAIT && kill -0 $CLAUDE_PID 2>/dev/null && \
   echo "[timeout] ${MAX_WAIT}초 초과 — 에이전트 강제 종료" >> "$DIR/$LOG_FILE" && \
+  touch "$TIMEOUT_FLAG" && \
   kill $CLAUDE_PID 2>/dev/null) &
 WATCHDOG_PID=$!
 
@@ -124,7 +128,14 @@ AGENT_EXIT=$?
 kill $WATCHDOG_PID 2>/dev/null
 wait $WATCHDOG_PID 2>/dev/null
 
-echo "[agent] 종료 (exit=$AGENT_EXIT)" >> "$DIR/$LOG_FILE"
+# 타임아웃 여부 확인
+TIMED_OUT=0
+if [ -f "$TIMEOUT_FLAG" ]; then
+  TIMED_OUT=1
+  rm -f "$TIMEOUT_FLAG"
+fi
+
+echo "[agent] 종료 (exit=$AGENT_EXIT, timed_out=$TIMED_OUT)" >> "$DIR/$LOG_FILE"
 
 # .raw 내용을 메인 로그에 합치기
 if [ -f "$RAW_FILE" ] && [ -s "$RAW_FILE" ]; then
@@ -136,6 +147,20 @@ fi
 # ─── Git Worktree Merge 검증 + 병합 ───
 if [ -n "$WORKTREE_DIR" ] && [ -d "$WORKTREE_DIR" ]; then
   cd "$WORKTREE_DIR" || exit 1
+
+  # 타임아웃 종료 시 불완전한 작업을 main에 merge하지 않음
+  if [ "$TIMED_OUT" -eq 1 ]; then
+    echo "[merge] ⛔ 타임아웃 종료 — 불완전한 작업 merge 차단" >> "$DIR/$LOG_FILE"
+    echo "   수동 확인: git diff main..$BRANCH_NAME" >> "$DIR/$LOG_FILE"
+    echo "[TIMEOUT_BLOCKED] $LOG_NAME" >> "$DIR/logs/regression_alerts.log"
+    # worktree 정리 후 종료
+    cd "$PROJECT_ROOT" || exit 1
+    git worktree remove "$WORKTREE_DIR" --force 2>/dev/null
+    git branch -D "$BRANCH_NAME" 2>/dev/null
+    echo "[worktree] 정리 완료 (타임아웃): $WORKTREE_DIR" >> "$DIR/$LOG_FILE"
+    echo "[swarm] Agent finished at $(date)" >> "$DIR/$LOG_FILE"
+    exit 1
+  fi
 
   # 변경 사항이 있는지 확인 (untracked 파일 또는 새 커밋)
   UNCOMMITTED=$(git status --porcelain 2>/dev/null | wc -l)
