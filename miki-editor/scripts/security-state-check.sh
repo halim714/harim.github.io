@@ -59,6 +59,17 @@ else
   echo "  ✅ 와일드카드 CORS 없음"
 fi
 
+# Referer-as-Origin 폴백 검사
+REFERER_FALLBACK=$(grep -rn "origin.*referer\|referer.*origin" "$MIKI_DIR/api/" "$WS_PROXY_DIR/src/" --include="*.js" 2>/dev/null | grep -v "node_modules" || true)
+if [ -n "$REFERER_FALLBACK" ]; then
+  echo "  ❌ Referer→Origin 폴백 발견 (Referer는 전체 URL 포함, Origin과 다른 보안 의미):"
+  echo "$REFERER_FALLBACK" | sed 's/^/    /'
+  REPORT="$REPORT\n❌ Referer→Origin 폴백 사용"
+  FAIL=1
+else
+  echo "  ✅ Referer→Origin 폴백 없음"
+fi
+
 # ─── 3. JWT payload 민감 정보 검사 ───
 echo ""
 echo "3️⃣  JWT payload 민감 정보 검사..."
