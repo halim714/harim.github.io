@@ -112,12 +112,12 @@ fi
 
 TOTAL_SOP=0
 for R in "$PROJECT_DIR"/.agents/roles/*.md; do
-  LINES=$(wc -l < "$R" | tr -d ' ')
-  TOTAL_SOP=$((TOTAL_SOP + LINES))
+  BYTES=$(wc -c < "$R" | tr -d ' ')
+  TOTAL_SOP=$((TOTAL_SOP + BYTES))
 done
-echo "- SOP 합계: ${TOTAL_SOP}줄 (5개 Role)" >> "$REPORT"
-if [ "$TOTAL_SOP" -gt 500 ]; then
-  echo "  ⚠️ SOP 총량 500줄 초과 — archive 이동 검토 필요" >> "$REPORT"
+echo "- SOP 합계: ${TOTAL_SOP}바이트 (sop-writer 기준 8000바이트/파일)" >> "$REPORT"
+if [ "$TOTAL_SOP" -gt 40000 ]; then
+  echo "  ⚠️ SOP 총량 40000바이트 초과 — archive 이동 검토 필요" >> "$REPORT"
 fi
 
 # ─── 7. 종합 판정 ───
