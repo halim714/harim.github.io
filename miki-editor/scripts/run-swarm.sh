@@ -84,16 +84,18 @@ else
   fi
 fi
 
-# ─── Claude CLI 실행 (백그라운드 + 유휴 감지) ───
+# ─── Claude CLI 실행 ───
 # claude -p 출력을 직접 .raw에 기록 (파이프/script 모두 macOS에서 버퍼링 문제)
-# idle detection은 .raw 파일 크기로 모니터링
-WORK_DIR="${WORKTREE_DIR:-$PROJECT_ROOT}"
+#
+# [v3 변경] --add-dir 제거
+#   CWD = worktree root = PROJECT_ROOT 체크아웃이므로 claude가 이미 모든 파일에 접근 가능.
+#   --add-dir "$WORK_DIR"           → CWD와 동일: 중복 인덱싱 유발
+#   --add-dir "$WORK_DIR/miki-editor" → CWD 하위: miki-editor 3회 인덱싱 → 초기화 hang 원인
+#   외부 디렉토리가 필요할 경우에만 --add-dir을 다시 추가할 것.
 RAW_FILE="$DIR/$LOG_FILE.raw"
 touch "$RAW_FILE"
 
 claude -p --model "$MODEL" --dangerously-skip-permissions \
-  --add-dir "$WORK_DIR" \
-  --add-dir "$WORK_DIR/miki-editor" \
   -- "$FULL_PROMPT" < /dev/null > "$RAW_FILE" 2>&1 &
 CLAUDE_PID=$!
 
@@ -103,17 +105,36 @@ echo "Worktree: ${WORKTREE_DIR:-none (direct)}"
 echo "Logs: $DIR/$LOG_FILE"
 echo "Raw output: $RAW_FILE"
 
-# ─── Claude CLI 자연 종료 대기 (최대 300초 타임아웃) ───
-# claude -p는 비대화식 → 응답 완료 후 스스로 종료
-# idle detection 불필요 + 오히려 응답 전에 죽이는 문제 발생
+# ─── 2단계 타임아웃: 초기화 워치독 + 전체 타임아웃 ───
+#
+# Phase 1 (INIT_TIMEOUT): 첫 출력까지 45초 대기
+#   - 정상 초기화는 5~20초. 45초는 2배+ 여유
+#   - 첫 출력 없으면 hang 판정 → 즉시 종료 (300초 낭비 방지)
+#
+# Phase 2 (MAX_WAIT): 첫 출력 확인 후 전체 300초 타임아웃
+#   - 출력 중 idle(긴 추론 pause)은 감지하지 않음 → 오탐 방지
+#
+INIT_TIMEOUT=45
 MAX_WAIT=300
 
-echo "Waiting for agent to complete (timeout: ${MAX_WAIT}s)..." >> "$DIR/$LOG_FILE"
+echo "Waiting for agent (init: ${INIT_TIMEOUT}s, max: ${MAX_WAIT}s)..." >> "$DIR/$LOG_FILE"
 
-# 타임아웃 플래그 파일 (race condition 없이 워치독 → 메인 프로세스 간 신호 전달)
 TIMEOUT_FLAG="$DIR/logs/.timeout_${LOG_NAME}_${TIMESTAMP}"
+INIT_FLAG="$DIR/logs/.init_hang_${LOG_NAME}_${TIMESTAMP}"
 
-# 타임아웃 워치독: MAX_WAIT 초 후에 프로세스가 살아있으면 강제 종료
+# Phase 1: 초기화 워치독 — 45초 내에 첫 출력이 없으면 hang 판정
+(sleep "${INIT_TIMEOUT}"
+ if kill -0 $CLAUDE_PID 2>/dev/null; then
+   RAWSIZE=$(wc -c < "$RAW_FILE" 2>/dev/null | tr -d ' ')
+   if [ "${RAWSIZE:-0}" -eq 0 ]; then
+     echo "[init-hang] ${INIT_TIMEOUT}초 경과, 출력 0바이트 — 초기화 hang 판정" >> "$DIR/$LOG_FILE"
+     touch "$INIT_FLAG"
+     kill $CLAUDE_PID 2>/dev/null
+   fi
+ fi) &
+INIT_WATCHDOG_PID=$!
+
+# Phase 2: 전체 타임아웃 워치독 — MAX_WAIT 초 후 강제 종료
 (sleep $MAX_WAIT && kill -0 $CLAUDE_PID 2>/dev/null && \
   echo "[timeout] ${MAX_WAIT}초 초과 — 에이전트 강제 종료" >> "$DIR/$LOG_FILE" && \
   touch "$TIMEOUT_FLAG" && \
@@ -125,17 +146,23 @@ wait $CLAUDE_PID 2>/dev/null
 AGENT_EXIT=$?
 
 # 워치독 정리
+kill $INIT_WATCHDOG_PID 2>/dev/null
 kill $WATCHDOG_PID 2>/dev/null
+wait $INIT_WATCHDOG_PID 2>/dev/null
 wait $WATCHDOG_PID 2>/dev/null
 
-# 타임아웃 여부 확인
+# 종료 원인 판별
 TIMED_OUT=0
-if [ -f "$TIMEOUT_FLAG" ]; then
+INIT_HANG=0
+if [ -f "$INIT_FLAG" ]; then
+  INIT_HANG=1
+  rm -f "$INIT_FLAG"
+elif [ -f "$TIMEOUT_FLAG" ]; then
   TIMED_OUT=1
   rm -f "$TIMEOUT_FLAG"
 fi
 
-echo "[agent] 종료 (exit=$AGENT_EXIT, timed_out=$TIMED_OUT)" >> "$DIR/$LOG_FILE"
+echo "[agent] 종료 (exit=$AGENT_EXIT, timed_out=$TIMED_OUT, init_hang=$INIT_HANG)" >> "$DIR/$LOG_FILE"
 
 # .raw 내용을 메인 로그에 합치기
 if [ -f "$RAW_FILE" ] && [ -s "$RAW_FILE" ]; then
@@ -148,16 +175,19 @@ fi
 if [ -n "$WORKTREE_DIR" ] && [ -d "$WORKTREE_DIR" ]; then
   cd "$WORKTREE_DIR" || exit 1
 
-  # 타임아웃 종료 시 불완전한 작업을 main에 merge하지 않음
-  if [ "$TIMED_OUT" -eq 1 ]; then
-    echo "[merge] ⛔ 타임아웃 종료 — 불완전한 작업 merge 차단" >> "$DIR/$LOG_FILE"
+  # 초기화 hang 또는 타임아웃 종료 시 불완전한 작업을 main에 merge하지 않음
+  if [ "$INIT_HANG" -eq 1 ] || [ "$TIMED_OUT" -eq 1 ]; then
+    if [ "$INIT_HANG" -eq 1 ]; then
+      echo "[merge] ⛔ 초기화 hang — merge 차단 (${INIT_TIMEOUT}초 내 출력 없음)" >> "$DIR/$LOG_FILE"
+    else
+      echo "[merge] ⛔ 타임아웃 종료 — 불완전한 작업 merge 차단" >> "$DIR/$LOG_FILE"
+    fi
     echo "   수동 확인: git diff main..$BRANCH_NAME" >> "$DIR/$LOG_FILE"
-    echo "[TIMEOUT_BLOCKED] $LOG_NAME" >> "$DIR/logs/regression_alerts.log"
-    # worktree 정리 후 종료
+    echo "[BLOCKED] $LOG_NAME (init_hang=$INIT_HANG, timeout=$TIMED_OUT)" >> "$DIR/logs/regression_alerts.log"
     cd "$PROJECT_ROOT" || exit 1
     git worktree remove "$WORKTREE_DIR" --force 2>/dev/null
     git branch -D "$BRANCH_NAME" 2>/dev/null
-    echo "[worktree] 정리 완료 (타임아웃): $WORKTREE_DIR" >> "$DIR/$LOG_FILE"
+    echo "[worktree] 정리 완료: $WORKTREE_DIR" >> "$DIR/$LOG_FILE"
     echo "[swarm] Agent finished at $(date)" >> "$DIR/$LOG_FILE"
     exit 1
   fi
