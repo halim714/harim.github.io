@@ -123,14 +123,11 @@ global.console = {
   error: jest.fn(),
 };
 
-// Mock import.meta.env for Vite compatibility
-global.importMeta = {
-  env: {
-    NODE_ENV: 'test',
-    VITE_API_BASE_URL: 'http://localhost:3000',
-    VITE_AI_API_URL: 'http://localhost:3000/api/ai',
-  }
-};
+// import.meta.env → process.env (.babelrc.js transformImportMeta 플러그인)
+// VITE_USE_WS_PROXY 미설정 = WS 모드 OFF (기존 동작 유지)
+process.env.VITE_USE_WS_PROXY = process.env.VITE_USE_WS_PROXY || '';
+process.env.VITE_API_BASE_URL = 'http://localhost:3000';
+process.env.VITE_AI_API_URL = 'http://localhost:3000/api/ai';
 
 // Mock URL.createObjectURL and revokeObjectURL
 global.URL.createObjectURL = jest.fn(() => 'mocked-url');
