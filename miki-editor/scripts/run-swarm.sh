@@ -1,5 +1,5 @@
 #!/bin/bash
-# Meki Swarm Agent Runner v2 — SOP Role + Idle Detection + Git Worktree Isolation
+# Meki Swarm Agent Runner v4 — Pre-flight + Init Watchdog + Worktree Isolation
 # 사용법: ./scripts/run-swarm.sh <모델> "<프롬프트>" <작업디렉토리> <role명> <로그이름>
 #
 # role명: frontend_dev | api_dev | test_verify | none
@@ -53,9 +53,10 @@ git worktree add "$WORKTREE_DIR" -b "$BRANCH_NAME" 2>> "$DIR/$LOG_FILE"
 WORKTREE_STATUS=$?
 
 if [ $WORKTREE_STATUS -ne 0 ]; then
-  echo "[worktree] Failed to create worktree — falling back to direct execution" >> "$DIR/$LOG_FILE"
-  WORKTREE_DIR=""
-  cd "$DIR" || exit 1
+  echo "[worktree] ❌ worktree 생성 실패 — 격리 없는 실행은 허용하지 않음, abort" >> "$DIR/$LOG_FILE"
+  echo "❌ [worktree] 생성 실패 — abort (격리 필수). git worktree prune 후 재시도하세요."
+  git branch -D "$BRANCH_NAME" 2>/dev/null
+  exit 1
 else
   echo "[worktree] Created isolated workspace: $WORKTREE_DIR" >> "$DIR/$LOG_FILE"
   # 에이전트를 worktree 루트에서 실행 (CLAUDE.md 자동 로드를 위해)
@@ -84,15 +85,17 @@ else
   fi
 fi
 
-# ─── Pre-flight: claude CLI 정상 여부 확인 (토큰 최소 소비) ───
-echo "[pre-flight] claude 기본 실행 테스트..." >> "$DIR/$LOG_FILE"
-PF_RESULT=$(timeout 15 claude -p --model "${MODEL}" --dangerously-skip-permissions \
+# ─── Pre-flight: claude CLI 정상 여부 확인 (중립 환경 /tmp에서 실행) ───
+# P1 fix: CWD가 원인인 hang이면 pre-flight도 같이 실패하므로, /tmp 서브쉘로 격리
+echo "[pre-flight] claude 기본 실행 테스트 (/tmp에서)..." >> "$DIR/$LOG_FILE"
+PF_RESULT=$(cd /tmp && timeout 15 claude -p --model "${MODEL}" --dangerously-skip-permissions \
   -- "respond with OK" < /dev/null 2>&1 || true)
 if echo "${PF_RESULT}" | grep -qi "OK"; then
   echo "[pre-flight] ✅ claude 정상" >> "$DIR/$LOG_FILE"
 else
-  echo "[pre-flight] ❌ claude 기본 실행 실패 — 환경 문제, abort" >> "$DIR/$LOG_FILE"
+  echo "[pre-flight] ❌ claude CLI 자체 실행 실패, abort" >> "$DIR/$LOG_FILE"
   echo "[pre-flight] 출력: ${PF_RESULT}" >> "$DIR/$LOG_FILE"
+  echo "❌ [pre-flight] claude CLI 실행 실패 — API 키/설치 확인 필요"
   echo "[PRE_FLIGHT_FAIL] ${LOG_NAME}" >> "$DIR/logs/regression_alerts.log"
   # worktree 정리
   if [ -n "${WORKTREE_DIR}" ] && [ -d "${WORKTREE_DIR}" ]; then
@@ -176,17 +179,24 @@ fi
 
 echo "[agent] 종료 (exit=${AGENT_EXIT}, timed_out=${TIMED_OUT}, init_hang=${INIT_HANG})" >> "$DIR/$LOG_FILE"
 
-# ─── INIT_HANG 자동 bisect (c7-hang-diagnosis.md 준거) ───
+# ─── INIT_HANG 자동 bisect: T3 (c7-hang-diagnosis.md 준거) ───
+# P2 fix: pre-flight(=/tmp T0)가 이미 통과 → T0 중복 제거. T3(빈 디렉토리)를 자동 실행
 if [ "${INIT_HANG}" -eq 1 ]; then
-  echo "[diag] INIT_HANG 감지 — T0 최소 실행 테스트 실행" >> "$DIR/$LOG_FILE"
-  T0_RESULT=$(timeout 15 claude -p --model "${MODEL}" --dangerously-skip-permissions \
-    -- "respond with OK" < /dev/null 2>&1 || true)
-  if echo "${T0_RESULT}" | grep -qi "OK"; then
-    echo "[diag] T0 정상 → claude 자체는 OK. CWD/프롬프트 복합 원인 의심" >> "$DIR/$LOG_FILE"
-    echo "[diag] 수동 bisect 필요: c7-hang-diagnosis.md 참조 (T3→T2→T1)" >> "$DIR/$LOG_FILE"
+  echo "[diag] INIT_HANG 감지 — pre-flight 통과 상태이므로 T3(환경 격리) 실행" >> "$DIR/$LOG_FILE"
+  T3_DIR="/tmp/swarm-diag-$(date +%s)"
+  mkdir -p "${T3_DIR}"
+  T3_RESULT=$(cd "${T3_DIR}" && timeout 60 claude -p --model "${MODEL}" --dangerously-skip-permissions \
+    -- "${FULL_PROMPT}" < /dev/null 2>&1 || true)
+  T3_SIZE=$(echo -n "${T3_RESULT}" | wc -c | tr -d ' ')
+  rm -rf "${T3_DIR}"
+  if [ "${T3_SIZE}" -gt 0 ]; then
+    echo "[diag] T3 정상 (${T3_SIZE}B) → CWD(worktree) 환경이 원인" >> "$DIR/$LOG_FILE"
+    echo "[diag] worktree의 CLAUDE.md/.git 크기/구조를 확인하세요" >> "$DIR/$LOG_FILE"
   else
-    echo "[diag] T0 실패 → claude CLI 자체 문제 (API/인증/설치)" >> "$DIR/$LOG_FILE"
+    echo "[diag] T3 실패 (0B) → 프롬프트 자체 또는 CLI 문제" >> "$DIR/$LOG_FILE"
+    echo "[diag] c7-hang-diagnosis.md 참조: T1(프롬프트 이분 탐색)" >> "$DIR/$LOG_FILE"
   fi
+  echo "[diag] 자동 재시도 없음 — 수동 개입 필요" >> "$DIR/$LOG_FILE"
 fi
 
 # .raw 내용을 메인 로그에 합치기
@@ -235,7 +245,7 @@ if [ -n "$WORKTREE_DIR" ] && [ -d "$WORKTREE_DIR" ]; then
 
     echo "[merge-check] additions=$ADD, deletions=$DEL" >> "$DIR/$LOG_FILE"
 
-    if [ "$DEL" -gt 0 ] && [ "$DEL" -gt $((ADD * 2)) ]; then
+    if [ "$DEL" -gt 10 ] && [ "$DEL" -gt $((ADD * 2)) ]; then
       echo "⚠️  [merge-check] 삭제($DEL)가 추가($ADD)의 2배 초과 — 회귀 의심! merge 보류" >> "$DIR/$LOG_FILE"
       echo "   수동 확인: git diff main..$BRANCH_NAME" >> "$DIR/$LOG_FILE"
       echo "[REGRESSION_SUSPECT] $LOG_NAME" >> "$DIR/logs/regression_alerts.log"
