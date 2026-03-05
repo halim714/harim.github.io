@@ -29,6 +29,8 @@
 
 ## 현재 활성 태스크
 
+**Phase 4 진행중** — P4-T0a ✅ 완료
+
 **Phase 2 완료** — P2-T1 ✅, P2-T2 ✅(재생성 완료), P2-T3 ✅, P2-T4 ✅, P2-T5 ✅
 
 ---
@@ -100,6 +102,7 @@
 [2026-02-27] api_dev @ P3-T1: ws-client.js 생성 (WsProxyClient, isWsProxyEnabled, 9 GitHub API 래퍼, 재연결/heartbeat/타임아웃), .env.example VITE_USE_WS_PROXY 추가, 빌드 성공 → 성공
 [2026-02-27] api_dev @ P3-T3: auth.js WS 연결 상태 기반 분기 리팩토링 (isWsProxyEnabled+isConnected → github.getUser WS 경로, AUTH_ERROR logout 처리, 직접 Octokit fallback 유지), ws-client.js 생성(isWsProxyEnabled export), 빌드 성공 (2159 modules, 0 errors) → 성공
 [2026-02-27] frontend_dev @ P3-T4: MigrationNotice.jsx 생성 (VITE_USE_WS_PROXY flag 감지 + legacy token 확인, 재로그인 유도 배너, dismiss 영속), App.jsx /editor 라우트에 적용, 빌드 성공 → 성공
+[2026-03-05] api_dev @ P4-T0a: auth.js 듀얼모드 리팩토링 (isWsMode, getToken→null in WS, saveToken→no-op in WS, hasLegacyToken 추가, getCurrentUser→getCachedUser in WS), 8개 소비자 파일 WS 분기 추가 (App.jsx/usePublish.js/useAttachment.js/storage-client.js/OnboardingSetup.jsx/verify-setup.js/functional-test.js), 빌드 성공 (2158 modules, 0 errors) → 성공
 [2026-03-01] api_dev @ P2-wiring: ws-proxy/src/index.js에 createApp() 배선 — Express app을 http.createServer()에 연결, /health + /api/session 실구동 검증 완료 → 성공
 [2026-02-27] api_dev @ P2-T1: ws-proxy/ 디렉토리 생성, package.json + src/index.js (Express + ws 부트스트랩) + README.md 작성 → 성공
 [2026-02-26] test_verify @ P1-T6: Phase 1 전체 검증 (XSS 차단, DOMPurify 적용, PKCE 적용, iframe sandbox, CSP headers, 빌드 성공, 보안 감사) → 성공

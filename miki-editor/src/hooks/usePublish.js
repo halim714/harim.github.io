@@ -8,8 +8,9 @@ export function usePublish() {
 
     const publishMutation = useMutation({
         mutationFn: async (document) => {
+            const isWsMode = import.meta.env.VITE_USE_WS_PROXY === 'true';
             const token = AuthService.getToken();
-            if (!token) throw new Error('로그인이 필요합니다.');
+            if (!isWsMode && !token) throw new Error('로그인이 필요합니다.');
             const publishService = new PublishService(token);
             return await publishService.publishDocument(document);
         },
@@ -64,8 +65,9 @@ export function usePublish() {
     // unpublishMutation도 동일하게 처리 필요
     const unpublishMutation = useMutation({
         mutationFn: async (document) => {
+            const isWsMode = import.meta.env.VITE_USE_WS_PROXY === 'true';
             const token = AuthService.getToken();
-            if (!token) throw new Error('로그인이 필요합니다.');
+            if (!isWsMode && !token) throw new Error('로그인이 필요합니다.');
             const publishService = new PublishService(token);
             return await publishService.unpublishDocument(document);
         },

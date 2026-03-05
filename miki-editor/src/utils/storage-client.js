@@ -16,8 +16,9 @@ let githubInstance = null;
 let currentToken = null;
 
 const getGithub = async () => {
+  const isWsMode = import.meta.env.VITE_USE_WS_PROXY === 'true';
   const token = AuthService.getToken();
-  if (!token) throw new Error('로그인이 필요합니다.');
+  if (!isWsMode && !token) throw new Error('로그인이 필요합니다.');
 
   // 토큰이 같으면 기존 인스턴스 재사용
   if (githubInstance && currentToken === token) {
