@@ -2,23 +2,40 @@ import { Octokit } from 'octokit';
 
 /**
  * Authentication Service
- * localStorage 기반 토큰 관리
+ * 듀얼모드: VITE_USE_WS_PROXY=true 시 WS 프록시 모드 (토큰은 서버 세션에 있음)
  */
 export class AuthService {
     static TOKEN_KEY = 'github_token';
     static USER_KEY = 'github_user';
 
+    /** WS 프록시 모드 여부 */
+    static isWsMode() {
+        return import.meta.env.VITE_USE_WS_PROXY === 'true';
+    }
+
     /**
-     * 토큰 가져오기
+     * localStorage에 기존(레거시) 토큰이 있으면 true.
+     * WS 모드 여부와 무관하게 항상 localStorage를 직접 확인.
+     */
+    static hasLegacyToken() {
+        return !!localStorage.getItem(this.TOKEN_KEY);
+    }
+
+    /**
+     * 토큰 가져오기.
+     * WS 모드에서는 null 반환 (토큰은 서버 세션에 있음).
      */
     static getToken() {
+        if (this.isWsMode()) return null;
         return localStorage.getItem(this.TOKEN_KEY);
     }
 
     /**
-     * 토큰 저장
+     * 토큰 저장.
+     * WS 모드에서는 no-op (토큰은 서버 세션에서 관리).
      */
     static saveToken(token) {
+        if (this.isWsMode()) return;
         localStorage.setItem(this.TOKEN_KEY, token);
         localStorage.setItem(`${this.TOKEN_KEY}_timestamp`, Date.now().toString());
     }
@@ -33,9 +50,14 @@ export class AuthService {
     }
 
     /**
-     * 현재 사용자 정보 가져오기 (GitHub API 호출)
+     * 현재 사용자 정보 가져오기.
+     * WS 모드에서는 캐시된 사용자 반환 (서버 세션 기반 조회는 P4-T0b에서 구현).
      */
     static async getCurrentUser() {
+        if (this.isWsMode()) {
+            return this.getCachedUser();
+        }
+
         const token = this.getToken();
         if (!token) return null;
 
