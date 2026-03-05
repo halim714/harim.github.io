@@ -39,6 +39,7 @@
 
 | 태스크 ID | 완료 시각 | 담당 에이전트 | 결과 |
 |---|---|---|---|
+| P4-T0a | 2026-03-05 | api_dev | ✅ `src/services/auth.js` 듀얼모드 리팩토링 (WS 모드: getToken→null 반환), 8개 소비자 파일(`App.jsx`, `usePublish.js` 등) 대응 완료. 에이전트 실행 환경(Claude CLI 중첩 세션 이슈, 45초 타임아웃 맹점) 진단/해결 이후 성공적으로 병합됨. 연관된 Jest SyntaxError(`import.meta`) 수정 및 단위 테스트 93개 통과/빌드 성공. |
 | P3-T3 | 2026-02-27 | api_dev | ✅ `src/services/auth.js` WS 연결 상태 기반 분기 리팩토링 — isWsProxyEnabled()+wsClient.isConnected 조건으로 getCurrentUser()를 WS경로(github.getUser)와 직접 Octokit 경로로 분리, AUTH_ERROR 코드 처리, ws-client.js 동시 생성(isWsProxyEnabled export 포함), 빌드 성공 (2159 modules, 0 errors) |
 | P3-T1 | 2026-02-27 | api_dev | ✅ `src/services/ws-client.js` 생성 (WsProxyClient 클래스, isWsProxyEnabled() flag, 9개 GitHub API 래퍼, 재연결 지수 백오프, heartbeat, 요청 타임아웃, singleton), `.env.example`에 VITE_USE_WS_PROXY + VITE_WS_PROXY_URL 추가, 빌드 성공 (2158 modules, 0 errors) |
 | P3-T4 | 2026-02-27 | frontend_dev | ✅ `src/components/MigrationNotice.jsx` 생성 (VITE_USE_WS_PROXY 감지, 기존 토큰 보유 시 재로그인 배너 표시, dismiss 영속, App.jsx /editor 라우트에 적용), 빌드 성공 (2158 modules, 0 errors) |
