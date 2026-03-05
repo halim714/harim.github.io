@@ -1,5 +1,5 @@
 #!/bin/bash
-# Meki Swarm Agent Runner v4 — Pre-flight + Init Watchdog + Worktree Isolation
+# Meki Swarm Agent Runner v5 — Pre-flight + Init Watchdog + Worktree Isolation + unset CLAUDECODE
 # 사용법: ./scripts/run-swarm.sh <모델> "<프롬프트>" <작업디렉토리> <role명> <로그이름>
 #
 # role명: frontend_dev | api_dev | test_verify | none
@@ -89,7 +89,7 @@ fi
 # ─── Pre-flight: claude CLI 정상 여부 확인 (중립 환경 /tmp에서 실행) ───
 # P1 fix: CWD가 원인인 hang이면 pre-flight도 같이 실패하므로, /tmp 서브쉘로 격리
 echo "[pre-flight] claude 기본 실행 테스트 (/tmp에서)..." >> "$DIR/$LOG_FILE"
-PF_RESULT=$(cd /tmp && timeout 15 claude -p --model "${MODEL}" --dangerously-skip-permissions \
+PF_RESULT=$(cd /tmp && unset CLAUDECODE && timeout 15 claude -p --model "${MODEL}" --dangerously-skip-permissions \
   -- "respond with OK" < /dev/null 2>&1 || true)
 if echo "${PF_RESULT}" | grep -qi "OK"; then
   echo "[pre-flight] ✅ claude 정상" >> "$DIR/$LOG_FILE"
@@ -110,6 +110,9 @@ fi
 # ─── Claude CLI 실행 ───
 RAW_FILE="$DIR/$LOG_FILE.raw"
 touch "$RAW_FILE"
+
+# CLAUDECODE 환경변수가 설정된 경우(Claude Code 세션 내 실행) 중첩 세션 차단 우회
+unset CLAUDECODE
 
 claude -p --model "$MODEL" --dangerously-skip-permissions \
   -- "$FULL_PROMPT" < /dev/null > "$RAW_FILE" 2>&1 &
@@ -186,7 +189,7 @@ if [ "${INIT_HANG}" -eq 1 ]; then
   echo "[diag] INIT_HANG 감지 — pre-flight 통과 상태이므로 T3(환경 격리) 실행" >> "$DIR/$LOG_FILE"
   T3_DIR="/tmp/swarm-diag-$(date +%s)"
   mkdir -p "${T3_DIR}"
-  T3_RESULT=$(cd "${T3_DIR}" && timeout 60 claude -p --model "${MODEL}" --dangerously-skip-permissions \
+  T3_RESULT=$(cd "${T3_DIR}" && unset CLAUDECODE && timeout 60 claude -p --model "${MODEL}" --dangerously-skip-permissions \
     -- "${FULL_PROMPT}" < /dev/null 2>&1 || true)
   T3_SIZE=$(echo -n "${T3_RESULT}" | wc -c | tr -d ' ')
   rm -rf "${T3_DIR}"
