@@ -10,6 +10,14 @@ jest.mock('octokit', () => ({
 // Mock dependencies
 jest.mock('../../services/auth');
 jest.mock('../../services/github');
+jest.mock('../../utils/database', () => ({
+    dbHelpers: {
+        saveLocal: jest.fn().mockResolvedValue(undefined),
+        markSyncedWithUpdate: jest.fn().mockResolvedValue(undefined),
+        deleteLocal: jest.fn().mockResolvedValue(undefined),
+    },
+    db: {},
+}));
 
 describe('storage-client', () => {
     // Define mock instance outside beforeEach to keep reference stable across tests
@@ -78,6 +86,8 @@ This is the body content.`;
 
     describe('savePost', () => {
         it('should merge preserved frontmatter with new content when saving', async () => {
+            jest.useFakeTimers();
+
             // Arrange
             const docId = 'test-doc-id';
             const originalFrontMatter = {
@@ -106,21 +116,28 @@ This is the body content.`;
 
             mockGithubInstance.createOrUpdateFile.mockResolvedValue('new-sha');
 
-            // Act
-            await storage.savePost(postToSave);
+            // Act — savePost은 즉시 반환 (debounce 5s 백그라운드 저장)
+            const result = await storage.savePost(postToSave);
+
+            // savePost는 즉시 syncStatus: 'pending' 반환
+            expect(result.syncStatus).toBe('pending');
+
+            // debounce(5s) 후 GitHub 저장 실행
+            await jest.runAllTimersAsync();
 
             // Assert
             expect(mockGithubInstance.createOrUpdateFile).toHaveBeenCalled();
-            const [repo, path, content, message] = mockGithubInstance.createOrUpdateFile.mock.calls[0];
+            const [,, content] = mockGithubInstance.createOrUpdateFile.mock.calls[0];
 
             // Verify content has frontmatter merged correctly
             expect(content).toContain('---');
-            // Title might be quoted or unquoted depending on js-yaml behavior
             const titleMatch = content.includes('title: "New Title"') || content.includes('title: New Title');
             expect(titleMatch).toBe(true);
-            expect(content).toContain('preserved-tag'); // Preserved tag (format varies)
-            expect(content).toContain('customField: preserved-value'); // Preserved custom field
-            expect(content).toContain('# New Content'); // New body
+            expect(content).toContain('preserved-tag');
+            expect(content).toContain('customField: preserved-value');
+            expect(content).toContain('# New Content');
+
+            jest.useRealTimers();
         });
     });
 });
