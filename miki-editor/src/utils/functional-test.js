@@ -30,6 +30,7 @@ export async function runFunctionalTest() {
 
         // Step 2: 게시 테스트
         console.log('🌐 Step 2: 퍼블릭 저장소에 배포...');
+        // WS 모드에서는 token이 null (서버 세션 관리). PublishService는 null token으로 WS 경유.
         const token = AuthService.getToken();
         const publishService = new PublishService(token);
         const publishResult = await publishService.publishDocument(savedPost);
