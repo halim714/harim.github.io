@@ -26,8 +26,9 @@ export default function OnboardingSetup() {
         setProgress(10);
 
         try {
+            const isWsMode = import.meta.env.VITE_USE_WS_PROXY === 'true';
             const token = AuthService.getToken();
-            if (!token) {
+            if (!isWsMode && !token) {
                 throw new Error('로그인이 필요합니다.');
             }
 

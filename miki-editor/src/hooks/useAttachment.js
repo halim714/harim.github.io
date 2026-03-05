@@ -87,8 +87,9 @@ export function useAttachment(content, onContentChange, docId) {
             setIsUploading(true);
             setError(null);
 
+            const isWsMode = import.meta.env.VITE_USE_WS_PROXY === 'true';
             const token = AuthService.getToken();
-            if (!token) throw new Error('인증 토큰이 없습니다. 로그인해주세요.');
+            if (!isWsMode && !token) throw new Error('인증 토큰이 없습니다. 로그인해주세요.');
 
             const github = new GitHubService(token);
             await github.setUsername();

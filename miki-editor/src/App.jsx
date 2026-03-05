@@ -28,6 +28,13 @@ function AuthProvider({ children }) {
 
   // 토큰 저장 후 호출하여 상태 즉시 갱신 (새로고침 없이)
   const refreshAuth = async () => {
+    // WS 모드: 토큰은 서버 세션에 있음. 캐시된 사용자로 UI 복원.
+    if (import.meta.env.VITE_USE_WS_PROXY === 'true') {
+      const user = AuthService.getCachedUser();
+      setAuth({ loading: false, user: user || null, needsSetup: false });
+      return;
+    }
+
     const token = AuthService.getToken();
 
     if (!token) {

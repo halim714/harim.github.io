@@ -6,8 +6,9 @@ import { GitHubService } from '../services/github';
  * 이중 저장소 구조 검증
  */
 export async function verifyDualRepoStructure() {
+    const isWsMode = import.meta.env.VITE_USE_WS_PROXY === 'true';
     const token = AuthService.getToken();
-    if (!token) {
+    if (!isWsMode && !token) {
         return { success: false, error: '로그인이 필요합니다.' };
     }
 
