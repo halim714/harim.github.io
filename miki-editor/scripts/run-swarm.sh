@@ -5,10 +5,11 @@
 # role명: frontend_dev | api_dev | test_verify | none
 # SOP 파일 위치: /Users/halim/Desktop/meeki/meki/.agents/roles/<role명>.md
 #
-# [v2 변경사항]
-# - Git Worktree 격리: 각 에이전트가 독립 브랜치에서 작업 → 원본 보호
-# - 삭제량 검증: merge 전 삭제가 추가보다 많으면 자동 롤백
-# - 기존 기능 보존: SOP 로드, 유휴 감지, 프롬프트 주입 모두 유지
+# [v4 변경사항]
+# - Pre-flight: /tmp 서브쉘에서 claude CLI 정상 여부 확인 (CWD 문제와 분리)
+# - worktree 생성 실패 시 폴백 없이 abort (격리 보장 필수)
+# - INIT_HANG 후 T0 제거, T3(빈 디렉토리) 자동 실행으로 대체
+# - REGRESSION_SUSPECT 최소 임계값 추가: DEL > 10 && DEL > ADD*2
 
 MODEL=$1
 PROMPT=$2
@@ -192,11 +193,14 @@ if [ "${INIT_HANG}" -eq 1 ]; then
   if [ "${T3_SIZE}" -gt 0 ]; then
     echo "[diag] T3 정상 (${T3_SIZE}B) → CWD(worktree) 환경이 원인" >> "$DIR/$LOG_FILE"
     echo "[diag] worktree의 CLAUDE.md/.git 크기/구조를 확인하세요" >> "$DIR/$LOG_FILE"
+    echo "⚠️  [diag] T3 정상 → CWD(worktree) 환경이 원인. worktree 구조 확인 필요"
   else
     echo "[diag] T3 실패 (0B) → 프롬프트 자체 또는 CLI 문제" >> "$DIR/$LOG_FILE"
     echo "[diag] c7-hang-diagnosis.md 참조: T1(프롬프트 이분 탐색)" >> "$DIR/$LOG_FILE"
+    echo "⚠️  [diag] T3 실패 → 프롬프트 자체 문제. c7-hang-diagnosis.md T1 참조"
   fi
   echo "[diag] 자동 재시도 없음 — 수동 개입 필요" >> "$DIR/$LOG_FILE"
+  echo "ℹ️  [diag] 자동 재시도 없음 — 수동 개입 필요 (로그: $DIR/$LOG_FILE)"
 fi
 
 # .raw 내용을 메인 로그에 합치기
