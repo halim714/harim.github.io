@@ -84,14 +84,26 @@ else
   fi
 fi
 
+# ─── Pre-flight: claude CLI 정상 여부 확인 (토큰 최소 소비) ───
+echo "[pre-flight] claude 기본 실행 테스트..." >> "$DIR/$LOG_FILE"
+PF_RESULT=$(timeout 15 claude -p --model "${MODEL}" --dangerously-skip-permissions \
+  -- "respond with OK" < /dev/null 2>&1 || true)
+if echo "${PF_RESULT}" | grep -qi "OK"; then
+  echo "[pre-flight] ✅ claude 정상" >> "$DIR/$LOG_FILE"
+else
+  echo "[pre-flight] ❌ claude 기본 실행 실패 — 환경 문제, abort" >> "$DIR/$LOG_FILE"
+  echo "[pre-flight] 출력: ${PF_RESULT}" >> "$DIR/$LOG_FILE"
+  echo "[PRE_FLIGHT_FAIL] ${LOG_NAME}" >> "$DIR/logs/regression_alerts.log"
+  # worktree 정리
+  if [ -n "${WORKTREE_DIR}" ] && [ -d "${WORKTREE_DIR}" ]; then
+    cd "${PROJECT_ROOT}" || exit 1
+    git worktree remove "${WORKTREE_DIR}" --force 2>/dev/null
+    git branch -D "${BRANCH_NAME}" 2>/dev/null
+  fi
+  exit 2
+fi
+
 # ─── Claude CLI 실행 ───
-# claude -p 출력을 직접 .raw에 기록 (파이프/script 모두 macOS에서 버퍼링 문제)
-#
-# [v3 변경] --add-dir 제거
-#   CWD = worktree root = PROJECT_ROOT 체크아웃이므로 claude가 이미 모든 파일에 접근 가능.
-#   --add-dir "$WORK_DIR"           → CWD와 동일: 중복 인덱싱 유발
-#   --add-dir "$WORK_DIR/miki-editor" → CWD 하위: miki-editor 3회 인덱싱 → 초기화 hang 원인
-#   외부 디렉토리가 필요할 경우에만 --add-dir을 다시 추가할 것.
 RAW_FILE="$DIR/$LOG_FILE.raw"
 touch "$RAW_FILE"
 
@@ -162,7 +174,20 @@ elif [ -f "$TIMEOUT_FLAG" ]; then
   rm -f "$TIMEOUT_FLAG"
 fi
 
-echo "[agent] 종료 (exit=$AGENT_EXIT, timed_out=$TIMED_OUT, init_hang=$INIT_HANG)" >> "$DIR/$LOG_FILE"
+echo "[agent] 종료 (exit=${AGENT_EXIT}, timed_out=${TIMED_OUT}, init_hang=${INIT_HANG})" >> "$DIR/$LOG_FILE"
+
+# ─── INIT_HANG 자동 bisect (c7-hang-diagnosis.md 준거) ───
+if [ "${INIT_HANG}" -eq 1 ]; then
+  echo "[diag] INIT_HANG 감지 — T0 최소 실행 테스트 실행" >> "$DIR/$LOG_FILE"
+  T0_RESULT=$(timeout 15 claude -p --model "${MODEL}" --dangerously-skip-permissions \
+    -- "respond with OK" < /dev/null 2>&1 || true)
+  if echo "${T0_RESULT}" | grep -qi "OK"; then
+    echo "[diag] T0 정상 → claude 자체는 OK. CWD/프롬프트 복합 원인 의심" >> "$DIR/$LOG_FILE"
+    echo "[diag] 수동 bisect 필요: c7-hang-diagnosis.md 참조 (T3→T2→T1)" >> "$DIR/$LOG_FILE"
+  else
+    echo "[diag] T0 실패 → claude CLI 자체 문제 (API/인증/설치)" >> "$DIR/$LOG_FILE"
+  fi
+fi
 
 # .raw 내용을 메인 로그에 합치기
 if [ -f "$RAW_FILE" ] && [ -s "$RAW_FILE" ]; then
