@@ -56,8 +56,20 @@ cd /tmp/swarm-diag-$(date +%s) && timeout 60 claude -p ... -- "$FULL_PROMPT"
 # 원본 디렉토리에서 동일 프롬프트 실행 (worktree 아닌 원본 CWD)
 cd "$PROJECT_ROOT" && timeout 60 claude -p ... -- "$FULL_PROMPT" < /dev/null
 # → 정상: worktree 특유의 환경 문제
-# → 실패: 원본 CWD에서도 동일. T1으로 진행
+# → 실패: 원본 CWD에서도 동일. T4로 진행
 ```
+
+### T4: 환경변수 격리 (수동 → v5で自動化済み)
+```bash
+# 부모 프로세스의 환경변수를 확인
+env | grep -iE "claude|anthropic|session"
+# CLAUDECODE=1 등 발견 시:
+unset CLAUDECODE && claude -p ... -- "$FULL_PROMPT" < /dev/null
+# → 정상: 환경변수가 원인 (중첩 세션 차단 등)
+# → 실패: T1으로 진행
+```
+> **v5 자동화**: `run-swarm.sh` v5에서 pre-flight/실행/T3 모두 `unset CLAUDECODE` 추가됨.
+> 이 단계는 "왜 hang인가"의 진단용으로만 남음.
 
 ### T1: 프롬프트 크기 이분 탐색 (수동)
 ```bash
@@ -72,7 +84,9 @@ timeout 30 claude -p ... -- "$HALF_PROMPT" < /dev/null
 **담당 Role**: orchestrator
 **T0**: [자동 — pre-flight 결과]
 **T3**: [자동 — INIT_HANG 핸들러 결과]
+**T4**: [자동(v5) / 수동 — 환경변수 확인 결과]
 **T2**: [수동 — 결과]
 **T1**: [수동 — 결과]
-**확정 원인**: [예: worktree 환경에서 CLAUDE.md 로딩 충돌]
+**확정 원인**: [예: CLAUDECODE 환경변수로 인한 중첩 세션 차단]
 ```
+
