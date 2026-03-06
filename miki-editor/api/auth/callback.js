@@ -14,16 +14,25 @@ export default async function handler(req, res) {
     }
 
     // CORS: origin 검증을 토큰 교환 전에 수행 (UP-2 순서 버그 수정)
-    const origin = req.headers.origin || '';
+    let origin = req.headers.origin;
+    if (!origin && req.headers.referer) {
+        origin = new URL(req.headers.referer).origin;
+    }
+    origin = origin || '';
+
     const allowedOrigins = [
         process.env.ALLOWED_ORIGIN || 'https://meki.vercel.app',
-        /^https:\/\/meki-.*\.vercel\.app$/   // Vercel preview deploys
+        /^https:\/\/meki-.*\.vercel\.app$/,   // Vercel preview deploys
+        /^http:\/\/localhost:\d+$/,           // 로컬 개발
+        /^http:\/\/127\.0\.0\.1:\d+$/         // 로컬 개발
     ];
-    const isAllowed = allowedOrigins.some(o =>
+
+    // Origin이 아예 빈 문자열이면 Same-Origin 요청이거나 프록시를 탔을 가능성이 높으므로 허용
+    const isAllowed = !origin || allowedOrigins.some(o =>
         o instanceof RegExp ? o.test(origin) : o === origin
     );
     if (!isAllowed) {
-        return res.status(403).json({ error: 'Origin not allowed', code: 'CORS_REJECTED' });
+        return res.status(403).json({ error: `Origin '${origin}' not allowed`, code: 'CORS_REJECTED' });
     }
     res.setHeader('Access-Control-Allow-Origin', origin);
 
