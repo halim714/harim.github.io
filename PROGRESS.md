@@ -39,6 +39,7 @@
 
 | 태스크 ID | 완료 시각 | 담당 에이전트 | 결과 |
 |---|---|---|---|
+| P4-T1 | 2026-03-06 | api_dev | ✅ `miki-editor/src/utils/database.js` IndexedDB 스키마 v3 추가 — `pendingSync` 테이블(`++id, documentId, changeType, status, queuedAt`) 신규 생성. `PendingSync` 클래스(`enqueue`, `getPending`, `markDone`, `markFailed`, `remove`, `removeByDocumentId`, `cleanup`) export. 기존 v1/v2 테이블(documents, syncQueue) 데이터 유실 없는 안전한 마이그레이션. 빌드 성공 (2158 modules, 0 errors). |
 | P4-T0b | 2026-03-06 | api_dev | ✅ `CallbackPage.jsx` WS 모드 분기 추가 (POST /api/session → HttpOnly 쿠키 수신, localStorage 저장 안 함, 사용자 정보 캐시), `ws-client.js` request()에서 token 필드 제거 (쿠키 기반 인증). 빌드 성공 (2158 modules, 0 errors). |
 | P4-T0c | 2026-03-06 | frontend_dev | ✅ `MigrationNotice.jsx` hasLegacyToken 로직을 `AuthService.hasLegacyToken()` 위임으로 정리 (기존 `Boolean(AuthService.getToken())` 대체). 빌드 성공 (2158 modules, 0 errors). |
 | P4-T0a | 2026-03-05 | api_dev | ✅ `src/services/auth.js` 듀얼모드 리팩토링 (WS 모드: getToken→null 반환), 8개 소비자 파일(`App.jsx`, `usePublish.js` 등) 대응 완료. 에이전트 실행 환경(Claude CLI 중첩 세션 이슈, 45초 타임아웃 맹점) 진단/해결 이후 성공적으로 병합됨. 연관된 Jest SyntaxError(`import.meta`) 수정 및 단위 테스트 93개 통과/빌드 성공. |
@@ -107,6 +108,7 @@
 [2026-02-27] frontend_dev @ P3-T4: MigrationNotice.jsx 생성 (VITE_USE_WS_PROXY flag 감지 + legacy token 확인, 재로그인 유도 배너, dismiss 영속), App.jsx /editor 라우트에 적용, 빌드 성공 → 성공
 [2026-03-06] test_verify @ P4-T0d: security-state-check.sh 실행 — Section 8 E2E ✅ (토큰 흐름 안전), UP-1 이행 완료 처리 → 성공
 [2026-03-06] frontend_dev @ P4-T0c: MigrationNotice.jsx hasLegacyToken 로직을 AuthService.hasLegacyToken() 위임으로 정리 (Boolean(AuthService.getToken()) 제거), 빌드 성공 → 성공
+[2026-03-06] api_dev @ P4-T1: database.js IndexedDB v3 스키마 추가 (pendingSync 테이블), PendingSync 클래스 export, 기존 데이터 유실 없음, 빌드 성공 (2158 modules) → 성공
 [2026-03-06] api_dev @ P4-T0b: CallbackPage.jsx WS 모드 분기(POST /api/session → HttpOnly 쿠키, 사용자 캐시), ws-client.js request() token 필드 제거(쿠키 기반 인증), 빌드 성공 → 성공
 [2026-03-05] api_dev @ P4-T0a: auth.js 듀얼모드 리팩토링 (isWsMode, getToken→null in WS, saveToken→no-op in WS, hasLegacyToken 추가, getCurrentUser→getCachedUser in WS), 8개 소비자 파일 WS 분기 추가 (App.jsx/usePublish.js/useAttachment.js/storage-client.js/OnboardingSetup.jsx/verify-setup.js/functional-test.js), 빌드 성공 (2158 modules, 0 errors) → 성공
 [2026-03-01] api_dev @ P2-wiring: ws-proxy/src/index.js에 createApp() 배선 — Express app을 http.createServer()에 연결, /health + /api/session 실구동 검증 완료 → 성공

@@ -20,6 +20,12 @@ export class MikiDatabase extends Dexie {
       syncQueue: '++queueId, documentId, operation, status, retryAt, retryCount, data'
     });
 
+    // Version 3: Add pendingSync table for offline-first change tracking
+    // (documents and syncQueue are unchanged — Dexie preserves unlisted tables)
+    this.version(3).stores({
+      pendingSync: '++id, documentId, changeType, status, queuedAt'
+    });
+
     // Add hooks for automatic timestamps
     this.documents.hook('creating', function (primKey, obj, trans) {
       obj.createdAt = new Date().toISOString();
@@ -270,6 +276,97 @@ export class SyncQueue {
       .where('status')
       .equals('completed')
       .and(item => item.completedAt < weekAgo)
+      .delete();
+  }
+}
+
+// Offline-first pending sync queue (pendingSync table, version 3+)
+// Tracks create/update/delete changes that occurred while offline.
+export class PendingSync {
+  /**
+   * Enqueue an offline change.
+   * @param {string} documentId - doc identifier (docId)
+   * @param {'create'|'update'|'delete'} changeType
+   * @param {object} payload - snapshot of the document at change time
+   */
+  static async enqueue(documentId, changeType, payload = {}) {
+    try {
+      await db.pendingSync.add({
+        documentId,
+        changeType,
+        status: 'pending',
+        queuedAt: new Date().toISOString(),
+        retryCount: 0,
+        payload: JSON.stringify(payload)
+      });
+      logger.info(`📥 [PendingSync] enqueued ${changeType} for ${documentId}`);
+    } catch (error) {
+      logger.error('❌ [PendingSync] enqueue failed:', error);
+      throw error;
+    }
+  }
+
+  /** Return all pending items ordered by queuedAt (oldest first). */
+  static async getPending() {
+    return await db.pendingSync
+      .where('status')
+      .equals('pending')
+      .sortBy('queuedAt');
+  }
+
+  /** Mark an item as successfully synced. */
+  static async markDone(id) {
+    await db.pendingSync.update(id, {
+      status: 'done',
+      doneAt: new Date().toISOString()
+    });
+  }
+
+  /**
+   * Mark an item as failed and apply exponential backoff retry logic.
+   * After 5 failures the item is permanently marked 'failed'.
+   */
+  static async markFailed(id, errorMsg) {
+    const item = await db.pendingSync.get(id);
+    if (!item) return;
+    const retryCount = (item.retryCount || 0) + 1;
+    const maxRetries = 5;
+
+    if (retryCount >= maxRetries) {
+      await db.pendingSync.update(id, {
+        status: 'failed',
+        retryCount,
+        lastError: String(errorMsg),
+        failedAt: new Date().toISOString()
+      });
+    } else {
+      const delayMs = Math.pow(2, retryCount) * 60 * 1000; // 2^n minutes
+      await db.pendingSync.update(id, {
+        status: 'pending',
+        retryCount,
+        lastError: String(errorMsg),
+        queuedAt: new Date(Date.now() + delayMs).toISOString()
+      });
+    }
+  }
+
+  /** Remove a specific item from the queue. */
+  static async remove(id) {
+    await db.pendingSync.delete(id);
+  }
+
+  /** Remove all items for a given documentId (e.g. after the doc is deleted remotely). */
+  static async removeByDocumentId(documentId) {
+    await db.pendingSync.where('documentId').equals(documentId).delete();
+  }
+
+  /** Delete done/failed items older than 7 days. */
+  static async cleanup() {
+    const weekAgo = new Date(Date.now() - 7 * 24 * 60 * 60 * 1000).toISOString();
+    await db.pendingSync
+      .where('status')
+      .anyOf(['done', 'failed'])
+      .and(item => (item.doneAt || item.failedAt || '') < weekAgo)
       .delete();
   }
 }
