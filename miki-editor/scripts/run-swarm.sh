@@ -115,10 +115,12 @@ touch "$RAW_FILE"
 unset CLAUDECODE
 
 # claude -p는 non-TTY 환경(Antigravity, CI 등)에서 hang하는 알려진 버그 있음.
-# pipe(stdin)로 프롬프트를 전달하면 정상 동작.
-# ref: GitHub Issues — claude -p hang in non-interactive/non-TTY context
-echo "$FULL_PROMPT" | claude --model "$MODEL" --dangerously-skip-permissions \
-  --output-format text > "$RAW_FILE" 2>&1 &
+# pipe(stdin)로 프롬프트를 전달하면 정상 동작하지만,
+# 백그라운드(&)에서 pipe stdin이 조기 종료될 수 있으므로 임시 파일 사용.
+PROMPT_FILE=$(mktemp /tmp/swarm-prompt-XXXXXX.txt)
+echo "$FULL_PROMPT" > "$PROMPT_FILE"
+claude --model "$MODEL" --dangerously-skip-permissions \
+  --output-format text < "$PROMPT_FILE" > "$RAW_FILE" 2>&1 &
 CLAUDE_PID=$!
 
 echo "Started swarm agent with $MODEL (PID: $CLAUDE_PID)"
@@ -283,3 +285,6 @@ if [ -n "$WORKTREE_DIR" ] && [ -d "$WORKTREE_DIR" ]; then
 fi
 
 echo "[swarm] Agent finished at $(date)" >> "$DIR/$LOG_FILE"
+
+# 임시 프롬프트 파일 정리
+rm -f "$PROMPT_FILE" 2>/dev/null
