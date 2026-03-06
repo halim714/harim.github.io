@@ -13,7 +13,7 @@
 
 | ID | 출처 | 내용 | 상태 |
 |---|---|---|---|
-| UP-1 | P1-T6 | HttpOnly cookie 전환 + `AuthService.getToken()` 호출자 10곳 리팩토링 + ws-client.js Feature Flag 연결 + MigrationNotice 로직 정리 | 🟡 P4 대기 |
+| UP-1 | P1-T6 | HttpOnly cookie 전환 + `AuthService.getToken()` 호출자 10곳 리팩토링 + ws-client.js Feature Flag 연결 + MigrationNotice 로직 정리 | ✅ 이행 완료 (P4-T0d) |
 | UP-2 | 보안감사 | callback.js CORS `*` → origin 제한 | ✅ 이행 완료 |
 | UP-3 | 보안감사 | JWT payload ghToken 제거 → 서버측 sessionStore 저장 | ✅ 이행 완료 |
 | UP-5 | 보안감사 | callback.js CORS 순서 버그 — 토큰 교환 전 origin 검증 | ✅ 이행 완료 |
@@ -105,6 +105,7 @@
 [2026-02-27] api_dev @ P3-T1: ws-client.js 생성 (WsProxyClient, isWsProxyEnabled, 9 GitHub API 래퍼, 재연결/heartbeat/타임아웃), .env.example VITE_USE_WS_PROXY 추가, 빌드 성공 → 성공
 [2026-02-27] api_dev @ P3-T3: auth.js WS 연결 상태 기반 분기 리팩토링 (isWsProxyEnabled+isConnected → github.getUser WS 경로, AUTH_ERROR logout 처리, 직접 Octokit fallback 유지), ws-client.js 생성(isWsProxyEnabled export), 빌드 성공 (2159 modules, 0 errors) → 성공
 [2026-02-27] frontend_dev @ P3-T4: MigrationNotice.jsx 생성 (VITE_USE_WS_PROXY flag 감지 + legacy token 확인, 재로그인 유도 배너, dismiss 영속), App.jsx /editor 라우트에 적용, 빌드 성공 → 성공
+[2026-03-06] test_verify @ P4-T0d: security-state-check.sh 실행 — Section 8 E2E ✅ (토큰 흐름 안전), UP-1 이행 완료 처리 → 성공
 [2026-03-06] frontend_dev @ P4-T0c: MigrationNotice.jsx hasLegacyToken 로직을 AuthService.hasLegacyToken() 위임으로 정리 (Boolean(AuthService.getToken()) 제거), 빌드 성공 → 성공
 [2026-03-06] api_dev @ P4-T0b: CallbackPage.jsx WS 모드 분기(POST /api/session → HttpOnly 쿠키, 사용자 캐시), ws-client.js request() token 필드 제거(쿠키 기반 인증), 빌드 성공 → 성공
 [2026-03-05] api_dev @ P4-T0a: auth.js 듀얼모드 리팩토링 (isWsMode, getToken→null in WS, saveToken→no-op in WS, hasLegacyToken 추가, getCurrentUser→getCachedUser in WS), 8개 소비자 파일 WS 분기 추가 (App.jsx/usePublish.js/useAttachment.js/storage-client.js/OnboardingSetup.jsx/verify-setup.js/functional-test.js), 빌드 성공 (2158 modules, 0 errors) → 성공
