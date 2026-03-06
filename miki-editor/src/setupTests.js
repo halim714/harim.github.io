@@ -98,22 +98,9 @@ Object.defineProperties(HTMLElement.prototype, {
   },
 });
 
-// Mock window.location
-delete window.location;
-window.location = {
-  href: 'http://localhost:3000',
-  origin: 'http://localhost:3000',
-  protocol: 'http:',
-  host: 'localhost:3000',
-  hostname: 'localhost',
-  port: '3000',
-  pathname: '/',
-  search: '',
-  hash: '',
-  assign: jest.fn(),
-  replace: jest.fn(),
-  reload: jest.fn(),
-};
+// NOTE: Do NOT replace window.location with a plain object.
+// React Router reads window.location.pathname via history.replaceState and
+// requires the real JSDOM Location to track URL changes correctly.
 
 // Mock console methods to reduce noise in tests
 global.console = {
@@ -180,3 +167,22 @@ Object.defineProperty(window, 'crypto', {
 });
 
 logger.info('✅ JSDOM 브라우저 API 폴리필 로드 완료 (2단계 - 테스트 환경 안정화)');
+
+// Mock octokit to avoid pure ESM syntax errors in Jest
+jest.mock('octokit', () => ({
+  Octokit: class OctokitMock {
+    constructor() {
+      this.rest = {
+        users: { getAuthenticated: jest.fn().mockResolvedValue({ data: { login: 'mock-user' } }) },
+        repos: { get: jest.fn().mockResolvedValue({ data: {} }) }
+      };
+    }
+  }
+}));
+
+// Mock react-markdown to avoid pure ESM syntax errors in Jest
+jest.mock('react-markdown', () => {
+  return function MockReactMarkdown(props) {
+    return <div data-testid="react-markdown">{props.children}</div>;
+  };
+});

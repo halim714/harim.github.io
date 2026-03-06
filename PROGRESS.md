@@ -29,16 +29,23 @@
 
 ## 현재 활성 태스크
 
-**Phase 4 진행중** — P4-T0a ✅ 완료
+**Phase 4 진행중** — P4-T0a ✅ 완료, P4-T0b ✅, P4-T0c ✅, P4-T0d ✅, P4-T1 ✅, P4-T2 ✅, P4-T3 ✅, P4-T4 ✅, P4-T5 ✅ (완료)
 
-**Phase 2 완료** — P2-T1 ✅, P2-T2 ✅(재생성 완료), P2-T3 ✅, P2-T4 ✅, P2-T5 ✅
+**Phase 5 완료** — P5-T1 ✅, P5-T2 ✅, P5-T3 ✅, P5-T4 ✅
 
 ---
 
 ## 완료된 태스크
 
-| 태스크 ID | 완료 시각 | 담당 에이전트 | 결과 |
+| 매스크 ID | 완료 시각 | 담당 에이전트 | 결과 |
 |---|---|---|---|
+| P5-T4 | 2026-03-06 | test_verify | ✅ `src/__tests__/integration/vaultFlow.test.jsx` 생성 및 검증 방안 완료. Vault 미적용, 적용 후 저장 로직 비교 및 복호화, 경고문 표시 4가지 E2E Flow 완벽 테스트 패스 (0 failures). 이로서 Phase 5 완료. |
+| P5-T3 | 2026-03-06 | api_dev | ✅ `src/utils/storage-client.js` 파이프라인에 E2EE 암복호화 연동 (VaultService 사용, MEKI_E2EE: 프리픽스 삽입 및 로드 시 복호화). public 게시글은 복호화된 상태로 publish 됨을 확인. |
+| P5-T2 | 2026-03-06 | frontend_dev | ✅ `src/components/VaultSetup.jsx` 및 `src/stores/useVaultStore.js` 생성 완료. Vault 생성/복원 UI 연동, `VaultSetup.test.jsx` 5개 테스트 통과. |
+| P5-T1 | 2026-03-06 | api_dev | ✅ `src/utils/vault.js` 생성 완료. Web Crypto API를 사용한 AES-GCM 암복호화(`generateKey`, `exportKeyAsSeed`, `importKeyFromSeed`, `encrypt`, `decrypt`), `src/__tests__/utils/vault.test.js` 4개 테스트 패스. |
+| P4-T5 | 2026-03-06 | test_verify | ✅ 오프라인 편집→재연결→동기화 검증 완료. 테스트 픽스: `setupTests.js` window.location 교체 제거(React Router pathname 추적 복원) + `documentFlow.test.jsx` Editor 페이지 mock + 디버그 코드 정리 + 스냅샷 업데이트. 결과: documentFlow 5/5 PASS, App.snapshot 12/12 PASS (총 150 PASS). |
+| P4-T3 | 2026-03-06 | api_dev | ✅ `src/App.jsx`에 `visibilitychange` (백그라운드 전환 시 즉시 동기화) 및 `beforeunload` (브라우저 종료 직전 비동기 fire-and-forget) 핸들러 추가하여 `PendingSyncProcessor.flush()` 연동 완료. 데이터 유실 방지와 서버 부하 제어 동시 달성. |
+| P4-T4 | 2026-03-06 | frontend_dev | ✅ `src/components/SyncStatus.jsx` 생성, `src/hooks/useSyncStatus.js` (online/offline 이벤트+폴링) 연동. `App.jsx` /editor 루트에 하단 배지 UI 추가 완료. |
 | P4-T2 | 2026-03-06 | api_dev | ✅ `src/sync/PendingSyncProcessor.js` 신규 생성 — `pendingSync` 테이블 폴링(30초), djb2 해시 기반 변경 감지(title+content), 배치 처리(최대 5개/cycle), 지수 백오프(`PendingSync.markFailed`), delete 우선순위, 중복 항목 스킵(superseded). `storage-client.js` GitHub 저장 실패 시 `PendingSync.enqueue()` 추가. `sync/index.js` 재export. `App.jsx` user 로그인 시 `start()`/로그아웃 시 `stop()` 배선. 테스트 9개 통과. 빌드 성공 (2163 modules, 0 errors). |
 | P4-T1 | 2026-03-06 | api_dev | ✅ `miki-editor/src/utils/database.js` IndexedDB 스키마 v3 추가 — `pendingSync` 테이블(`++id, documentId, changeType, status, queuedAt`) 신규 생성. `PendingSync` 클래스(`enqueue`, `getPending`, `markDone`, `markFailed`, `remove`, `removeByDocumentId`, `cleanup`) export. 기존 v1/v2 테이블(documents, syncQueue) 데이터 유실 없는 안전한 마이그레이션. 빌드 성공 (2158 modules, 0 errors). |
 | P4-T0b | 2026-03-06 | api_dev | ✅ `CallbackPage.jsx` WS 모드 분기 추가 (POST /api/session → HttpOnly 쿠키 수신, localStorage 저장 안 함, 사용자 정보 캐시), `ws-client.js` request()에서 token 필드 제거 (쿠키 기반 인증). 빌드 성공 (2158 modules, 0 errors). |
@@ -111,6 +118,8 @@
 [2026-03-06] frontend_dev @ P4-T0c: MigrationNotice.jsx hasLegacyToken 로직을 AuthService.hasLegacyToken() 위임으로 정리 (Boolean(AuthService.getToken()) 제거), 빌드 성공 → 성공
 [2026-03-06] frontend_dev @ P4-T4: SyncStatus.jsx 생성 (useSyncStatus 훅, offline/syncing/synced 상태 UI, 하단 우측 고정 배지), App.jsx /editor 라우트에 배치. RTL 테스트 5개 통과, 빌드 성공 (2165 modules, 0 errors) → 성공
 [2026-03-06] api_dev @ P4-T3: App.jsx에 visibilitychange(탭 백그라운드 전환 시 즉시 flush) + beforeunload(종료 직전 fire-and-forget flush) 핸들러 추가. 빌드 성공 (0 errors) → 성공
+[2026-03-06] frontend_dev @ P4-T4: SyncStatus.jsx, useSyncStatus.js 컴포넌트 생성 및 App.jsx 배선 (오프라인/동기화중/완료 상태 표시 UI) → 성공
+[2026-03-06] api_dev @ P4-T3: visibilitychange 및 beforeunload 이벤트 구독하여 PendingSyncProcessor.flush() 백그라운드 강제 동기화 트리거 추가 → 성공
 [2026-03-06] api_dev @ P4-T2: PendingSyncProcessor.js 생성 (pendingSync 폴링, djb2 해시 변경감지, 배치동기화, 지수백오프), storage-client.js enqueue on failure, sync/index.js 재export, App.jsx 배선 완료. 테스트 9개 통과, 빌드 성공 (2163 modules) → 성공
 [2026-03-06] api_dev @ P4-T1: database.js IndexedDB v3 스키마 추가 (pendingSync 테이블), PendingSync 클래스 export, 기존 데이터 유실 없음, 빌드 성공 (2158 modules) → 성공
 [2026-03-06] api_dev @ P4-T0b: CallbackPage.jsx WS 모드 분기(POST /api/session → HttpOnly 쿠키, 사용자 캐시), ws-client.js request() token 필드 제거(쿠키 기반 인증), 빌드 성공 → 성공

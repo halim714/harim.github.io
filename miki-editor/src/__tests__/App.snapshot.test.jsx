@@ -1,4 +1,4 @@
-import { render } from '@testing-library/react';
+import { render, act } from '@testing-library/react';
 
 import '@testing-library/jest-dom';
 import App from '../App';
@@ -35,6 +35,16 @@ jest.mock('@tanstack/react-query', () => ({
 
 jest.mock('@tanstack/react-query-devtools', () => ({
   ReactQueryDevtools: () => null,
+}));
+
+jest.mock('../services/auth', () => ({
+  AuthService: {
+    getToken: () => 'fake-token',
+    getCurrentUser: () => Promise.resolve({ login: 'testuser' }),
+    getCachedUser: () => ({ login: 'testuser' }),
+    hasLegacyToken: () => false,
+    logout: jest.fn(),
+  }
 }));
 
 // Mock config modules
@@ -88,6 +98,15 @@ jest.mock('../hooks/useDocuments', () => ({
   }),
 }));
 
+jest.mock('../hooks/useAttachment', () => ({
+  useAttachment: () => ({
+    attachments: [],
+    processAttachment: jest.fn().mockResolvedValue(null),
+    removeAttachment: jest.fn(),
+    isUploading: false,
+  }),
+}));
+
 // Mock dependencies that might cause issues in test environment
 jest.mock('../utils/database', () => ({
   MikiDatabase: {
@@ -96,10 +115,22 @@ jest.mock('../utils/database', () => ({
         toArray: () => Promise.resolve([]),
         add: () => Promise.resolve(),
         update: () => Promise.resolve(),
-        delete: () => Promise.resolve()
-      }
-    })
-  }
+        delete: () => Promise.resolve(),
+      },
+    }),
+  },
+  dbHelpers: {
+    getUnsyncedCount: jest.fn().mockResolvedValue(0),
+  },
+}));
+
+// PendingSyncProcessor 실제 setInterval 방지
+jest.mock('../sync', () => ({
+  getPendingSyncProcessor: () => ({
+    start: jest.fn(),
+    stop: jest.fn(),
+    flush: jest.fn().mockResolvedValue(undefined),
+  }),
 }));
 
 jest.mock('../stores', () => ({
@@ -149,8 +180,13 @@ Object.defineProperty(window, 'matchMedia', {
 
 describe('App Component Snapshots', () => {
   beforeEach(() => {
-    // Reset any mocks before each test
     jest.clearAllMocks();
+    // WS 모드 강제 → AuthProvider가 getCachedUser()로 동기 해소 (Octokit 체인 우회)
+    process.env.VITE_USE_WS_PROXY = 'true';
+  });
+
+  afterEach(() => {
+    delete process.env.VITE_USE_WS_PROXY;
   });
 
   test('App 컴포넌트 기본 렌더링 스냅샷', () => {
@@ -158,13 +194,16 @@ describe('App Component Snapshots', () => {
     expect(asFragment()).toMatchSnapshot();
   });
 
-  test('App 컴포넌트 DOM 구조 검증', () => {
+  test('App 컴포넌트 DOM 구조 검증', async () => {
     const { container } = render(<App />);
-    
+
+    // auth Promise 체인 + 상태 업데이트 + 리렌더 전부 flush
+    await act(async () => {});
+
     // 실제 App.jsx 구조에 맞는 핵심 UI 요소들이 존재하는지 확인
     expect(container.querySelector('header')).toBeInTheDocument();
     expect(container.querySelector('.flex-grow')).toBeInTheDocument();
-    
+
     // 스냅샷으로 전체 구조 보존
     expect(container.firstChild).toMatchSnapshot('app-dom-structure');
   });
@@ -176,7 +215,7 @@ describe('App Component Snapshots', () => {
       configurable: true,
       value: 375,
     });
-    
+
     window.matchMedia = jest.fn().mockImplementation(query => ({
       matches: query.includes('max-width: 768px'),
       media: query,
@@ -199,7 +238,7 @@ describe('App Component Snapshots', () => {
       configurable: true,
       value: 1920,
     });
-    
+
     window.matchMedia = jest.fn().mockImplementation(query => ({
       matches: query.includes('min-width: 1024px'),
       media: query,
@@ -220,14 +259,24 @@ describe('Critical UI Components Snapshots', () => {
   test('MikiEditor 컴포넌트 스냅샷', async () => {
     // MikiEditor가 별도로 테스트 가능한 경우
     const MikiEditor = (await import('../MikiEditor')).default;
-    const { asFragment } = render(<MikiEditor />);
+    const { ConfirmProvider } = await import('../contexts/ConfirmContext');
+    const { asFragment } = render(
+      <ConfirmProvider>
+        <MikiEditor />
+      </ConfirmProvider>
+    );
     expect(asFragment()).toMatchSnapshot('miki-editor-component');
   });
 
   test('AiPanel 컴포넌트 스냅샷', async () => {
     // AiPanel이 별도로 테스트 가능한 경우
     const AiPanel = (await import('../AiPanel')).default;
-    const { asFragment } = render(<AiPanel />);
+    const { ConfirmProvider } = await import('../contexts/ConfirmContext');
+    const { asFragment } = render(
+      <ConfirmProvider>
+        <AiPanel />
+      </ConfirmProvider>
+    );
     expect(asFragment()).toMatchSnapshot('ai-panel-component');
   });
 }); 
