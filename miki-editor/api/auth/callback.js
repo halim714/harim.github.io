@@ -22,7 +22,9 @@ export default async function handler(req, res) {
 
     const allowedOrigins = [
         process.env.ALLOWED_ORIGIN || 'https://meki.vercel.app',
-        /^https:\/\/meki-.*\.vercel\.app$/,   // Vercel preview deploys
+        /^https:\/\/meki-.*\.vercel\.app$/,   // Vercel preview deploys (meki-*)
+        /^https:\/\/miki-.*\.vercel\.app$/,   // Vercel preview deploys (miki-*)
+        'https://miki-editor.vercel.app',     // 프로덕션 배포
         /^http:\/\/localhost:\d+$/,           // 로컬 개발
         /^http:\/\/127\.0\.0\.1:\d+$/         // 로컬 개발
     ];
