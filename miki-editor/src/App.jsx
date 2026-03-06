@@ -102,19 +102,34 @@ function AppContent() {
     if (!user) return;
     const processor = getPendingSyncProcessor();
     processor.start();
-    return () => processor.stop();
+
+    // 탭이 백그라운드로 전환될 때 즉시 flush — 포그라운드 복귀 전 데이터 유실 방지
+    const handleVisibilityChange = () => {
+      if (document.visibilityState === 'hidden') {
+        processor.flush();
+      }
+    };
+    document.addEventListener('visibilitychange', handleVisibilityChange);
+
+    return () => {
+      processor.stop();
+      document.removeEventListener('visibilitychange', handleVisibilityChange);
+    };
   }, [user]);
 
-  // 🛡️ 종료 방지: 미동기화 문서 확인
+  // 🛡️ 종료 방지: 브라우저 종료 직전 강제 flush + 미동기화 경고
   useEffect(() => {
-    const handleBeforeUnload = async (e) => {
-      // 동기화 안 된 문서가 하나라도 있으면 경고
-      const count = await dbHelpers.getUnsyncedCount();
+    const handleBeforeUnload = (e) => {
+      // 종료 직전 flush 시도 (fire-and-forget — 서버 부하 최소화)
+      getPendingSyncProcessor().flush().catch(() => {});
 
-      if (count > 0) {
-        e.preventDefault();
-        e.returnValue = '아직 GitHub에 저장되지 않은 문서가 있습니다. 잠시 후 다시 시도해주세요.';
-      }
+      // 비동기 카운트 확인 후 경고 (브라우저가 이벤트 루프를 허용하는 경우)
+      dbHelpers.getUnsyncedCount().then(count => {
+        if (count > 0) {
+          e.preventDefault();
+          e.returnValue = '아직 GitHub에 저장되지 않은 문서가 있습니다. 잠시 후 다시 시도해주세요.';
+        }
+      });
     };
 
     window.addEventListener('beforeunload', handleBeforeUnload);

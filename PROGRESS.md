@@ -110,6 +110,7 @@
 [2026-03-06] test_verify @ P4-T0d: security-state-check.sh 실행 — Section 8 E2E ✅ (토큰 흐름 안전), UP-1 이행 완료 처리 → 성공
 [2026-03-06] frontend_dev @ P4-T0c: MigrationNotice.jsx hasLegacyToken 로직을 AuthService.hasLegacyToken() 위임으로 정리 (Boolean(AuthService.getToken()) 제거), 빌드 성공 → 성공
 [2026-03-06] frontend_dev @ P4-T4: SyncStatus.jsx 생성 (useSyncStatus 훅, offline/syncing/synced 상태 UI, 하단 우측 고정 배지), App.jsx /editor 라우트에 배치. RTL 테스트 5개 통과, 빌드 성공 (2165 modules, 0 errors) → 성공
+[2026-03-06] api_dev @ P4-T3: App.jsx에 visibilitychange(탭 백그라운드 전환 시 즉시 flush) + beforeunload(종료 직전 fire-and-forget flush) 핸들러 추가. 빌드 성공 (0 errors) → 성공
 [2026-03-06] api_dev @ P4-T2: PendingSyncProcessor.js 생성 (pendingSync 폴링, djb2 해시 변경감지, 배치동기화, 지수백오프), storage-client.js enqueue on failure, sync/index.js 재export, App.jsx 배선 완료. 테스트 9개 통과, 빌드 성공 (2163 modules) → 성공
 [2026-03-06] api_dev @ P4-T1: database.js IndexedDB v3 스키마 추가 (pendingSync 테이블), PendingSync 클래스 export, 기존 데이터 유실 없음, 빌드 성공 (2158 modules) → 성공
 [2026-03-06] api_dev @ P4-T0b: CallbackPage.jsx WS 모드 분기(POST /api/session → HttpOnly 쿠키, 사용자 캐시), ws-client.js request() token 필드 제거(쿠키 기반 인증), 빌드 성공 → 성공
