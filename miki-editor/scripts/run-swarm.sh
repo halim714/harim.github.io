@@ -186,20 +186,28 @@ if [ -n "$WORKTREE_DIR" ] && [ -d "$WORKTREE_DIR" ]; then
       MERGE_STATUS=$?
       if [ $MERGE_STATUS -eq 0 ]; then
         echo "[merge] ✅ $BRANCH_NAME → main 병합 성공" >> "$DIR/$LOG_FILE"
+        # 병합 성공 시에만 Worktree 및 브랜치 정리
+        cd "$PROJECT_ROOT" || exit 1
+        git worktree remove "$WORKTREE_DIR" --force 2>/dev/null
+        git branch -D "$BRANCH_NAME" 2>/dev/null
+        echo "[worktree] 병합 성공 후 정리 완료: $WORKTREE_DIR" >> "$DIR/$LOG_FILE"
       else
-        echo "[merge] ❌ 충돌 발생 — 수동 확인 필요: git merge $BRANCH_NAME" >> "$DIR/$LOG_FILE"
+        echo "[merge] ❌ 충돌 발생 — 브랜치 보존됨. 수동 병합 필요: git merge $BRANCH_NAME" >> "$DIR/$LOG_FILE"
         git merge --abort 2>/dev/null
+        # 병합 실패 시 Worktree는 정리하지만 브랜치는 보존
+        cd "$PROJECT_ROOT" || exit 1
+        git worktree remove "$WORKTREE_DIR" --force 2>/dev/null
+        echo "[worktree] 충돌 발생으로 워크트리만 정리: $WORKTREE_DIR" >> "$DIR/$LOG_FILE"
       fi
     fi
   else
     echo "[worktree] 변경 사항 없음 — 이미 완료된 태스크" >> "$DIR/$LOG_FILE"
+    # 내용 없으면 모두 정리
+    cd "$PROJECT_ROOT" || exit 1
+    git worktree remove "$WORKTREE_DIR" --force 2>/dev/null
+    git branch -D "$BRANCH_NAME" 2>/dev/null
+    echo "[worktree] 정리 완료: $WORKTREE_DIR" >> "$DIR/$LOG_FILE"
   fi
-
-  # Worktree 정리
-  cd "$PROJECT_ROOT" || exit 1
-  git worktree remove "$WORKTREE_DIR" --force 2>/dev/null
-  git branch -D "$BRANCH_NAME" 2>/dev/null
-  echo "[worktree] 정리 완료: $WORKTREE_DIR" >> "$DIR/$LOG_FILE"
 fi
 
 echo "[swarm] Agent finished at $(date)" >> "$DIR/$LOG_FILE"
