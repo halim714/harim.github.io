@@ -26,6 +26,13 @@ const { Octokit } = require('@octokit/rest');
 const JWT_SECRET = process.env.JWT_SECRET || 'meki-dev-secret-change-in-production';
 const JWT_EXPIRES = process.env.JWT_EXPIRES || '8h';
 
+const ALLOWED_ORIGINS = [
+    process.env.ALLOWED_ORIGIN || 'https://miki-editor.vercel.app',
+    /^https:\/\/miki-.*\.vercel\.app$/,
+    /^http:\/\/localhost:\d+$/,
+    /^http:\/\/127\.0\.0\.1:\d+$/,
+];
+
 // ─── Server-side Session Store (UP-3: ghToken을 JWT에서 제거) ───────────────
 // key: sessionId (uuid), value: { ghToken, login, createdAt }
 const sessionStore = new Map();
@@ -208,6 +215,22 @@ function createApp() {
 
     // Security: hide Express fingerprint
     app.disable('x-powered-by');
+
+    // CORS: miki-editor.vercel.app → /api/session 허용 (credentials 포함)
+    app.use((req, res, next) => {
+        const origin = req.headers.origin || '';
+        const allowed = ALLOWED_ORIGINS.some(o =>
+            o instanceof RegExp ? o.test(origin) : o === origin
+        );
+        if (allowed) {
+            res.setHeader('Access-Control-Allow-Origin', origin);
+            res.setHeader('Access-Control-Allow-Credentials', 'true');
+            res.setHeader('Access-Control-Allow-Methods', 'GET, POST, DELETE, OPTIONS');
+            res.setHeader('Access-Control-Allow-Headers', 'Content-Type, Authorization');
+        }
+        if (req.method === 'OPTIONS') return res.sendStatus(204);
+        next();
+    });
 
     // UP-6: Parse HttpOnly session cookies
     app.use(cookieParser());
