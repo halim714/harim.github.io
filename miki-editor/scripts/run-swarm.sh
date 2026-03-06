@@ -89,8 +89,8 @@ fi
 # ─── Pre-flight: claude CLI 정상 여부 확인 (중립 환경 /tmp에서 실행) ───
 # P1 fix: CWD가 원인인 hang이면 pre-flight도 같이 실패하므로, /tmp 서브쉘로 격리
 echo "[pre-flight] claude 기본 실행 테스트 (/tmp에서)..." >> "$DIR/$LOG_FILE"
-PF_RESULT=$(cd /tmp && unset CLAUDECODE && timeout 15 claude -p --model "${MODEL}" --dangerously-skip-permissions \
-  -- "respond with OK" < /dev/null 2>&1 || true)
+PF_RESULT=$(cd /tmp && unset CLAUDECODE && echo "respond with OK" | timeout 15 claude --model "${MODEL}" --dangerously-skip-permissions \
+  --output-format text 2>&1 || true)
 if echo "${PF_RESULT}" | grep -qi "OK"; then
   echo "[pre-flight] ✅ claude 정상" >> "$DIR/$LOG_FILE"
 else
@@ -114,8 +114,11 @@ touch "$RAW_FILE"
 # CLAUDECODE 환경변수가 설정된 경우(Claude Code 세션 내 실행) 중첩 세션 차단 우회
 unset CLAUDECODE
 
-claude -p --model "$MODEL" --dangerously-skip-permissions \
-  -- "$FULL_PROMPT" < /dev/null > "$RAW_FILE" 2>&1 &
+# claude -p는 non-TTY 환경(Antigravity, CI 등)에서 hang하는 알려진 버그 있음.
+# pipe(stdin)로 프롬프트를 전달하면 정상 동작.
+# ref: GitHub Issues — claude -p hang in non-interactive/non-TTY context
+echo "$FULL_PROMPT" | claude --model "$MODEL" --dangerously-skip-permissions \
+  --output-format text > "$RAW_FILE" 2>&1 &
 CLAUDE_PID=$!
 
 echo "Started swarm agent with $MODEL (PID: $CLAUDE_PID)"
@@ -189,8 +192,8 @@ if [ "${INIT_HANG}" -eq 1 ]; then
   echo "[diag] INIT_HANG 감지 — pre-flight 통과 상태이므로 T3(환경 격리) 실행" >> "$DIR/$LOG_FILE"
   T3_DIR="/tmp/swarm-diag-$(date +%s)"
   mkdir -p "${T3_DIR}"
-  T3_RESULT=$(cd "${T3_DIR}" && unset CLAUDECODE && timeout 60 claude -p --model "${MODEL}" --dangerously-skip-permissions \
-    -- "${FULL_PROMPT}" < /dev/null 2>&1 || true)
+  T3_RESULT=$(cd "${T3_DIR}" && unset CLAUDECODE && echo "${FULL_PROMPT}" | timeout 60 claude --model "${MODEL}" --dangerously-skip-permissions \
+    --output-format text 2>&1 || true)
   T3_SIZE=$(echo -n "${T3_RESULT}" | wc -c | tr -d ' ')
   rm -rf "${T3_DIR}"
   if [ "${T3_SIZE}" -gt 0 ]; then
