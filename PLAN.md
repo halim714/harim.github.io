@@ -60,11 +60,11 @@ Meki = 개인 주권 에이전트 인프라 (1단계: GitHub 기반 마크다운
 | 태스크 ID | 담당 Role | 작업 내용 | 상태 |
 |---|---|---|---|
 | P4-T0a | `api_dev` | `auth.js` 듀얼모드 리팩토링 (WS 모드: getToken→null) + 8개 소비자 파일 대응 (`App.jsx`, `usePublish.js`, `useAttachment.js`, `storage-client.js`, `OnboardingSetup.jsx`, `verify-setup.js`, `functional-test.js`) | ✅ 완료 |
-| P4-T0b | `api_dev` | `CallbackPage.jsx` WS모드 세션 전환 (POST /api/session → HttpOnly 쿠키, localStorage 저장 안 함) + `ws-client.js` sessionId 기반 전환 | ⬜ 미시작 |
-| P4-T0c | `frontend_dev` | `MigrationNotice.jsx` 로직 정리 — hasLegacyToken을 `AuthService.hasLegacyToken()` 위임 | ⬜ 미시작 |
-| P4-T0d | `test_verify` | UP-1 검증: `security-state-check.sh` Section 8 E2E PASS + PROGRESS.md UP-1 → ✅ | ⬜ 미시작 |
-| P4-T1 | `api_dev` | IndexedDB `pendingSync` 테이블 확장 | ⬜ 미시작 |
-| P4-T2 | `api_dev` | SyncQueue 해시 변경 감지 + 배치 동기화 | ⬜ 미시작 |
+| P4-T0b | `api_dev` | `CallbackPage.jsx` WS모드 세션 전환 (POST /api/session → HttpOnly 쿠키, localStorage 저장 안 함) + `ws-client.js` sessionId 기반 전환 | ✅ 완료 |
+| P4-T0c | `frontend_dev` | `MigrationNotice.jsx` 로직 정리 — hasLegacyToken을 `AuthService.hasLegacyToken()` 위임 | ✅ 완료 |
+| P4-T0d | `test_verify` | UP-1 검증: `security-state-check.sh` Section 8 E2E PASS + PROGRESS.md UP-1 → ✅ | ✅ 완료 |
+| P4-T1 | `api_dev` | IndexedDB `pendingSync` 테이블 확장 | ✅ 완료 |
+| P4-T2 | `api_dev` | SyncQueue 해시 변경 감지 + 배치 동기화 | ✅ 완료 |
 | P4-T3 | `api_dev` | `visibilitychange`/`beforeunload` 핸들러 | ⬜ 미시작 |
 | P4-T4 | `frontend_dev` | `SyncStatus.jsx` UI 컴포넌트 | ⬜ 미시작 |
 | P4-T5 | `test_verify` | 오프라인 편집→재연결→동기화 검증 | ⬜ 미시작 |

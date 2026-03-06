@@ -58,7 +58,7 @@ grep -rn "수정한함수명" src/ --include="*.js" --include="*.jsx"
   - `haiku` — 단순 읽기, 상태 확인 등 토큰 절약이 필요한 작업
   - Level 1 구조 검증은 `health-check.sh` (bash, 토큰 비용 0)
   - ⚠️ `test_verify`에 haiku를 쓰지 마라 — 검증은 가장 중요한 단계이므로 sonnet 이상 사용
-- **반드시** `run_command` 도구를 사용하여 다음 명령을 백그라운드로 실행하세요:
+- **반드시** `run_command` 도구를 사용하여 다음 명령을 실행하세요 (v6 기반 1호출 = 1에이전트 블로킹 방식이므로, Antigravity 런타임이 여러 `run_command` 호출을 통해 병렬성을 관리합니다. 쉘 명령어에 백그라운드용 `&`를 붙이지 마세요):
 
 ```bash
 ./scripts/run-swarm.sh <모델명> "<구체적인 태스크 프롬프트>" /Users/halim/Desktop/meeki/meki/miki-editor <식별자>
