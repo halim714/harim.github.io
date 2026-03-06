@@ -33,7 +33,7 @@ describe('Shallow Boot Test', () => {
         // dynamic import로 App을 로드 (번들 에러 감지)
         let App;
         try {
-            const mod = await import('../../App');
+            const mod = await import('../App');
             App = mod.default;
         } catch (e) {
             // import 자체가 실패하면 번들/구문 에러
