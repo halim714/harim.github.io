@@ -39,6 +39,7 @@
 
 | 태스크 ID | 완료 시각 | 담당 에이전트 | 결과 |
 |---|---|---|---|
+| P4-T2 | 2026-03-06 | api_dev | ✅ `src/sync/PendingSyncProcessor.js` 신규 생성 — `pendingSync` 테이블 폴링(30초), djb2 해시 기반 변경 감지(title+content), 배치 처리(최대 5개/cycle), 지수 백오프(`PendingSync.markFailed`), delete 우선순위, 중복 항목 스킵(superseded). `storage-client.js` GitHub 저장 실패 시 `PendingSync.enqueue()` 추가. `sync/index.js` 재export. `App.jsx` user 로그인 시 `start()`/로그아웃 시 `stop()` 배선. 테스트 9개 통과. 빌드 성공 (2163 modules, 0 errors). |
 | P4-T1 | 2026-03-06 | api_dev | ✅ `miki-editor/src/utils/database.js` IndexedDB 스키마 v3 추가 — `pendingSync` 테이블(`++id, documentId, changeType, status, queuedAt`) 신규 생성. `PendingSync` 클래스(`enqueue`, `getPending`, `markDone`, `markFailed`, `remove`, `removeByDocumentId`, `cleanup`) export. 기존 v1/v2 테이블(documents, syncQueue) 데이터 유실 없는 안전한 마이그레이션. 빌드 성공 (2158 modules, 0 errors). |
 | P4-T0b | 2026-03-06 | api_dev | ✅ `CallbackPage.jsx` WS 모드 분기 추가 (POST /api/session → HttpOnly 쿠키 수신, localStorage 저장 안 함, 사용자 정보 캐시), `ws-client.js` request()에서 token 필드 제거 (쿠키 기반 인증). 빌드 성공 (2158 modules, 0 errors). |
 | P4-T0c | 2026-03-06 | frontend_dev | ✅ `MigrationNotice.jsx` hasLegacyToken 로직을 `AuthService.hasLegacyToken()` 위임으로 정리 (기존 `Boolean(AuthService.getToken())` 대체). 빌드 성공 (2158 modules, 0 errors). |
@@ -108,6 +109,7 @@
 [2026-02-27] frontend_dev @ P3-T4: MigrationNotice.jsx 생성 (VITE_USE_WS_PROXY flag 감지 + legacy token 확인, 재로그인 유도 배너, dismiss 영속), App.jsx /editor 라우트에 적용, 빌드 성공 → 성공
 [2026-03-06] test_verify @ P4-T0d: security-state-check.sh 실행 — Section 8 E2E ✅ (토큰 흐름 안전), UP-1 이행 완료 처리 → 성공
 [2026-03-06] frontend_dev @ P4-T0c: MigrationNotice.jsx hasLegacyToken 로직을 AuthService.hasLegacyToken() 위임으로 정리 (Boolean(AuthService.getToken()) 제거), 빌드 성공 → 성공
+[2026-03-06] api_dev @ P4-T2: PendingSyncProcessor.js 생성 (pendingSync 폴링, djb2 해시 변경감지, 배치동기화, 지수백오프), storage-client.js enqueue on failure, sync/index.js 재export, App.jsx 배선 완료. 테스트 9개 통과, 빌드 성공 (2163 modules) → 성공
 [2026-03-06] api_dev @ P4-T1: database.js IndexedDB v3 스키마 추가 (pendingSync 테이블), PendingSync 클래스 export, 기존 데이터 유실 없음, 빌드 성공 (2158 modules) → 성공
 [2026-03-06] api_dev @ P4-T0b: CallbackPage.jsx WS 모드 분기(POST /api/session → HttpOnly 쿠키, 사용자 캐시), ws-client.js request() token 필드 제거(쿠키 기반 인증), 빌드 성공 → 성공
 [2026-03-05] api_dev @ P4-T0a: auth.js 듀얼모드 리팩토링 (isWsMode, getToken→null in WS, saveToken→no-op in WS, hasLegacyToken 추가, getCurrentUser→getCachedUser in WS), 8개 소비자 파일 WS 분기 추가 (App.jsx/usePublish.js/useAttachment.js/storage-client.js/OnboardingSetup.jsx/verify-setup.js/functional-test.js), 빌드 성공 (2158 modules, 0 errors) → 성공
