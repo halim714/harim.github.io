@@ -9,6 +9,7 @@ import VerificationPage from './pages/VerificationPage';
 import { AuthService } from './services/auth';
 import { ConfirmProvider } from './contexts/ConfirmContext';
 import MigrationNotice from './components/MigrationNotice';
+import SyncStatus from './components/SyncStatus';
 
 const LoadingScreen = () => (
   <div className="flex items-center justify-center h-screen bg-gray-900 text-white">
@@ -156,6 +157,7 @@ function AppContent() {
             <>
               <MigrationNotice />
               <Editor />
+              <SyncStatus />
             </>
           } />
           <Route path="*" element={<Navigate to="/editor" replace />} />
