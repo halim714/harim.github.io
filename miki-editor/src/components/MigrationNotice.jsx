@@ -34,8 +34,7 @@ export function MigrationNotice({ onRelogin }) {
     if (localStorage.getItem(DISMISS_KEY) === '1') return;
 
     // 기존 직접 인증 토큰이 있는 경우에만 마이그레이션 안내 필요
-    const hasLegacyToken = Boolean(AuthService.getToken());
-    if (hasLegacyToken) {
+    if (AuthService.hasLegacyToken()) {
       setVisible(true);
     }
   }, []);
