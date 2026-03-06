@@ -3,12 +3,12 @@
  * Meki WS Proxy Client — singleton WebSocket connection manager
  *
  * Protocol (matches ws-proxy/src/ws-handler.js):
- *   Client → Server: { id, action, token, payload }
+ *   Client → Server: { id, action, payload }  (auth via HttpOnly cookie)
  *   Server → Client: { id, success, data }  |  { id, success: false, error, code }
  *
  * Usage:
  *   import { getWsClient } from './ws-client';
- *   const data = await getWsClient().request('github.getFile', { repoName, path }, token);
+ *   const data = await getWsClient().request('github.getFile', { repoName, path });
  */
 
 const WS_PROXY_URL = import.meta.env.VITE_WS_PROXY_URL || 'ws://localhost:8080';
@@ -123,13 +123,13 @@ export class WsClient {
 
     /**
      * Send a request to the WS proxy and return the response data.
+     * Authentication is handled via HttpOnly cookie (meki_session) set by POST /api/session.
      *
      * @param {string} action - Action name (e.g. 'github.getFile')
      * @param {object} [payload] - Action-specific payload
-     * @param {string|null} [token] - GitHub access token (required for github.* actions)
      * @returns {Promise<object>} Resolved response data from server
      */
-    async request(action, payload = {}, token = null) {
+    async request(action, payload = {}) {
         let ws = this._ws;
         if (!ws || ws.readyState !== WebSocket.OPEN) {
             ws = await this._connect();
@@ -140,7 +140,7 @@ export class WsClient {
         }
 
         const id = `meki-${Date.now()}-${Math.random().toString(36).slice(2)}`;
-        const message = JSON.stringify({ id, action, token, payload });
+        const message = JSON.stringify({ id, action, payload });
 
         return new Promise((resolve, reject) => {
             const timer = setTimeout(() => {

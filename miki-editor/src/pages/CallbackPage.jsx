@@ -58,8 +58,35 @@ export default function CallbackPage() {
             })
             .then(async data => {
                 if (data.token) {
-                    // localStorage에 토큰 저장
-                    AuthService.saveToken(data.token);
+                    if (AuthService.isWsMode()) {
+                        // WS 모드: localStorage에 저장 안 하고 ws-proxy에 세션 생성 → HttpOnly 쿠키 수신
+                        const wsProxyUrl = import.meta.env.VITE_WS_PROXY_URL || 'ws://localhost:8080';
+                        const httpProxyUrl = wsProxyUrl.replace(/^wss:/, 'https:').replace(/^ws:/, 'http:');
+                        const sessionRes = await fetch(`${httpProxyUrl}/api/session`, {
+                            method: 'POST',
+                            headers: { 'Content-Type': 'application/json' },
+                            body: JSON.stringify({ token: data.token }),
+                            credentials: 'include', // HttpOnly 쿠키 수신
+                        });
+                        if (!sessionRes.ok) {
+                            const errData = await sessionRes.json().catch(() => ({}));
+                            throw new Error(errData.error || `Session creation failed: ${sessionRes.status}`);
+                        }
+                        const sessionData = await sessionRes.json();
+                        // 사용자 정보 캐시 (getCachedUser()가 읽을 수 있도록)
+                        if (sessionData.user) {
+                            const user = {
+                                id: sessionData.user.id,
+                                username: sessionData.user.login,
+                                name: sessionData.user.login,
+                                avatar: sessionData.user.avatar_url,
+                            };
+                            localStorage.setItem(AuthService.USER_KEY, JSON.stringify(user));
+                        }
+                    } else {
+                        // 일반 모드: localStorage에 토큰 저장
+                        AuthService.saveToken(data.token);
+                    }
 
                     // AuthProvider 상태 즉시 갱신 (새로고침 없이)
                     if (auth?.refreshAuth) {
