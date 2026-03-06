@@ -10,6 +10,8 @@ import {
   generateFilename,
   isDocumentFile
 } from './slugify';
+import { useVaultStore } from '../stores/useVaultStore';
+import { VaultService } from './vault';
 
 // 헬퍼: GitHubService 인스턴스 생성 (캐싱 적용)
 let githubInstance = null;
@@ -42,6 +44,23 @@ const decodeContent = (base64) => {
     return window.atob(base64);
   }
 };
+
+// 헬퍼: E2EE 복호화 래퍼
+async function decryptContentIfNeeded(content) {
+  if (typeof content === 'string' && content.startsWith('MEKI_E2EE:')) {
+    const vaultState = useVaultStore.getState();
+    if (!vaultState.isVaultReady || !vaultState.cryptoKey) {
+      return '---\ntitle: 암호화된 문서\n---\n⚠️ [암호화된 문서입니다. 개인 설정에서 Vault(볼트) Seed를 입력하여 접근을 해제해주세요.]';
+    }
+    try {
+      const encryptedData = content.substring(10);
+      return await VaultService.decrypt(encryptedData, vaultState.cryptoKey);
+    } catch (e) {
+      return '---\ntitle: 복호화 실패\n---\n⚠️ [문서 복호화에 실패했습니다. 올바른 복구 Seed인지 확인해주세요.]';
+    }
+  }
+  return content;
+}
 
 // 🛠 유틸리티: 문서별 독립 디바운스 관리자
 class DebounceMap {
@@ -138,50 +157,46 @@ export const storage = {
       const files = await github.getFilesWithMetadata('miki-data', 'miki-editor/posts');
 
       if (Array.isArray(files)) {
-        githubPosts = files
-          .filter(f => {
-            // ✅ 강화된 필터링: 시스템 파일 제외
-            const isValid = isDocumentFile(f.path, f.name);
-            if (!isValid) {
-              console.log(`⏭️ [getPostList] 비문서 파일 필터링: ${f.name}`);
-            }
-            return isValid;
-          })
-          .map(f => {
-            const { data: frontMatter, content: body } = parseFrontMatter(f.text);
-            const filename = f.name.replace('.md', '');
+        const validFiles = files.filter(f => {
+          const isValid = isDocumentFile(f.path, f.name);
+          if (!isValid) {
+            console.log(`⏭️ [getPostList] 비문서 파일 필터링: ${f.name}`);
+          }
+          return isValid;
+        });
 
-            // ✅ 새 파일명 파싱 (구 패턴 호환)
-            const parsed = parseFilename(f.name);
+        githubPosts = await Promise.all(validFiles.map(async f => {
+          // 복호화 파이프라인 적용
+          const decryptedText = await decryptContentIfNeeded(f.text);
+          const { data: frontMatter, content: body } = parseFrontMatter(decryptedText);
+          const filename = f.name.replace('.md', '');
 
-            // docId 결정 우선순위:
-            // 1. Front Matter의 docId
-            // 2. 새 패턴의 uuid8로 매칭 (임시, 나중에 전체 UUID로 업그레이드)
-            // 3. 구 패턴: 파일명 자체를 ID로 사용
-            let docId = frontMatter.docId;
-            if (!docId && parsed.uuid8) {
-              docId = parsed.uuid8;
-            }
-            if (!docId) {
-              docId = filename; // 구 패턴 폴백
-            }
+          const parsed = parseFilename(f.name);
 
-            return {
-              id: docId,
-              sha: f.sha,
-              filename: filename,
-              title: frontMatter.title || extractTitle(body) || filename.replace(/-/g, ' '),
-              updatedAt: frontMatter.updatedAt || new Date().toISOString(),
-              createdAt: frontMatter.createdAt || new Date().toISOString(),
-              status: frontMatter.status || (frontMatter.published ? 'published' : 'draft'),
-              size: f.text.length,
-              preview: body.substring(0, 150) + (body.length > 150 ? '...' : ''),
-              path: f.path,
-              hasDocId: !!frontMatter.docId,
-              isLegacyFilename: parsed.isLegacy, // 마이그레이션 필요 여부
-              source: 'github'
-            };
-          });
+          let docId = frontMatter.docId;
+          if (!docId && parsed.uuid8) {
+            docId = parsed.uuid8;
+          }
+          if (!docId) {
+            docId = filename;
+          }
+
+          return {
+            id: docId,
+            sha: f.sha,
+            filename: filename,
+            title: frontMatter.title || extractTitle(body) || filename.replace(/-/g, ' '),
+            updatedAt: frontMatter.updatedAt || new Date().toISOString(),
+            createdAt: frontMatter.createdAt || new Date().toISOString(),
+            status: frontMatter.status || (frontMatter.published ? 'published' : 'draft'),
+            size: decryptedText.length,
+            preview: body.substring(0, 150) + (body.length > 150 ? '...' : ''),
+            path: f.path,
+            hasDocId: !!frontMatter.docId,
+            isLegacyFilename: parsed.isLegacy,
+            source: 'github'
+          };
+        }));
 
         // ✅ Self-Healing: 동일 docId 중복 제거 (최신 updatedAt 기준)
         githubPosts = Object.values(
@@ -312,7 +327,8 @@ export const storage = {
         throw new Error('File content is empty or missing');
       }
 
-      const content = decodeContent(file.content);
+      let rawContent = decodeContent(file.content);
+      const content = await decryptContentIfNeeded(rawContent);
       const { data: frontMatter, content: body } = parseFrontMatter(content);
       const metadata = extractMetadata(content);
 
@@ -479,6 +495,15 @@ export const storage = {
 
     const updatedContent = stringifyFrontMatter(updatedFrontMatter) + body;
 
+    // === E2EE 암호화 파이프라인 ===
+    let finalContent = updatedContent;
+    const vaultState = useVaultStore.getState();
+    if (vaultState.isVaultReady && vaultState.cryptoKey) {
+      const encrypted = await VaultService.encrypt(updatedContent, vaultState.cryptoKey);
+      finalContent = 'MEKI_E2EE:' + encrypted;
+      console.log(`🔒 [SAVE] Vault E2EE 암호화 적용됨`);
+    }
+
     // ✅ 6. 새 파일 저장 (또는 덮어쓰기)
     const isNewFile = !existingPost;
     let newSha;
@@ -487,7 +512,7 @@ export const storage = {
       newSha = await github.createOrUpdateFile(
         'miki-data',
         `miki-editor/posts/${newFilename}.md`,
-        updatedContent,
+        finalContent,
         filenameChanged
           ? `Rename: ${oldFilename} → ${newFilename} [${docId.substring(0, 8)}]`
           : `Save: ${title} [${docId.substring(0, 8)}]`,

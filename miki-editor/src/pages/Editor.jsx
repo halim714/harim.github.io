@@ -28,6 +28,8 @@ import { logError } from '../utils/errorHandler';
 import realTimeDocSync from '../utils/RealTimeDocumentSync';
 import { storage } from '../utils/storage-client'; // storage 임포트
 import { usePublish } from '../hooks/usePublish'; // ✅ Publish 훅 임포트
+import { useVaultStore } from '../stores/useVaultStore';
+import { VaultSetup } from '../components/VaultSetup';
 
 // 유틸리티 함수들
 const slugify = (str) => {
@@ -192,6 +194,14 @@ function AppContent() {
       logger.info('✅ 새 문서가 서버에 저장되고 currentDocument로 설정됨:', newDocument.id);
     }
   });
+
+  // Vault 상태
+  const { isVaultReady, checkLocalVault } = useVaultStore();
+  const [vaultPanelOpen, setVaultPanelOpen] = useState(false);
+
+  useEffect(() => {
+    checkLocalVault();
+  }, [checkLocalVault]);
 
   // 🔎 단축키 도움말(튜토리얼) 상태 & body 클래스 토글
   const [helpOpen, setHelpOpen] = useState(false);
@@ -841,6 +851,24 @@ function AppContent() {
           </div>
         </div>
       )}
+
+      {/* Vault 설정 패널 */}
+      {vaultPanelOpen && (
+        <div className="fixed inset-0 z-50 bg-black bg-opacity-50 flex items-center justify-center" onClick={() => setVaultPanelOpen(false)}>
+          <div onClick={(e) => e.stopPropagation()}>
+            <VaultSetup onComplete={() => setVaultPanelOpen(false)} />
+          </div>
+        </div>
+      )}
+
+      {/* Vault 상태 배지 */}
+      <button
+        className={`fixed bottom-4 right-4 z-40 px-3 py-1.5 rounded-full text-xs font-medium shadow-md border ${isVaultReady ? 'bg-green-50 border-green-300 text-green-800' : 'bg-red-50 border-red-300 text-red-800'}`}
+        onClick={() => setVaultPanelOpen(true)}
+        title="Vault 암호화 설정"
+      >
+        {isVaultReady ? '🔒 Vault 활성' : '🔓 Vault 미설정'}
+      </button>
 
       {/* 에러 표시 */}
       {error && (

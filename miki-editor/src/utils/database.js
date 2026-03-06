@@ -26,6 +26,11 @@ export class MikiDatabase extends Dexie {
       pendingSync: '++id, documentId, changeType, status, queuedAt'
     });
 
+    // Version 4: Vault 암호화 키 IndexedDB 저장 (non-extractable CryptoKey)
+    this.version(4).stores({
+      vaultKeys: '&keyId, createdAt'
+    });
+
     // Add hooks for automatic timestamps
     this.documents.hook('creating', function (primKey, obj, trans) {
       obj.createdAt = new Date().toISOString();
@@ -40,6 +45,22 @@ export class MikiDatabase extends Dexie {
 
 // Create database instance
 export const db = new MikiDatabase();
+
+// Vault 암호화 키 IndexedDB 저장소
+export class VaultKeyStore {
+  static async save(cryptoKey) {
+    await db.vaultKeys.put({ keyId: 'default', cryptoKey, createdAt: new Date().toISOString() });
+  }
+
+  static async load() {
+    const record = await db.vaultKeys.get('default');
+    return record?.cryptoKey || null;
+  }
+
+  static async clear() {
+    await db.vaultKeys.delete('default');
+  }
+}
 
 // 🔥 DB Helpers for Local-First Strategy
 export const dbHelpers = {

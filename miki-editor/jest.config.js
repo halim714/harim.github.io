@@ -9,7 +9,7 @@ module.exports = {
     '^.+\\.(js|jsx)$': 'babel-jest'
   },
   transformIgnorePatterns: [
-    'node_modules/(?!(react-split|@tanstack)/)'
+    'node_modules/(?!(react-split|@tanstack|octokit|@octokit)/)'
   ],
   testMatch: [
     '<rootDir>/src/**/__tests__/**/*.{js,jsx}',
@@ -61,7 +61,7 @@ module.exports = {
         '^.+\\.(js|jsx)$': 'babel-jest'
       },
       transformIgnorePatterns: [
-        'node_modules/(?!(.*\\.mjs$))'
+        'node_modules/(?!(react-split|@tanstack|octokit|@octokit|.*\\.mjs$))'
       ],
       globals: {
         'import.meta': {
@@ -86,7 +86,7 @@ module.exports = {
         '^.+\\.(js|jsx)$': 'babel-jest'
       },
       transformIgnorePatterns: [
-        'node_modules/(?!(.*\\.mjs$))'
+        'node_modules/(?!(react-split|@tanstack|octokit|@octokit|.*\\.mjs$))'
       ],
       globals: {
         'import.meta': {
