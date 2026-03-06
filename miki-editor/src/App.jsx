@@ -90,10 +90,19 @@ async function checkRepoExists(token, repoName) {
 export const useAuth = () => useContext(AuthContext);
 
 import { dbHelpers } from './utils/database';
+import { getPendingSyncProcessor } from './sync';
 
 function AppContent() {
   const { loading, user, needsSetup } = useAuth();
   const location = useLocation();
+
+  // 오프라인 보류 항목 배치 동기화 (로그인 상태에서만 실행)
+  useEffect(() => {
+    if (!user) return;
+    const processor = getPendingSyncProcessor();
+    processor.start();
+    return () => processor.stop();
+  }, [user]);
 
   // 🛡️ 종료 방지: 미동기화 문서 확인
   useEffect(() => {

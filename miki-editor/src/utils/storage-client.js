@@ -124,7 +124,7 @@ if (typeof window !== 'undefined') {
 // 🔒 Rename Lock (Race Condition 방지)
 const renameInProgress = new Set();
 
-import { dbHelpers, db } from './database';
+import { dbHelpers, db, PendingSync } from './database';
 
 export const storage = {
   // ... getPostList, getPost 등 기존 코드 ...
@@ -398,7 +398,13 @@ export const storage = {
         console.log(`✅ [GitHub] 백그라운드 저장 완료: ${docToSave.title}`);
       } catch (error) {
         console.error(`❌ [GitHub] 백그라운드 저장 실패: ${docToSave.title}`, error);
-        // 실패해도 로컬엔 남아있음 (추후 Retry 로직 추가 가능)
+        // 오프라인/네트워크 오류 → pendingSync 큐에 등록하여 재연결 시 배치 동기화
+        try {
+          await PendingSync.enqueue(docToSave.id, 'update', docToSave);
+          console.log(`📥 [pendingSync] 재시도 큐 등록: ${docToSave.id}`);
+        } catch (queueErr) {
+          console.error('❌ [pendingSync] 큐 등록 실패:', queueErr);
+        }
       }
     }, 5000);
 

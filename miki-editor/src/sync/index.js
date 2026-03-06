@@ -6,6 +6,7 @@ import { SyncQueue } from '../utils/database';
 import { HttpAdapter } from './httpAdapter';
 import { WebSocketAdapter } from './wsAdapter';
 import { ConflictResolver } from './conflict';
+export { getPendingSyncProcessor, resetPendingSyncProcessor } from './PendingSyncProcessor';
 
 /**
  * SyncManager - 중앙화된 동기화 관리자
