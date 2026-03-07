@@ -50,8 +50,49 @@ export class AuthService {
     }
 
     /**
+     * WS 모드에서 HttpOnly 쿠키로 세션을 검증하고 sessionId 복원 및 사용자 정보 반환
+     */
+    static async checkWsSession() {
+        const wsProxyUrl = import.meta.env.VITE_WS_PROXY_URL || 'ws://localhost:8080';
+        const httpProxyUrl = wsProxyUrl.replace(/^wss:/, 'https:').replace(/^ws:/, 'http:');
+
+        try {
+            const res = await fetch(`${httpProxyUrl}/api/session`, {
+                method: 'GET',
+                credentials: 'include'
+            });
+            if (!res.ok) {
+                if (res.status === 401) {
+                    this.logout(); // 쿠키 무효화 시 캐시 삭제
+                }
+                return null;
+            }
+            const data = await res.json();
+            if (data.valid && data.user) {
+                if (data.sessionId) {
+                    const { setSessionId } = await import('./ws-client');
+                    setSessionId(data.sessionId);
+                }
+                const user = {
+                    id: data.user.id,
+                    username: data.user.login,
+                    name: data.user.login,
+                    avatar: this.getCachedUser()?.avatar || '' // Try to keep avatar from cache
+                };
+                localStorage.setItem(this.USER_KEY, JSON.stringify(user));
+                return user;
+            }
+            return null;
+        } catch (e) {
+            console.error('Session check failed:', e);
+            // 네트워크 에러 시 캐시된 사용자 반환 (오프라인)
+            return this.getCachedUser();
+        }
+    }
+
+    /**
      * 현재 사용자 정보 가져오기.
-     * WS 모드에서는 캐시된 사용자 반환 (서버 세션 기반 조회는 P4-T0b에서 구현).
+     * WS 모드에서는 캐시된 사용자 반환 (세션 복구는 위 checkWsSession에서 수행)
      */
     static async getCurrentUser() {
         if (this.isWsMode()) {

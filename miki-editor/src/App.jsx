@@ -29,10 +29,21 @@ function AuthProvider({ children }) {
 
   // 토큰 저장 후 호출하여 상태 즉시 갱신 (새로고침 없이)
   const refreshAuth = async () => {
-    // WS 모드: 토큰은 서버 세션에 있음. 캐시된 사용자로 UI 복원.
+    // WS 모드: 토큰은 서버 세션에 있음. 캐시된 사용자로 UI 복원 + 백그라운드 서버 세션 핑
     if (import.meta.env.VITE_USE_WS_PROXY === 'true') {
-      const user = AuthService.getCachedUser();
-      setAuth({ loading: false, user: user || null, needsSetup: false });
+      try {
+        const user = await AuthService.checkWsSession();
+        if (user) {
+          const hasRepo = await checkRepoExists(null, 'miki-data'); // In WS mode, token is null, handled via WS
+          setAuth({ loading: false, user, needsSetup: !hasRepo });
+        } else {
+          setAuth({ loading: false, user: null, needsSetup: false });
+        }
+      } catch (err) {
+        console.error('WS Auth check error:', err);
+        const cachedUser = AuthService.getCachedUser();
+        setAuth({ loading: false, user: cachedUser, needsSetup: false });
+      }
       return;
     }
 
@@ -75,15 +86,22 @@ function AuthProvider({ children }) {
 // 저장소 존재 확인 헬퍼
 async function checkRepoExists(token, repoName) {
   try {
-    const octokit = new Octokit({ auth: token });
-    const { data: user } = await octokit.rest.users.getAuthenticated();
-    await octokit.rest.repos.get({
-      owner: user.login,
-      repo: repoName
-    });
-    return true;
+    if (import.meta.env.VITE_USE_WS_PROXY === 'true') {
+      const { getWsClient } = await import('./services/ws-client');
+      const wsClient = getWsClient();
+      await wsClient.request('github.getRepo', { repoName });
+      return true;
+    } else {
+      const octokit = new Octokit({ auth: token });
+      const { data: user } = await octokit.rest.users.getAuthenticated();
+      await octokit.rest.repos.get({
+        owner: user.login,
+        repo: repoName
+      });
+      return true;
+    }
   } catch (error) {
-    if (error.status === 404) return false;
+    if (error.status === 404 || error.code === 'NOT_FOUND') return false;
     throw error;
   }
 }
@@ -121,7 +139,7 @@ function AppContent() {
   useEffect(() => {
     const handleBeforeUnload = (e) => {
       // 종료 직전 flush 시도 (fire-and-forget — 서버 부하 최소화)
-      getPendingSyncProcessor().flush().catch(() => {});
+      getPendingSyncProcessor().flush().catch(() => { });
 
       // 비동기 카운트 확인 후 경고 (브라우저가 이벤트 루프를 허용하는 경우)
       dbHelpers.getUnsyncedCount().then(count => {
