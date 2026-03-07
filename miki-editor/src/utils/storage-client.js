@@ -1,6 +1,7 @@
 // src/utils/storage-client.js
 import { AuthService } from '../services/auth';
 import { GitHubService } from '../services/github';
+import { getWsClient } from '../services/ws-client';
 import { generateDocumentId, isTemporaryId } from './id-generator';
 import { parseFrontMatter, stringifyFrontMatter, extractTitle, extractMetadata } from './markdown';
 import {
@@ -13,14 +14,63 @@ import {
 import { useVaultStore } from '../stores/useVaultStore';
 import { VaultService } from './vault';
 
+// WS 모드용 GitHubService 인터페이스 구현 (ws-client 경유)
+class WsGitHubProxy {
+  constructor() {
+    this.username = null;
+  }
+
+  async setUsername() {
+    const data = await getWsClient().request('github.getUser');
+    this.username = data.login;
+    return this.username;
+  }
+
+  async getFilesWithMetadata(repoName, path) {
+    return getWsClient().request('github.getFilesWithMeta', { repoName, path });
+  }
+
+  async getFile(repoName, path) {
+    const data = await getWsClient().request('github.getFile', { repoName, path });
+    // ws-handler returns decoded UTF-8; re-encode to base64 for decodeContent() compatibility
+    const base64 = btoa(unescape(encodeURIComponent(data.content)));
+    return { ...data, content: base64 };
+  }
+
+  async createOrUpdateFile(repoName, path, content, message, sha, opts = {}) {
+    return getWsClient().request('github.createOrUpdateFile', {
+      repoName, path, content, message,
+      sha: sha || undefined,
+      skipShaLookup: opts.skipShaLookup || false,
+    });
+  }
+
+  async deleteFile(repoName, path, message, sha) {
+    return getWsClient().request('github.deleteFile', { repoName, path, message, sha });
+  }
+}
+
 // 헬퍼: GitHubService 인스턴스 생성 (캐싱 적용)
 let githubInstance = null;
 let currentToken = null;
 
 const getGithub = async () => {
   const isWsMode = import.meta.env.VITE_USE_WS_PROXY === 'true';
+
+  if (isWsMode) {
+    // WS 모드: WsGitHubProxy 사용 (토큰 불필요, ws-client 경유)
+    if (githubInstance instanceof WsGitHubProxy) {
+      return githubInstance;
+    }
+    const proxy = new WsGitHubProxy();
+    await proxy.setUsername();
+    githubInstance = proxy;
+    currentToken = '__ws__';
+    return githubInstance;
+  }
+
   const token = AuthService.getToken();
-  if (!isWsMode && !token) throw new Error('로그인이 필요합니다.');
+  if (!token) throw new Error('로그인이 필요합니다.');
 
   // 토큰이 같으면 기존 인스턴스 재사용
   if (githubInstance && currentToken === token) {
