@@ -159,11 +159,12 @@ router.post('/api/session', express.json(), async (req, res) => {
 
     const sessionToken = jwt.sign(payload, JWT_SECRET, { expiresIn: JWT_EXPIRES });
 
-    // UP-1: HttpOnly 쿠키로 세션 토큰 설정
+    // UP-1: HttpOnly 쿠키로 세션 토큰 설정 (CORS cross-site 호환성을 위해 SameSite=None)
+    const isProd = process.env.NODE_ENV === 'production';
     res.cookie('meki_session', sessionToken, {
         httpOnly: true,
-        secure: process.env.NODE_ENV === 'production',
-        sameSite: 'strict',
+        secure: isProd,
+        sameSite: isProd ? 'none' : 'lax',
         maxAge: 8 * 60 * 60 * 1000, // 8h
         path: '/'
     });
@@ -183,11 +184,12 @@ router.post('/api/session', express.json(), async (req, res) => {
  * Response: { valid: true, user: { login, id }, expiresAt }
  */
 router.get('/api/session', requireSession, (req, res) => {
-    const { sub, login, exp } = req.session;
+    const { sub, login, exp, sid } = req.session;
     res.json({
         valid: true,
         user: { login, id: sub },
-        expiresAt: exp ? new Date(exp * 1000).toISOString() : null
+        expiresAt: exp ? new Date(exp * 1000).toISOString() : null,
+        sessionId: sid
     });
 });
 
