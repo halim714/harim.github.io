@@ -19,6 +19,18 @@ const REQUEST_TIMEOUT_MS = 30_000;
 /** @type {WsClient|null} */
 let _instance = null;
 
+/** Session ID received from POST /api/session — included in every WS message */
+let _sessionId = null;
+
+/**
+ * Set the session ID to include in WS messages.
+ * Called by CallbackPage after successful WS-mode login.
+ * @param {string} sid
+ */
+export function setSessionId(sid) {
+    _sessionId = sid;
+}
+
 export class WsClient {
     constructor(url) {
         this._url = url;
@@ -140,7 +152,7 @@ export class WsClient {
         }
 
         const id = `meki-${Date.now()}-${Math.random().toString(36).slice(2)}`;
-        const message = JSON.stringify({ id, action, payload });
+        const message = JSON.stringify({ id, action, payload, sessionId: _sessionId });
 
         return new Promise((resolve, reject) => {
             const timer = setTimeout(() => {
