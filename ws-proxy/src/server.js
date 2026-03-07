@@ -169,6 +169,7 @@ router.post('/api/session', express.json(), async (req, res) => {
     });
 
     return res.status(201).json({
+        sessionId,
         expiresIn: JWT_EXPIRES,
         user: { login: user.login, id: user.id, avatar_url: user.avatar_url }
     });
