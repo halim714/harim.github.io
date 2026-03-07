@@ -27,6 +27,16 @@ function AuthProvider({ children }) {
     refreshAuth();
   }, []);
 
+  // WS 인증 에러(서버 재시작 등) → 자동 로그아웃 후 로그인 페이지로
+  useEffect(() => {
+    const handleAuthError = () => {
+      AuthService.logout();
+      setAuth({ loading: false, user: null, needsSetup: false });
+    };
+    window.addEventListener('meki:auth-error', handleAuthError);
+    return () => window.removeEventListener('meki:auth-error', handleAuthError);
+  }, []);
+
   // 토큰 저장 후 호출하여 상태 즉시 갱신 (새로고침 없이)
   const refreshAuth = async () => {
     // WS 모드: 토큰은 서버 세션에 있음. 캐시된 사용자로 UI 복원 + 백그라운드 서버 세션 핑
