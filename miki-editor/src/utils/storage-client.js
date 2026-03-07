@@ -14,6 +14,14 @@ import {
 import { useVaultStore } from '../stores/useVaultStore';
 import { VaultService } from './vault';
 
+// WS 인증 에러 시 github 인스턴스 캐시 리셋
+if (typeof window !== 'undefined') {
+  window.addEventListener('meki:auth-error', () => {
+    githubInstance = null;
+    currentToken = null;
+  });
+}
+
 // WS 모드용 GitHubService 인터페이스 구현 (ws-client 경유)
 class WsGitHubProxy {
   constructor() {

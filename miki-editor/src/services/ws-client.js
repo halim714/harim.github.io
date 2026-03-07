@@ -89,6 +89,13 @@ export class WsClient {
                         code: msg.code,
                         wsError: true
                     });
+                    // Auth errors: clear session and notify app to redirect to login
+                    if (msg.code === 'UNAUTHENTICATED' || msg.code === 'SESSION_EXPIRED') {
+                        _sessionId = null;
+                        if (typeof window !== 'undefined') {
+                            window.dispatchEvent(new CustomEvent('meki:auth-error', { detail: msg.code }));
+                        }
+                    }
                     entry.reject(err);
                 }
             });
