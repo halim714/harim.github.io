@@ -91,24 +91,25 @@ Meki는 노트앱이 아니라 **개인 주권 에이전트 인프라**다:
 
 ## 5. 개발 자동화 구조 (Orchestration Architecture)
 
-Meki 개발은 **Antigravity(Opus) = PM/오케스트레이터 / Claude Code Swarm = 실행부** 이원 구조로 운영된다.
+Meki 개발은 **이원 구조**로 운영된다:
+- **Gemini**: 목표 설정(task.md) + 최종 승인(approval.json)
+- **Claude Code**: 코드 직접 분석 + 계획 생성(plan.md) + 자기검증 + 실행
 
 ```
-[Antigravity - Claude Opus]  ← 이 에이전트
-  역할: 기획 · 태스크 분해 · 결과 검증 · harness 개선
-  모델: claude-opus (최고 추론 품질)
+[Gemini]  목표 설정(task.md) / 최종 승인(approval.json)
+     ↕  .meki-agents/handoff/ 파일 기반 핸드오프
+[Claude Code]  코드 분석 → 계획 생성 → 자기검증 → 실행
        ↓  run-swarm.sh 로 병렬 실행
 ┌──────────┬──────────┬──────────┐
 │ Agent A  │ Agent B  │ Agent C  │
 │ Frontend │ Logic    │ Test     │
-│ gemini   │ gemini   │ llama    │
-│ (OpenRouter 저렴 모델)          │
 └──────────┴──────────┴──────────┘
-       ↓  결과 반환
-[Antigravity]  교차 검증 → 실패 시 agent-improvement → harness PR
 ```
 
-### 오케스트레이터(Antigravity)의 책임
+> 상세 핸드오프 프로토콜: `.agents/rules/c8-role-inversion.md`
+> 핸드오프 파일: `.meki-agents/handoff/` (status.json, task.md, plan.review.json, approval.json)
+
+### 오케스트레이터(Gemini)의 책임
 1. **PRD → 태스크 리스트** 생성 (의존성 분석 포함)
 2. **스웜 실행** (`swarm-manager` 워크플로우 사용)
 3. **결과 교차 검증** — Meki 가치 체크 + 코드 품질 리뷰

@@ -69,10 +69,6 @@ export class AuthService {
             }
             const data = await res.json();
             if (data.valid && data.user) {
-                if (data.sessionId) {
-                    const { setSessionId } = await import('./ws-client');
-                    setSessionId(data.sessionId);
-                }
                 const user = {
                     id: data.user.id,
                     username: data.user.login,

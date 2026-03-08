@@ -7,18 +7,32 @@ tags: [meki, orchestration, opus, swarm, openrouter]
 
 # Meki 개발 자동화 아키텍처 레퍼런스
 
-## 이원 구조
+## 이원 구조 (Role Inversion Architecture)
 
 ```
-[Antigravity - Claude Opus]    PM / 오케스트레이터
+[Gemini]  목표 설정 / 최종 승인
+     ↕  .meki-agents/handoff/ (파일 기반 핸드오프)
+     │  status.json: IDLE→TASK_READY→PLANNING→PENDING_APPROVAL→APPROVED→EXECUTING→DONE
+[Claude Code]  코드 분석 → 계획 생성(/plan-phase) → 자기검증(/review-plan) → 실행
        ↓  run-swarm.sh
 ┌──────────┬──────────┬──────────┐
-│ Agent A  │ Agent B  │ Agent C  │  Claude Code (Claude Pro)
+│ Agent A  │ Agent B  │ Agent C  │  Claude Code Swarm
 │frontend  │ api/svc  │ test     │
 └──────────┴──────────┴──────────┘
        ↓
-[Antigravity]  교차 검증 → agent-optimizer → SOP 개선 PR
+[Claude Code]  교차 검증 → agent-optimizer → SOP 개선 PR
 ```
+
+### 역할 분담
+
+| 역할 | Gemini | Claude Code |
+|---|---|---|
+| 목표 설정 | task.md 작성 | - |
+| 계획 생성 | - | /plan-phase 실행 |
+| 자기검증 | - | /review-plan 실행 |
+| 승인 게이트 | approval.json 작성 | PENDING_APPROVAL 대기 |
+| 실행 | - | 계획대로 스웜 실행 |
+| 완료 보고 | notify_user | status.json → DONE |
 
 ## 에이전트 도구 전체 맵
 

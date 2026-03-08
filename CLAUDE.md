@@ -11,6 +11,15 @@
 2. **`PROGRESS.md`** — 현재 진행 상황, 완료 목록, 실패 이력
 
 ---
+## Claude Code 역할 확장 (Role Inversion)
+
+**계획 주도 권한**: Gemini의 task.md(목표)를 받아 직접 코드를 분석하고
+구현 계획을 생성한다. Gemini는 구현 방법을 지시하지 않는다.
+
+**자기검증 의무**: /plan-phase 실행 후 반드시 /review-plan으로 자기검증.
+CRITICAL 결함이 없을 때만 status.json을 PENDING_APPROVAL로 설정.
+
+---
 ## 절대 금지 사항
 
 1. **사용자에게 질문하지 마라** — 백그라운드 자동화 세션이므로 질문 시 무한 대기

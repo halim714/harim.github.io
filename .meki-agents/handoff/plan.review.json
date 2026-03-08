@@ -1,0 +1,52 @@
+{
+  "schema_version": "1.0",
+  "iteration": 1,
+  "generated_at": "2026-03-07T13:03:58.672278+00:00",
+  "status": "REVIEWED",
+  "critical": [],
+  "warnings": [
+    {
+      "task": "P6-T1",
+      "issue": "ENCRYPTION_KEY env var은 Fly.io secrets에 별도로 추가해야 함. 미설정 시 dev fallback 값이 사용됨 (production 보안 위험)"
+    },
+    {
+      "task": "P6-T2",
+      "issue": "JWT_SECRET이 server.js(L26)와 ws-handler.js(신규 추가)에 중복 정의됨. 동일 env var 참조이므로 런타임 문제는 없으나 향후 리팩토링 권장"
+    },
+    {
+      "task": "P6-T1/T2",
+      "issue": "기존 sessionId 포함 JWT 쿠키(enc_token 없음)는 ws-handler 연결 시 decryptToken 실패로 UNAUTHENTICATED 반환됨. 사용자 재로그인 필요. 예상된 breaking change이므로 배포 전 공지 권장"
+    }
+  ],
+  "verification": {
+    "server_js": {
+      "sessionStore_L38": "confirmed",
+      "getGitHubToken_L46": "confirmed",
+      "cleanup_interval_L52": "confirmed",
+      "exports_L258": "confirmed — { createApp, getGitHubToken }"
+    },
+    "ws_handler_js": {
+      "import_L25": "confirmed — const { getGitHubToken } = require(./server)",
+      "dispatch_L298": "confirmed — async function dispatch(msg)",
+      "dispatch_call_L434": "confirmed — await dispatch(msg)",
+      "only_one_call_site": "confirmed"
+    },
+    "ws_client_js": {
+      "sessionId_var_L23": "confirmed — let _sessionId = null",
+      "setSessionId_export_L30": "confirmed",
+      "sessionId_in_message_L162": "confirmed — sessionId: _sessionId",
+      "auth_error_clear_L94": "confirmed — _sessionId = null"
+    },
+    "CallbackPage_jsx": {
+      "import_L5": "confirmed — import { setSessionId } from ../services/ws-client",
+      "call_L78": "confirmed — if (sessionData.sessionId) setSessionId(sessionData.sessionId)"
+    },
+    "auth_js": {
+      "setSessionId_block_L72_75": "confirmed — dynamic import + setSessionId call"
+    },
+    "tests": "setSessionId/sessionId not referenced in any test files — no test updates needed",
+    "circular_deps": "none — ws-handler imports from server, server imports nothing from ws-handler",
+    "crypto_module": "Node.js built-in, no new package install required"
+  },
+  "approved_if": "CRITICAL 항목 없음 — 즉시 승인 가능"
+}

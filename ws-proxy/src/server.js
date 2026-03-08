@@ -1,21 +1,23 @@
 /**
  * ws-proxy/src/server.js
- * Meki WS Proxy — Express HTTP server + JWT session management
+ * Meki WS Proxy — Express HTTP server + Stateless JWT session (AES-256-GCM)
  *
  * Endpoints:
  *   GET  /health          — liveness check
- *   POST /api/session     — exchange GitHub token for a signed JWT
+ *   POST /api/session     — exchange GitHub token for a signed JWT (enc_token)
  *   GET  /api/session     — verify JWT and return session info
  *   DELETE /api/session   — invalidate session (client-side)
  *
  * Environment variables:
- *   JWT_SECRET   — signing secret (required in production)
- *   JWT_EXPIRES  — token TTL (default: '8h')
- *   PORT         — HTTP port (default: 8080, overridden by index.js)
+ *   JWT_SECRET      — signing secret (required in production)
+ *   JWT_EXPIRES     — token TTL (default: '8h')
+ *   ENCRYPTION_KEY  — AES-256-GCM key material (required in production)
+ *   PORT            — HTTP port (default: 8080, overridden by index.js)
  */
 
 'use strict';
 
+const crypto = require('crypto');
 const express = require('express');
 const cookieParser = require('cookie-parser');
 const jwt = require('jsonwebtoken');
@@ -33,31 +35,41 @@ const ALLOWED_ORIGINS = [
     /^http:\/\/127\.0\.0\.1:\d+$/,
 ];
 
-// ─── Server-side Session Store (UP-3: ghToken을 JWT에서 제거) ───────────────
-// key: sessionId (uuid), value: { ghToken, login, createdAt }
-const sessionStore = new Map();
+// ─── AES-256-GCM Token Encryption (P6-T1: Stateless) ──────────────────────
+// ghToken은 서버 메모리가 아닌 JWT payload에 암호화되어 저장됨 (서버 재시작 내성)
+
+const ENCRYPTION_KEY = (() => {
+    const raw = process.env.ENCRYPTION_KEY || 'meki-dev-enc-key-change-in-production';
+    return crypto.scryptSync(raw, 'meki-salt', 32); // 32바이트 AES-256 키
+})();
 
 /**
- * Retrieve the GitHub token for a given session ID.
- * Used by ws-handler.js to authenticate GitHub API calls.
- * @param {string} sessionId
- * @returns {string|null}
+ * AES-256-GCM으로 평문 문자열을 암호화.
+ * @param {string} plainText
+ * @returns {string} base64 encoded [iv(12) + tag(16) + ciphertext]
  */
-function getGitHubToken(sessionId) {
-    const entry = sessionStore.get(sessionId);
-    return entry ? entry.ghToken : null;
+function encryptToken(plainText) {
+    const iv = crypto.randomBytes(12); // 96-bit IV for GCM
+    const cipher = crypto.createCipheriv('aes-256-gcm', ENCRYPTION_KEY, iv);
+    const encrypted = Buffer.concat([cipher.update(plainText, 'utf8'), cipher.final()]);
+    const tag = cipher.getAuthTag();
+    return Buffer.concat([iv, tag, encrypted]).toString('base64');
 }
 
-// Clean up expired sessions every hour
-setInterval(() => {
-    const now = Date.now();
-    const maxAge = 8 * 60 * 60 * 1000; // 8h
-    for (const [id, entry] of sessionStore) {
-        if (now - entry.createdAt > maxAge) {
-            sessionStore.delete(id);
-        }
-    }
-}, 60 * 60 * 1000);
+/**
+ * AES-256-GCM으로 암호화된 base64 문자열을 복호화.
+ * @param {string} encoded
+ * @returns {string} plainText
+ */
+function decryptToken(encoded) {
+    const buf = Buffer.from(encoded, 'base64');
+    const iv = buf.slice(0, 12);
+    const tag = buf.slice(12, 28);
+    const encrypted = buf.slice(28);
+    const decipher = crypto.createDecipheriv('aes-256-gcm', ENCRYPTION_KEY, iv);
+    decipher.setAuthTag(tag);
+    return decipher.update(encrypted) + decipher.final('utf8');
+}
 
 // ─── Helpers ───────────────────────────────────────────────────────────────
 
@@ -84,11 +96,10 @@ async function verifyGitHubToken(githubToken) {
 // ─── Middleware ────────────────────────────────────────────────────────────
 
 /**
- * Validate and decode the JWT from the Authorization header.
+ * Validate and decode the JWT from the Authorization header or HttpOnly cookie.
  * Attaches decoded payload to req.session on success.
  */
 function requireSession(req, res, next) {
-    // UP-1: Authorization header 또는 HttpOnly 쿠키에서 JWT 추출
     const token = extractBearer(req) || (req.cookies && req.cookies.meki_session);
     if (!token) {
         return res.status(401).json({ error: 'Missing Authorization header', code: 'UNAUTHENTICATED' });
@@ -119,9 +130,10 @@ router.get('/health', (_req, res) => {
 /**
  * POST /api/session
  * Exchange a GitHub OAuth access token for a signed JWT session.
+ * ghToken은 AES-256-GCM으로 암호화되어 JWT payload의 enc_token 필드에 저장됨.
  *
  * Request body: { token: "<github_access_token>" }
- * Response:     { sessionToken, expiresIn, user: { login, id, avatar_url } }
+ * Response:     { expiresIn, user: { login, id, avatar_url } }
  */
 router.post('/api/session', express.json(), async (req, res) => {
     const { token: githubToken } = req.body || {};
@@ -141,25 +153,16 @@ router.post('/api/session', express.json(), async (req, res) => {
         return res.status(502).json({ error: 'GitHub API unavailable', code: 'GITHUB_UNAVAILABLE' });
     }
 
-    // UP-3: GitHub 토큰을 JWT에 넣지 않고 서버 메모리에 저장
-    const crypto = require('crypto');
-    const sessionId = crypto.randomUUID();
-
-    sessionStore.set(sessionId, {
-        ghToken: githubToken,
-        login: user.login,
-        createdAt: Date.now()
-    });
-
+    // P6-T1: ghToken을 AES-256-GCM으로 암호화하여 JWT payload에 내장 (서버 메모리 저장 제거)
     const payload = {
         sub: String(user.id),
         login: user.login,
-        sid: sessionId   // JWT에는 sessionId만 포함 (ghToken 제거)
+        enc_token: encryptToken(githubToken)
     };
 
     const sessionToken = jwt.sign(payload, JWT_SECRET, { expiresIn: JWT_EXPIRES });
 
-    // UP-1: HttpOnly 쿠키로 세션 토큰 설정 (CORS cross-site 호환성을 위해 SameSite=None)
+    // HttpOnly 쿠키로 세션 토큰 설정 (CORS cross-site 호환성을 위해 SameSite=None)
     const isProd = process.env.NODE_ENV === 'production';
     res.cookie('meki_session', sessionToken, {
         httpOnly: true,
@@ -170,7 +173,6 @@ router.post('/api/session', express.json(), async (req, res) => {
     });
 
     return res.status(201).json({
-        sessionId,
         expiresIn: JWT_EXPIRES,
         user: { login: user.login, id: user.id, avatar_url: user.avatar_url }
     });
@@ -180,30 +182,29 @@ router.post('/api/session', express.json(), async (req, res) => {
  * GET /api/session
  * Verify an existing JWT and return the decoded session info.
  *
- * Authorization: Bearer <sessionToken>
+ * Authorization: Bearer <sessionToken>  or  Cookie: meki_session=<sessionToken>
  * Response: { valid: true, user: { login, id }, expiresAt }
  */
 router.get('/api/session', requireSession, (req, res) => {
-    const { sub, login, exp, sid } = req.session;
+    const { sub, login, exp } = req.session;
     res.json({
         valid: true,
         user: { login, id: sub },
-        expiresAt: exp ? new Date(exp * 1000).toISOString() : null,
-        sessionId: sid
+        expiresAt: exp ? new Date(exp * 1000).toISOString() : null
     });
 });
 
 /**
  * DELETE /api/session
  * Signal session termination.
- * JWTs are stateless — actual invalidation is client-side (discard token).
- * A token blocklist can be added here if needed in the future.
+ * JWTs are stateless — actual invalidation is client-side (discard cookie).
  *
- * Authorization: Bearer <sessionToken>
+ * Authorization: Bearer <sessionToken>  or  Cookie: meki_session=<sessionToken>
  * Response: { success: true }
  */
 router.delete('/api/session', requireSession, (req, res) => {
     console.log(`[server] Session ended for user: ${req.session.login}`);
+    res.clearCookie('meki_session', { path: '/' });
     res.json({ success: true });
 });
 
@@ -235,7 +236,7 @@ function createApp() {
         next();
     });
 
-    // UP-6: Parse HttpOnly session cookies
+    // Parse HttpOnly session cookies
     app.use(cookieParser());
 
     // Routes
@@ -255,4 +256,4 @@ function createApp() {
     return app;
 }
 
-module.exports = { createApp, getGitHubToken };
+module.exports = { createApp, decryptToken };

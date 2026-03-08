@@ -35,12 +35,15 @@
 
 **Phase 5 보안강화 완료** — P5-SEC ✅ Vault E2EE 키 저장 보안 강화 (localStorage Seed 제거 → IndexedDB non-extractable 키 저장)
 
+**Phase 6 완료** — P6-T1 ✅, P6-T2 ✅, P6-T3 ✅, P6-T4 ✅
+
 ---
 
 ## 완료된 태스크
 
 | 매스크 ID | 완료 시각 | 담당 에이전트 | 결과 |
 |---|---|---|---|
+| P6-T1~T4 | 2026-03-07 | api_dev + frontend_dev | ✅ Phase 6 Stateless Session 완료: server.js AES-256-GCM encryptToken/decryptToken 추가, sessionStore 제거, ws-handler.js 연결 시 쿠키 파싱·JWT 검증·ws.ghToken 바인딩, ws-client.js/CallbackPage.jsx/auth.js sessionId 전면 제거. 빌드 성공 (2169 modules, 0 errors). |
 | P5-SEC | 2026-03-06 | security_dev | ✅ Vault E2EE 키 저장 보안 강화: `database.js` v4 스키마(`vaultKeys`) + `VaultKeyStore` 클래스 추가, `vault.js` `importKeyNonExtractable()` 추가, `useVaultStore.js` localStorage Seed 저장 제거 → IndexedDB non-extractable 키 저장, `Editor.jsx` VaultSetup 모달 및 Vault 상태 배지 추가. 테스트 16개 PASS (vault: 5, VaultSetup: 5, vaultFlow: 6). 빌드 성공. |
 | P5-T4 | 2026-03-06 | test_verify | ✅ `src/__tests__/integration/vaultFlow.test.jsx` 생성 및 검증 방안 완료. Vault 미적용, 적용 후 저장 로직 비교 및 복호화, 경고문 표시 4가지 E2E Flow 완벽 테스트 패스 (0 failures). 이로서 Phase 5 완료. |
 | P5-T3 | 2026-03-06 | api_dev | ✅ `src/utils/storage-client.js` 파이프라인에 E2EE 암복호화 연동 (VaultService 사용, MEKI_E2EE: 프리픽스 삽입 및 로드 시 복호화). public 게시글은 복호화된 상태로 publish 됨을 확인. |

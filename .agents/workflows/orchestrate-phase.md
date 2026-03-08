@@ -72,6 +72,23 @@ fi
 
 생성된 리포트 파일을 읽는다: `logs/review_phase<N>.md`
 
+## Step 3.5: Claude 계획 완료 대기 및 자율 검토
+
+// turbo
+status.json이 PENDING_APPROVAL이 될 때까지 10초 간격 폴링:
+```bash
+HANDOFF="/Users/halim/Desktop/meeki/meki/.meki-agents/handoff"
+while true; do
+  STATUS=$(python3 -c "import sys,json; \
+    print(json.load(open('$HANDOFF/status.json'))['status'])")
+  [ "$STATUS" = "PENDING_APPROVAL" ] && break
+  [ "$STATUS" = "BLOCKED" ] && echo "BLOCKED — 유저 개입 필요" && exit 1
+  sleep 10
+done
+```
+폴링 완료 → plan.review.json 읽기 → Meki 가치 체크 → approval.json 작성
+notify_user 호출 금지 (Step 6까지)
+
 ## Step 4: 리포트 판단 — 의사결정 트리
 
 리포트의 **Section 6: Antigravity Action Required**를 읽고 다음 중 하나를 선택:

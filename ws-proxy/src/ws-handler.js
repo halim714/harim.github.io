@@ -22,7 +22,26 @@
 'use strict';
 
 const { Octokit } = require('@octokit/rest');
-const { getGitHubToken } = require('./server');
+const jwt = require('jsonwebtoken');
+const { decryptToken } = require('./server');
+
+const JWT_SECRET = process.env.JWT_SECRET || 'meki-dev-secret-change-in-production';
+
+/**
+ * 쿠키 헤더 파서 (외부 패키지 없이 순수 구현)
+ */
+function parseCookies(cookieHeader) {
+    const cookies = {};
+    if (!cookieHeader) return cookies;
+    cookieHeader.split(';').forEach(part => {
+        const eqIdx = part.indexOf('=');
+        if (eqIdx < 0) return;
+        const name = part.slice(0, eqIdx).trim();
+        const val = part.slice(eqIdx + 1).trim();
+        try { cookies[name] = decodeURIComponent(val); } catch { cookies[name] = val; }
+    });
+    return cookies;
+}
 
 // ─── Constants ─────────────────────────────────────────────────────────────
 
@@ -294,24 +313,18 @@ const ACTION_HANDLERS = {
 /**
  * Dispatch a parsed message to the appropriate handler.
  * Returns a JSON string to send back to the client.
+ * @param {import('ws').WebSocket} ws - Connection object with ws.ghToken bound at connect time
+ * @param {object} msg - Parsed message from client
  */
-async function dispatch(msg) {
-    const { id, action, token, sessionId, payload = {} } = msg;
+async function dispatch(ws, msg) {
+    const { id, action, payload = {} } = msg;
 
     if (action === 'ping') {
         return ok(id, { pong: true, ts: Date.now() });
     }
 
-    // UP-3: sessionId가 있으면 서버측 세션 저장소에서 GitHub 토큰 조회
-    // token이 있으면 레거시 호환 (Phase 4 전환 완료 시 제거)
-    let resolvedToken = token;
-    if (sessionId && !token) {
-        resolvedToken = getGitHubToken(sessionId);
-        if (!resolvedToken) {
-            return fail(id, 'Invalid or expired session', 'SESSION_EXPIRED');
-        }
-    }
-
+    // P6-T2: ghToken은 연결 시점에 ws 객체에 바인딩됨 (쿠키 → JWT → AES 복호화)
+    const resolvedToken = ws.ghToken;
     if (!resolvedToken) {
         return fail(id, 'Missing authentication token', 'UNAUTHENTICATED');
     }
@@ -370,7 +383,26 @@ async function dispatch(msg) {
  */
 function handleWsConnection(ws, req) {
     const remoteIp = req.headers['x-forwarded-for'] || req.socket.remoteAddress;
-    console.log(`[ws-handler] Client connected: ${remoteIp}`);
+
+    // ── P6-T2: 연결 시 쿠키 → JWT → AES 복호화로 ghToken 바인딩 ──────────
+    const cookies = parseCookies(req.headers.cookie);
+    const sessionToken = cookies.meki_session;
+    if (!sessionToken) {
+        ws.send(fail(null, 'Authentication required', 'UNAUTHENTICATED'));
+        ws.close();
+        return;
+    }
+    try {
+        const jwtPayload = jwt.verify(sessionToken, JWT_SECRET);
+        ws.ghToken = decryptToken(jwtPayload.enc_token);
+        ws.wsLogin = jwtPayload.login;
+    } catch (err) {
+        ws.send(fail(null, 'Invalid or expired session', 'UNAUTHENTICATED'));
+        ws.close();
+        return;
+    }
+
+    console.log(`[ws-handler] Client connected: ${remoteIp} (user: ${ws.wsLogin})`);
 
     // ── Heartbeat ──────────────────────────────────────────────────────────
     ws.isAlive = true;
@@ -431,7 +463,7 @@ function handleWsConnection(ws, req) {
         }
 
         try {
-            const response = await dispatch(msg);
+            const response = await dispatch(ws, msg);
             if (ws.readyState === ws.OPEN) {
                 ws.send(response);
             }

@@ -19,18 +19,6 @@ const REQUEST_TIMEOUT_MS = 30_000;
 /** @type {WsClient|null} */
 let _instance = null;
 
-/** Session ID received from POST /api/session — included in every WS message */
-let _sessionId = null;
-
-/**
- * Set the session ID to include in WS messages.
- * Called by CallbackPage after successful WS-mode login.
- * @param {string} sid
- */
-export function setSessionId(sid) {
-    _sessionId = sid;
-}
-
 export class WsClient {
     constructor(url) {
         this._url = url;
@@ -89,9 +77,8 @@ export class WsClient {
                         code: msg.code,
                         wsError: true
                     });
-                    // Auth errors: clear session and notify app to redirect to login
+                    // Auth errors: notify app to redirect to login
                     if (msg.code === 'UNAUTHENTICATED' || msg.code === 'SESSION_EXPIRED') {
-                        _sessionId = null;
                         if (typeof window !== 'undefined') {
                             window.dispatchEvent(new CustomEvent('meki:auth-error', { detail: msg.code }));
                         }
@@ -159,7 +146,7 @@ export class WsClient {
         }
 
         const id = `meki-${Date.now()}-${Math.random().toString(36).slice(2)}`;
-        const message = JSON.stringify({ id, action, payload, sessionId: _sessionId });
+        const message = JSON.stringify({ id, action, payload });
 
         return new Promise((resolve, reject) => {
             const timer = setTimeout(() => {
