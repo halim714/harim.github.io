@@ -434,8 +434,9 @@ function handleWsConnection(ws, req) {
 
             try {
                 const jwtPayload = require('jsonwebtoken').verify(msg.token, JWT_SECRET);
-                const { decryptToken } = require('./server');
-                ws.ghToken = decryptToken(jwtPayload.enc_token);
+                const ghToken = getGitHubToken(jwtPayload.sid);
+                if (!ghToken) throw new Error('Session not found or expired');
+                ws.ghToken = ghToken;
                 ws.wsLogin = jwtPayload.login;
                 authCompleted = true;
                 ws.send(ok(msg.id, { authenticated: true, login: ws.wsLogin }));
