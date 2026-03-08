@@ -97,6 +97,17 @@
 
 ---
 
+## Phase 6.1 완료 (2026-03-08)
+
+- ✅ ws-handler.js: `decryptToken` → `getGitHubToken(sid)` 세션 조회 방식으로 교체 (UP-3 server-side session store 활용)
+- ✅ ws-client.js: 연결 시 `auth` 액션으로 JWT 토큰 전송 (localStorage 기반)
+- ✅ CallbackPage.jsx: sessionToken을 localStorage에 캐시
+- ✅ auth.js: localStorage session token 사용
+- ✅ Fly.io 배포: https://meki-ws-proxy.fly.dev/ (health ✅)
+- ✅ Vercel 배포: git push main 트리거됨
+
+---
+
 ## 에이전트 세션 로그
 
 각 에이전트는 세션 종료 시 아래에 간략한 요약을 추가해 주세요:
@@ -105,6 +116,7 @@
 [YYYY-MM-DD] <role명> @ <태스크 ID>: <완료한 작업 한 줄 요약> → <결과: 성공/실패>
 ```
 
+[2026-03-08] api_dev @ Phase6.1: ws-handler decryptToken→getGitHubToken 교체, Fly.io 배포(health ✅), Vercel git push 트리거 완료 → 성공
 [2026-02-26] api_dev @ P1-T2: DOMPurify 설치 확인 및 src/utils/sanitize.js 생성 (sanitizeHtml, sanitizeMarkdown 함수 export) → 성공
 [2026-02-26] frontend_dev @ P1-T3: 마크다운 렌더러 3곳에 sanitizeHtml 적용 (MikiEditor.jsx:93, IsolatedPreview.jsx:58, conflict.js:231-233) → 성공
 [2026-02-26] frontend_dev @ P1-T4: src/components/IsolatedPreview.jsx 생성 (blob URL + iframe sandbox, 자동 cleanup, 다크모드 지원) → 성공
