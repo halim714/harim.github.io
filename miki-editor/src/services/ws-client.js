@@ -225,3 +225,19 @@ export function getWsClient() {
     }
     return _instance;
 }
+
+/**
+ * Close and destroy the singleton instance.
+ * Called on logout so the next login gets a fresh, re-authenticated connection.
+ */
+export function resetWsClient() {
+    if (_instance) {
+        _instance.close();
+        _instance = null;
+    }
+}
+
+// Reset on logout so the next login gets a fresh WS session
+if (typeof window !== 'undefined') {
+    window.addEventListener('meki:logout', resetWsClient);
+}

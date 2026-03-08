@@ -14,12 +14,14 @@ import {
 import { useVaultStore } from '../stores/useVaultStore';
 import { VaultService } from './vault';
 
-// WS 인증 에러 시 github 인스턴스 캐시 리셋
+// WS 인증 에러 또는 로그아웃 시 github 인스턴스 캐시 리셋
 if (typeof window !== 'undefined') {
-  window.addEventListener('meki:auth-error', () => {
+  const resetGithubCache = () => {
     githubInstance = null;
     currentToken = null;
-  });
+  };
+  window.addEventListener('meki:auth-error', resetGithubCache);
+  window.addEventListener('meki:logout', resetGithubCache);
 }
 
 // WS 모드용 GitHubService 인터페이스 구현 (ws-client 경유)
@@ -282,8 +284,15 @@ export const storage = {
         );
       }
     } catch (error) {
-      console.warn('GitHub fetch failed (offline?):', error);
-      // 오프라인이거나 에러 시 로컬 데이터만으로 진행
+      console.warn('GitHub fetch failed:', error);
+      // 로컬 DB에 데이터가 있으면 오프라인 폴백, 없으면 에러 노출 (새 브라우저/계정전환 케이스)
+      let localCount = 0;
+      try { localCount = await db.documents.count(); } catch { /* ignore */ }
+      if (localCount === 0) {
+        // 로컬에 아무것도 없는 상태에서 GitHub도 실패 → 에러 노출
+        throw error;
+      }
+      // 로컬 데이터 있음 → 오프라인 폴백 허용
     }
 
     // 2. 로컬 DB 데이터 가져오기

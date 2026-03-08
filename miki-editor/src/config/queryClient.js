@@ -152,4 +152,11 @@ export const handleQueryError = (error, context = '') => {
   };
 };
 
-export default queryClient; 
+// 로그아웃 시 모든 문서 캐시 제거 — 계정 전환 시 이전 계정 문서가 보이는 버그 방지
+if (typeof window !== 'undefined') {
+  window.addEventListener('meki:logout', () => {
+    queryClient.removeQueries();
+  });
+}
+
+export default queryClient;
