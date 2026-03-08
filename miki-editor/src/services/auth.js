@@ -47,6 +47,7 @@ export class AuthService {
         localStorage.removeItem(this.TOKEN_KEY);
         localStorage.removeItem(`${this.TOKEN_KEY}_timestamp`);
         localStorage.removeItem(this.USER_KEY);
+        localStorage.removeItem('meki_session'); // P6.1: Remove local session token
     }
 
     /**
@@ -56,10 +57,16 @@ export class AuthService {
         const wsProxyUrl = import.meta.env.VITE_WS_PROXY_URL || 'ws://localhost:8080';
         const httpProxyUrl = wsProxyUrl.replace(/^wss:/, 'https:').replace(/^ws:/, 'http:');
 
+        // P6.1: Read sessiontoken from localStorage
+        const sessionToken = localStorage.getItem('meki_session');
+        if (!sessionToken) return null;
+
         try {
             const res = await fetch(`${httpProxyUrl}/api/session`, {
                 method: 'GET',
-                credentials: 'include'
+                headers: {
+                    'Authorization': `Bearer ${sessionToken}` // P6.1: Use Bearer auth instead of credentials: 'include'
+                }
             });
             if (!res.ok) {
                 if (res.status === 401) {
@@ -69,10 +76,6 @@ export class AuthService {
             }
             const data = await res.json();
             if (data.valid && data.user) {
-                if (data.sessionId) {
-                    const { setSessionId } = await import('./ws-client');
-                    setSessionId(data.sessionId);
-                }
                 const user = {
                     id: data.user.id,
                     username: data.user.login,

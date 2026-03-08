@@ -19,18 +19,6 @@ const REQUEST_TIMEOUT_MS = 30_000;
 /** @type {WsClient|null} */
 let _instance = null;
 
-/** Session ID received from POST /api/session — included in every WS message */
-let _sessionId = null;
-
-/**
- * Set the session ID to include in WS messages.
- * Called by CallbackPage after successful WS-mode login.
- * @param {string} sid
- */
-export function setSessionId(sid) {
-    _sessionId = sid;
-}
-
 export class WsClient {
     constructor(url) {
         this._url = url;
@@ -61,10 +49,47 @@ export class WsClient {
 
             ws.addEventListener('open', () => {
                 console.log('[ws-client] Connected to', this._url);
-                this._ws = ws;
-                this._reconnectDelay = RECONNECT_BASE_MS;
-                this._connectingPromise = null;
-                resolve(ws);
+
+                // P6.1: Connection established, now must send auth token before returning the socket
+                const token = typeof window !== 'undefined' ? localStorage.getItem('meki_session') : null;
+
+                if (!token) {
+                    console.warn('[ws-client] No session token found. Socket will likely be closed by server.');
+                    this._ws = ws;
+                    resolve(ws);
+                    return;
+                }
+
+                // Send auth message
+                const id = `auth-init-${Date.now()}`;
+                const message = JSON.stringify({ id, action: 'auth', token });
+
+                // Set up a one-time listener or just rely on the main message handler
+                // We'll let the main message handler verify 'success' of this auth ID
+                const authTimeout = setTimeout(() => {
+                    this._pending.delete(id);
+                    console.error('[ws-client] Auth timeout');
+                    ws.close();
+                    resolve(null);
+                }, REQUEST_TIMEOUT_MS);
+
+                this._pending.set(id, {
+                    resolve: () => {
+                        console.log('[ws-client] Auth successful');
+                        this._ws = ws;
+                        this._reconnectDelay = RECONNECT_BASE_MS;
+                        this._connectingPromise = null;
+                        resolve(ws);
+                    },
+                    reject: (err) => {
+                        console.error('[ws-client] Auth failed:', err);
+                        ws.close();
+                        resolve(null);
+                    },
+                    timer: authTimeout
+                });
+
+                ws.send(message);
             });
 
             ws.addEventListener('message', (event) => {
@@ -89,10 +114,10 @@ export class WsClient {
                         code: msg.code,
                         wsError: true
                     });
-                    // Auth errors: clear session and notify app to redirect to login
+                    // Auth errors: notify app to redirect to login
                     if (msg.code === 'UNAUTHENTICATED' || msg.code === 'SESSION_EXPIRED') {
-                        _sessionId = null;
                         if (typeof window !== 'undefined') {
+                            localStorage.removeItem('meki_session');
                             window.dispatchEvent(new CustomEvent('meki:auth-error', { detail: msg.code }));
                         }
                     }
@@ -159,7 +184,7 @@ export class WsClient {
         }
 
         const id = `meki-${Date.now()}-${Math.random().toString(36).slice(2)}`;
-        const message = JSON.stringify({ id, action, payload, sessionId: _sessionId });
+        const message = JSON.stringify({ id, action, payload });
 
         return new Promise((resolve, reject) => {
             const timer = setTimeout(() => {

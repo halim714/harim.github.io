@@ -2,7 +2,6 @@ import React, { useEffect, useState, useRef } from 'react';
 import { useNavigate, useSearchParams } from 'react-router-dom';
 import { AuthService } from '../services/auth';
 import { useAuth } from '../App';
-import { setSessionId } from '../services/ws-client';
 
 export default function CallbackPage() {
     const [searchParams] = useSearchParams();
@@ -74,8 +73,10 @@ export default function CallbackPage() {
                             throw new Error(errData.error || `Session creation failed: ${sessionRes.status}`);
                         }
                         const sessionData = await sessionRes.json();
-                        // sessionId를 메모리에 저장 (WS 메시지 인증에 사용)
-                        if (sessionData.sessionId) setSessionId(sessionData.sessionId);
+                        // P6.1: Store session token in localStorage for WS auth
+                        if (sessionData.sessionToken) {
+                            localStorage.setItem('meki_session', sessionData.sessionToken);
+                        }
                         // 사용자 정보 캐시 (getCachedUser()가 읽을 수 있도록)
                         if (sessionData.user) {
                             const user = {
