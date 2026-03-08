@@ -29,6 +29,7 @@ const { getGitHubToken } = require('./server');
 const MAX_MESSAGE_BYTES = 1 * 1024 * 1024; // 1 MB guard
 const HEARTBEAT_INTERVAL_MS = 30_000;
 const HEARTBEAT_TIMEOUT_MS = 10_000;
+const JWT_SECRET = process.env.JWT_SECRET || 'meki-dev-secret-change-in-production';
 
 // ─── Helpers ───────────────────────────────────────────────────────────────
 
@@ -294,24 +295,17 @@ const ACTION_HANDLERS = {
 /**
  * Dispatch a parsed message to the appropriate handler.
  * Returns a JSON string to send back to the client.
+ * @param {import('ws').WebSocket} ws - Connection object with ws.ghToken bound
+ * @param {object} msg - Parsed message from client
  */
-async function dispatch(msg) {
-    const { id, action, token, sessionId, payload = {} } = msg;
+async function dispatch(ws, msg) {
+    const { id, action, payload = {} } = msg;
 
     if (action === 'ping') {
         return ok(id, { pong: true, ts: Date.now() });
     }
 
-    // UP-3: sessionId가 있으면 서버측 세션 저장소에서 GitHub 토큰 조회
-    // token이 있으면 레거시 호환 (Phase 4 전환 완료 시 제거)
-    let resolvedToken = token;
-    if (sessionId && !token) {
-        resolvedToken = getGitHubToken(sessionId);
-        if (!resolvedToken) {
-            return fail(id, 'Invalid or expired session', 'SESSION_EXPIRED');
-        }
-    }
-
+    const resolvedToken = ws.ghToken;
     if (!resolvedToken) {
         return fail(id, 'Missing authentication token', 'UNAUTHENTICATED');
     }
@@ -372,6 +366,10 @@ function handleWsConnection(ws, req) {
     const remoteIp = req.headers['x-forwarded-for'] || req.socket.remoteAddress;
     console.log(`[ws-handler] Client connected: ${remoteIp}`);
 
+    ws.ghToken = null;
+    ws.wsLogin = null;
+    let authCompleted = false;
+
     // ── Heartbeat ──────────────────────────────────────────────────────────
     ws.isAlive = true;
     ws.on('pong', () => { ws.isAlive = true; });
@@ -425,13 +423,38 @@ function handleWsConnection(ws, req) {
             ws.send(fail(null, 'Missing required field: id', 'BAD_REQUEST'));
             return;
         }
+
+        // P6.1: Connection must authenticate with 'auth' action first
+        if (!authCompleted) {
+            if (msg.action !== 'auth' || !msg.token) {
+                ws.send(fail(msg.id, 'Authentication required before sending commands', 'UNAUTHENTICATED'));
+                ws.close();
+                return;
+            }
+
+            try {
+                const jwtPayload = require('jsonwebtoken').verify(msg.token, JWT_SECRET);
+                const { decryptToken } = require('./server');
+                ws.ghToken = decryptToken(jwtPayload.enc_token);
+                ws.wsLogin = jwtPayload.login;
+                authCompleted = true;
+                ws.send(ok(msg.id, { authenticated: true, login: ws.wsLogin }));
+                console.log(`[ws-handler] Client authenticated: ${remoteIp} (user: ${ws.wsLogin})`);
+                return;
+            } catch (err) {
+                ws.send(fail(msg.id, 'Invalid or expired session', 'UNAUTHENTICATED'));
+                ws.close();
+                return;
+            }
+        }
+
         if (!msg.action) {
             ws.send(fail(msg.id, 'Missing required field: action', 'BAD_REQUEST'));
             return;
         }
 
         try {
-            const response = await dispatch(msg);
+            const response = await dispatch(ws, msg);
             if (ws.readyState === ws.OPEN) {
                 ws.send(response);
             }
