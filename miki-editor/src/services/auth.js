@@ -47,7 +47,10 @@ export class AuthService {
         localStorage.removeItem(this.TOKEN_KEY);
         localStorage.removeItem(`${this.TOKEN_KEY}_timestamp`);
         localStorage.removeItem(this.USER_KEY);
-        localStorage.removeItem('meki_session'); // P6.1: Remove local session token
+        localStorage.removeItem('meki_session');
+        if (typeof window !== 'undefined') {
+            window.dispatchEvent(new CustomEvent('meki:logout'));
+        }
     }
 
     /**

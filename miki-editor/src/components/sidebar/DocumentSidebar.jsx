@@ -677,7 +677,8 @@ const DocumentSidebar = ({
           <div className="text-center py-4 text-gray-500">로딩 중...</div>
         ) : error ? (
           <div className="text-center py-4">
-            <div className="text-red-500 mb-2">문서 목록을 불러오는 중 오류가 발생했습니다.</div>
+            <div className="text-red-500 mb-2 text-sm">GitHub에서 문서를 불러오지 못했습니다.</div>
+            <div className="text-gray-400 mb-3 text-xs">{error.message || '연결을 확인하세요.'}</div>
             <button
               onClick={() => refetch()}
               className="px-3 py-1 bg-blue-500 text-white rounded hover:bg-blue-600"
