@@ -540,6 +540,9 @@ export const storage = {
     // 이제 영구 ID로 저장되므로, 이후 GitHub 저장 시에도 이 ID가 유지됨
     await dbHelpers.saveLocal(docToSave);
 
+    // 인메모리 캐시 무효화 — _backgroundRefresh가 구버전으로 덮어쓰는 것 방지
+    postContentCache.delete(docToSave.id);
+
     // 2.5. optimistic sync.notify — GitHub write 기다리지 않고 즉시 브로드캐스트
     if (import.meta.env.VITE_USE_WS_PROXY === 'true') {
       try {
