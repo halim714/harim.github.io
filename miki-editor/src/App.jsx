@@ -120,14 +120,10 @@ export const useAuth = () => useContext(AuthContext);
 
 import { dbHelpers } from './utils/database';
 import { getPendingSyncProcessor } from './sync';
-import { useQueryClient } from '@tanstack/react-query';
-import { queryKeys } from './config/queryClient';
-import { getWsClient } from './services/ws-client';
 
 function AppContent() {
   const { loading, user, needsSetup } = useAuth();
   const location = useLocation();
-  const queryClient = useQueryClient();
 
   // 오프라인 보류 항목 배치 동기화 (로그인 상태에서만 실행)
   useEffect(() => {
@@ -148,67 +144,6 @@ function AppContent() {
       document.removeEventListener('visibilitychange', handleVisibilityChange);
     };
   }, [user]);
-
-  // 타기기 실시간 동기화: WS 서버 push → React Query 캐시 직접 업데이트
-  useEffect(() => {
-    if (import.meta.env.VITE_USE_WS_PROXY !== 'true' || !user) return;
-
-    const unsubscribe = getWsClient().subscribe('sync:changed',
-      ({ action, phase, docId, title, filename, updatedAt, sha }) => {
-        if (!docId) return;
-        const listKey = queryKeys.documents.lists();
-
-        if (action === 'delete' && phase === 'committed') {
-          // 삭제 confirmed: docId로 직접 캐시 패치
-          queryClient.setQueryData(listKey,
-            old => (old ?? []).filter(d => d.id !== docId));
-
-        } else if (action === 'update') {
-          if (phase === 'optimistic' && title) {
-            // 비Vault optimistic: old ?? []로 캐시 없어도 엔트리 생성
-            // Vault 모드는 title 없어 이 분기에 진입 안 함 (의도적)
-            queryClient.setQueryData(listKey, old => {
-              const list = old ?? [];
-              const existing = list.find(d => d.id === docId);
-              if (existing?.updatedAt > updatedAt) return list; // stale 무시
-              const updated = { ...existing, id: docId, title, filename, updatedAt, source: 'ws-optimistic' };
-              return existing
-                ? list.map(d => d.id === docId ? updated : d)
-                : [updated, ...list];
-            });
-
-          } else if (phase === 'committed') {
-            if (title) {
-              // 비Vault committed: SHA/filename 포함 최종 캐시 패치
-              queryClient.setQueryData(listKey, old => {
-                const list = old ?? [];
-                const existing = list.find(d => d.id === docId);
-                if (existing?.sha === sha) return list; // 이미 최신
-                const updated = { ...existing, id: docId, title, filename, updatedAt, sha, source: 'github' };
-                return existing
-                  ? list.map(d => d.id === docId ? updated : d)
-                  : [updated, ...list];
-              });
-            } else {
-              // Vault committed: docId만 수신 → refetchType:'all'로 inactive query도 즉시 재조회
-              queryClient.invalidateQueries({ queryKey: listKey, refetchType: 'all' });
-            }
-
-          } else if (phase === 'failed') {
-            // GitHub write 실패: ws-optimistic 신규 항목 제거 + invalidate로 복구
-            // - 새 문서(ws-optimistic 추가): 캐시에서 제거
-            // - 기존 문서 업데이트 실패: invalidate가 GitHub 상태로 복원
-            queryClient.setQueryData(listKey, old =>
-              old?.filter(d => !(d.id === docId && d.source === 'ws-optimistic')) ?? old
-            );
-            queryClient.invalidateQueries({ queryKey: listKey, refetchType: 'all' });
-          }
-        }
-      }
-    );
-
-    return () => unsubscribe();
-  }, [user, queryClient]);
 
   // 🛡️ 종료 방지: 브라우저 종료 직전 강제 flush + 미동기화 경고
   useEffect(() => {

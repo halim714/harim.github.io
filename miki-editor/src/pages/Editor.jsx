@@ -70,6 +70,7 @@ const extractTitleFromContent = (content) => {
 };
 
 import { generateDocumentId, isTemporaryId } from '../utils/id-generator';
+import { getWsClient } from '../services/ws-client';
 
 const createNewMemo = () => {
   const id = generateDocumentId(); // UUID 즉시 생성
@@ -110,6 +111,70 @@ function AppContent() {
   const { data: documentsData, isLoading: isLoadingDocuments, error: documentsError, refetch: refetchDocuments } = useDocuments();
   const { currentDocument, setCurrentDocument, addDocument } = useDocumentStore();
   const queryClient = useQueryClient();
+
+  // 타기기 실시간 동기화: WS 서버 push → React Query 캐시 직접 업데이트
+  useEffect(() => {
+    if (import.meta.env.VITE_USE_WS_PROXY !== 'true') return;
+
+    const unsubscribe = getWsClient().subscribe('sync:changed',
+      ({ action, phase, docId, title: syncTitle, filename, updatedAt, sha }) => {
+        if (!docId) return;
+        const listKey = queryKeys.documents.lists();
+
+        if (action === 'delete' && phase === 'committed') {
+          queryClient.setQueryData(listKey,
+            old => (old ?? []).filter(d => d.id !== docId));
+
+        } else if (action === 'update') {
+          if (phase === 'optimistic' && syncTitle) {
+            // 비Vault optimistic: old ?? []로 캐시 없어도 엔트리 생성
+            queryClient.setQueryData(listKey, old => {
+              const list = old ?? [];
+              const existing = list.find(d => d.id === docId);
+              if (existing?.updatedAt > updatedAt) return list; // stale 무시
+              const updated = { ...existing, id: docId, title: syncTitle, filename, updatedAt, source: 'ws-optimistic' };
+              return existing
+                ? list.map(d => d.id === docId ? updated : d)
+                : [updated, ...list];
+            });
+
+          } else if (phase === 'committed') {
+            if (syncTitle) {
+              // 비Vault committed: SHA/filename 포함 최종 캐시 패치
+              queryClient.setQueryData(listKey, old => {
+                const list = old ?? [];
+                const existing = list.find(d => d.id === docId);
+                if (existing?.sha === sha) return list; // 이미 최신
+                const updated = { ...existing, id: docId, title: syncTitle, filename, updatedAt, sha, source: 'github' };
+                return existing
+                  ? list.map(d => d.id === docId ? updated : d)
+                  : [updated, ...list];
+              });
+            } else {
+              // Vault committed: refetchType:'all'로 inactive query도 즉시 재조회
+              queryClient.invalidateQueries({ queryKey: listKey, refetchType: 'all' });
+            }
+
+          } else if (phase === 'failed') {
+            // ws-optimistic 신규 항목 제거 + invalidate로 복구
+            queryClient.setQueryData(listKey, old =>
+              old?.filter(d => !(d.id === docId && d.source === 'ws-optimistic')) ?? old
+            );
+            queryClient.invalidateQueries({ queryKey: listKey, refetchType: 'all' });
+          }
+        }
+      }
+    );
+
+    // meki:logout 시 구독 해제 (resetWsClient 전에 cleanup)
+    const handleLogout = () => unsubscribe();
+    window.addEventListener('meki:logout', handleLogout);
+
+    return () => {
+      unsubscribe();
+      window.removeEventListener('meki:logout', handleLogout);
+    };
+  }, [queryClient]);
 
   // 🔥 NEW: Phantom Document 상태 관리
   const { setPhantomTrustLevel, removePhantom } = usePhantomDocument();
