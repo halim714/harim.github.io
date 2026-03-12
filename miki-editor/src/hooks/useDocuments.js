@@ -6,7 +6,11 @@ import { storage } from '../utils/storage-client'; // storage-client 임포트
 export function useDocuments() {
   return useQuery({
     queryKey: queryKeys.documents.lists(),
-    queryFn: () => storage.getPostList(), // storage.getPostList() 사용
+    queryFn: () => storage.getPostList(),
+    // GitHub-first: 탭 포커스 복귀 시 재동기화 (다른 기기에서 저장한 내용 반영)
+    refetchOnWindowFocus: true,
+    // 5분 캐시 — 같은 탭 내 잦은 재조회 방지, 단 5분 후엔 GitHub 재조회
+    staleTime: 5 * 60 * 1000,
   });
 }
 

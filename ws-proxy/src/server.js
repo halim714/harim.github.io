@@ -33,31 +33,38 @@ const ALLOWED_ORIGINS = [
     /^http:\/\/127\.0\.0\.1:\d+$/,
 ];
 
-// ─── Server-side Session Store (UP-3: ghToken을 JWT에서 제거) ───────────────
-// key: sessionId (uuid), value: { ghToken, login, createdAt }
-const sessionStore = new Map();
+// ─── Token Encryption (서버 재시작에도 세션 유지) ────────────────────────────
+// ghToken을 AES-256-GCM으로 암호화하여 JWT payload에 포함.
+// 서버 메모리에 의존하지 않으므로 Fly.io 재시작 후에도 세션이 유지됨.
+const crypto = require('crypto');
+const TOKEN_ENC_SECRET = process.env.TOKEN_ENC_SECRET || JWT_SECRET;
+// 32바이트 키 도출 (PBKDF2 대신 단순 sha256 — 성능 우선)
+const ENC_KEY = crypto.createHash('sha256').update(TOKEN_ENC_SECRET).digest(); // 32 bytes
 
-/**
- * Retrieve the GitHub token for a given session ID.
- * Used by ws-handler.js to authenticate GitHub API calls.
- * @param {string} sessionId
- * @returns {string|null}
- */
+function encryptToken(plaintext) {
+    const iv = crypto.randomBytes(12);
+    const cipher = crypto.createCipheriv('aes-256-gcm', ENC_KEY, iv);
+    const encrypted = Buffer.concat([cipher.update(plaintext, 'utf8'), cipher.final()]);
+    const tag = cipher.getAuthTag();
+    return Buffer.concat([iv, tag, encrypted]).toString('base64url');
+}
+
+function decryptToken(ciphertext) {
+    const buf = Buffer.from(ciphertext, 'base64url');
+    const iv = buf.subarray(0, 12);
+    const tag = buf.subarray(12, 28);
+    const data = buf.subarray(28);
+    const decipher = crypto.createDecipheriv('aes-256-gcm', ENC_KEY, iv);
+    decipher.setAuthTag(tag);
+    return Buffer.concat([decipher.update(data), decipher.final()]).toString('utf8');
+}
+
+// 하위 호환: sessionStore는 유지하되, JWT enc_token이 우선
+const sessionStore = new Map();
 function getGitHubToken(sessionId) {
     const entry = sessionStore.get(sessionId);
     return entry ? entry.ghToken : null;
 }
-
-// Clean up expired sessions every hour
-setInterval(() => {
-    const now = Date.now();
-    const maxAge = 8 * 60 * 60 * 1000; // 8h
-    for (const [id, entry] of sessionStore) {
-        if (now - entry.createdAt > maxAge) {
-            sessionStore.delete(id);
-        }
-    }
-}, 60 * 60 * 1000);
 
 // ─── Helpers ───────────────────────────────────────────────────────────────
 
@@ -141,10 +148,9 @@ router.post('/api/session', express.json(), async (req, res) => {
         return res.status(502).json({ error: 'GitHub API unavailable', code: 'GITHUB_UNAVAILABLE' });
     }
 
-    // UP-3: GitHub 토큰을 JWT에 넣지 않고 서버 메모리에 저장
-    const crypto = require('crypto');
     const sessionId = crypto.randomUUID();
 
+    // 서버 메모리에도 저장 (하위 호환)
     sessionStore.set(sessionId, {
         ghToken: githubToken,
         login: user.login,
@@ -154,7 +160,8 @@ router.post('/api/session', express.json(), async (req, res) => {
     const payload = {
         sub: String(user.id),
         login: user.login,
-        sid: sessionId   // JWT에는 sessionId만 포함 (ghToken 제거)
+        sid: sessionId,
+        enc_token: encryptToken(githubToken)  // 서버 재시작 후에도 복호화 가능
     };
 
     const sessionToken = jwt.sign(payload, JWT_SECRET, { expiresIn: JWT_EXPIRES });
@@ -255,4 +262,4 @@ function createApp() {
     return app;
 }
 
-module.exports = { createApp, getGitHubToken };
+module.exports = { createApp, getGitHubToken, decryptToken };
