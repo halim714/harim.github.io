@@ -153,6 +153,7 @@ async function handleGetFilesWithMeta(octokit, username, payload) {
 
     return entries.map(entry => ({
         name: entry.name,
+        path: `${path}/${entry.name}`,
         sha: entry.oid,
         text: entry.object?.text || ''
     }));
