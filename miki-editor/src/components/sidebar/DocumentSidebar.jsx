@@ -711,6 +711,12 @@ const DocumentSidebar = ({
                 <li
                   key={post._renderKey || post.id}
                   className={`py-3 px-3 hover:bg-gray-50 focus:outline-none focus:bg-gray-50 transition-colors duration-150 border-b last:border-b-0 leading-tight ${selectedClass} ${phantomClass}`}
+                  onMouseEnter={() => {
+                    if (import.meta.env.VITE_USE_WS_PROXY === 'true' && storage.prefetchPost
+                        && currentDocument?.id !== post.id) {
+                      storage.prefetchPost(post.id);
+                    }
+                  }}
                 >
                   <button
                     onClick={() => handleDocumentClick(post)}
