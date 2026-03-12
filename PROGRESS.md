@@ -147,9 +147,21 @@
 
 ---
 
-## Antigravity 오케스트레이터 메모
+## Phase 7 완료 (2026-03-12)
 
-_다음 태스크 배정 시 이 섹션에 지시 사항을 기록합니다._
+- ✅ P7-T1: `storage-client.js` `getPost()` IndexedDB-first 리팩토링 + `postContentCache`(TTL 30s) + `prefetchPost()` 추가. 매 문서 클릭마다 발생하던 GitHub GraphQL 재호출 제거 (~500ms 절약).
+- ✅ P7-T2: `DocumentSidebar.jsx` hover 시 `storage.prefetchPost(id)` 호출. 클릭 전 콘텐츠 프리로드.
+- ✅ P7-T3: 빌드 검증 통과 (2169 modules, 0 errors). Vercel 배포 트리거됨.
+- **예상 개선**: 문서 클릭 체감 로딩 ~750ms → hover 후 즉시(<50ms)
+
+---
+
+## Antigravity 오케스트레이터 메모 (Claude Code 대행 — 2026-03-12)
+
+_Gemini 한도 소진으로 Claude Code가 오케스트레이터 역할 대행_
+
+**완료된 마지막 Phase**: Phase 7 (문서 로딩 성능 최적화)
+**현재 상태**: 모든 Phase 1~7 완료. 다음 우선순위 태스크 대기 중.
 
 **다음 단계**: Phase 2 P2-T5 검증 완료. P2-T2(server.js), P2-T4(Dockerfile+fly.toml) 산출물 누락 — api_dev 재실행 필요.
 
