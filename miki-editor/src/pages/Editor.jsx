@@ -598,8 +598,19 @@ function AppContent() {
   }, [setCurrentDocument, refetchDocuments, currentDocument, content, title, manualSave]);
 
   // 새 글 생성
-  const newPost = useCallback(() => {
+  const newPost = useCallback(async () => {
     logger.info('🚀 [NEW-POST] 새 글 생성 시작');
+
+    // 현재 문서에 내용이 있으면 먼저 저장 (타이머 취소 전에)
+    if (currentDocument && !currentDocument.isEmpty && content.trim()) {
+      logger.info('💾 [NEW-POST] 현재 문서 저장 중...');
+      try {
+        await manualSave();
+        logger.info('✅ [NEW-POST] 현재 문서 저장 완료');
+      } catch (err) {
+        logger.error('⚠️ [NEW-POST] 저장 실패 - 새글 생성은 계속 진행:', err);
+      }
+    }
 
     try {
       const newMemo = createNewMemo();
@@ -649,7 +660,7 @@ function AppContent() {
     } catch (error) {
       logger.error('❌ [NEW-POST] 새 글 생성 중 오류:', error);
     }
-  }, [setCurrentDocument, queryClient]);
+  }, [setCurrentDocument, queryClient, manualSave, currentDocument, content]);
 
   // 앱 최초 진입 시 자동으로 새 문서에서 시작
   useEffect(() => {
