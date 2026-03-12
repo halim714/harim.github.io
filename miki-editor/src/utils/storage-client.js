@@ -148,6 +148,9 @@ const saveDebouncer = new DebounceMap();
 const postContentCache = new Map(); // docId → { data, timestamp }
 const POST_CACHE_TTL_MS = 30_000; // 30초
 
+// 초기 로드 1회만 getPostList() 결과로 캐시 워밍 (이후 refetch는 캐시 덮어쓰기 금지)
+let initialCacheWarmingDone = false;
+
 // 🗑️ 백그라운드 파일 정리 큐
 class CleanupQueue {
   constructor() {
@@ -245,6 +248,26 @@ export const storage = {
             docId = filename;
           }
 
+          // ⚡ 초기 로드 시 전체 콘텐츠를 캐시에 워밍 — 클릭 즉시 반환 가능하게 함
+          // getFilesWithMetadata(GraphQL)이 이미 f.text로 전체 내용을 가져왔으므로 추가 비용 없음
+          // initialCacheWarmingDone 플래그로 이후 refetch 시 덮어쓰기 방지 (사용자 편집 내용 보호)
+          if (!initialCacheWarmingDone && !postContentCache.has(docId)) {
+            postContentCache.set(docId, {
+              data: {
+                id: docId,
+                filename,
+                title: frontMatter.title || extractTitle(body) || filename.replace(/-/g, ' '),
+                content: body,
+                frontMatter,
+                sha: f.sha,
+                updatedAt: frontMatter.updatedAt || new Date().toISOString(),
+                createdAt: frontMatter.createdAt || new Date().toISOString(),
+                metadata: extractMetadata(decryptedText)
+              },
+              timestamp: Date.now()
+            });
+          }
+
           return {
             id: docId,
             sha: f.sha,
@@ -286,6 +309,12 @@ export const storage = {
             return acc;
           }, {})
         );
+
+        // 초기 워밍 완료 마킹 — 이후 refetch는 캐시를 덮어쓰지 않음
+        if (!initialCacheWarmingDone) {
+          initialCacheWarmingDone = true;
+          console.log(`⚡ [getPostList] 초기 캐시 워밍 완료: ${githubPosts.length}개 문서`);
+        }
       }
     } catch (error) {
       console.warn('GitHub fetch failed:', error);
