@@ -31,6 +31,33 @@ const HEARTBEAT_INTERVAL_MS = 30_000;
 const HEARTBEAT_TIMEOUT_MS = 10_000;
 const JWT_SECRET = process.env.JWT_SECRET || 'meki-dev-secret-change-in-production';
 
+// ─── Client registry (per-login broadcast) ─────────────────────────────────
+
+const clientsByLogin = new Map(); // login → Set<WebSocket>
+
+function registerClient(login, ws) {
+    if (!clientsByLogin.has(login)) clientsByLogin.set(login, new Set());
+    clientsByLogin.get(login).add(ws);
+}
+
+function deregisterClient(login, ws) {
+    const set = clientsByLogin.get(login);
+    if (!set) return;
+    set.delete(ws);
+    if (set.size === 0) clientsByLogin.delete(login);
+}
+
+function broadcastToLogin(login, senderWs, message) {
+    const set = clientsByLogin.get(login);
+    if (!set) return;
+    const payload = JSON.stringify(message);
+    for (const ws of set) {
+        if (ws !== senderWs && ws.readyState === ws.OPEN) {
+            try { ws.send(payload); } catch { /* ignore dead socket */ }
+        }
+    }
+}
+
 // ─── Helpers ───────────────────────────────────────────────────────────────
 
 /**
@@ -311,6 +338,18 @@ async function dispatch(ws, msg) {
         return fail(id, 'Missing authentication token', 'UNAUTHENTICATED');
     }
 
+    // sync.notify: broadcast metadata to other devices of same user
+    if (action === 'sync.notify') {
+        if (ws.wsLogin) {
+            broadcastToLogin(ws.wsLogin, ws, {
+                type: 'sync:changed',
+                ts: Date.now(),
+                ...payload  // action, phase, docId, title, filename, updatedAt, sha
+            });
+        }
+        return ok(id, { notified: true });
+    }
+
     const handler = ACTION_HANDLERS[action];
     if (!handler) {
         return fail(id, `Unknown action: ${action}`, 'UNKNOWN_ACTION');
@@ -396,11 +435,13 @@ function handleWsConnection(ws, req) {
 
     ws.on('close', () => {
         clearInterval(heartbeat);
+        if (ws.wsLogin) deregisterClient(ws.wsLogin, ws);
         console.log(`[ws-handler] Client disconnected: ${remoteIp}`);
     });
 
     ws.on('error', (err) => {
         clearInterval(heartbeat);
+        if (ws.wsLogin) deregisterClient(ws.wsLogin, ws);
         console.error(`[ws-handler] Error from ${remoteIp}:`, err.message);
     });
 
@@ -444,6 +485,7 @@ function handleWsConnection(ws, req) {
                 ws.ghToken = ghToken;
                 ws.wsLogin = jwtPayload.login;
                 authCompleted = true;
+                registerClient(ws.wsLogin, ws);
                 ws.send(ok(msg.id, { authenticated: true, login: ws.wsLogin }));
                 console.log(`[ws-handler] Client authenticated: ${remoteIp} (user: ${ws.wsLogin})`);
                 return;

@@ -26,6 +26,8 @@ export class WsClient {
         this._ws = null;
         /** @type {Map<string, { resolve: Function, reject: Function, timer: ReturnType<typeof setTimeout> }>} */
         this._pending = new Map();
+        /** @type {Map<string, Function[]>} */
+        this._subscriptions = new Map();
         this._reconnectDelay = RECONNECT_BASE_MS;
         this._intentionalClose = false;
         /** @type {Promise<WebSocket|null>|null} */
@@ -101,6 +103,12 @@ export class WsClient {
                     return;
                 }
 
+                // Server push: no id, has type (e.g. sync:changed)
+                if (!msg.id && msg.type) {
+                    this._handlePush(msg);
+                    return;
+                }
+
                 const entry = this._pending.get(msg.id);
                 if (!entry) return; // unsolicited or already timed out
 
@@ -161,6 +169,35 @@ export class WsClient {
             entry.reject(new Error(reason));
         }
         this._pending.clear();
+    }
+
+    // ── Push subscriptions ─────────────────────────────────────────────────
+
+    _handlePush(msg) {
+        const callbacks = this._subscriptions.get(msg.type);
+        if (!callbacks) return;
+        for (const cb of callbacks) {
+            try { cb(msg); } catch (e) {
+                console.error('[ws-client] Push subscriber error:', e);
+            }
+        }
+    }
+
+    /**
+     * Subscribe to server-push messages of a given type.
+     * @param {string} type - Message type (e.g. 'sync:changed')
+     * @param {Function} callback - Called with the full message object
+     * @returns {Function} Unsubscribe function
+     */
+    subscribe(type, callback) {
+        if (!this._subscriptions.has(type)) this._subscriptions.set(type, []);
+        this._subscriptions.get(type).push(callback);
+        return () => {
+            const cbs = this._subscriptions.get(type);
+            if (!cbs) return;
+            const idx = cbs.indexOf(callback);
+            if (idx !== -1) cbs.splice(idx, 1);
+        };
     }
 
     // ── Public API ─────────────────────────────────────────────────────────
