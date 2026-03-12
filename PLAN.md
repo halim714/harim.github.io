@@ -84,6 +84,22 @@ _Phase 2~4 안정화 후 착수_
 
 ---
 
+---
+
+## Phase 7: 문서 로딩 성능 최적화 🔄 진행중
+
+> 병목 분석 결과 (2026-03-12): `getPost()` 내부 `getPostList()` 재호출이 매 문서 클릭마다 500ms GitHub GraphQL 낭비. IndexedDB-first 전략 + 인메모리 캐시 + hover prefetch로 체감 로딩을 ~750ms → <100ms로 단축.
+
+| 태스크 ID | 담당 Role | 작업 내용 | 상태 |
+|---|---|---|---|
+| P7-T1 | `api_dev` | `storage-client.js` `getPost()` 리팩토링 — IndexedDB-first 파일명 조회 + 인메모리 포스트 캐시(TTL 30s) + `prefetchPost()` 퍼블릭 메서드 추가 | ✅ 완료 |
+| P7-T2 | `frontend_dev` | `Editor.jsx` 문서 목록 hover prefetch — 마우스오버 시 `storage.prefetchPost(id)` 호출로 클릭 전 콘텐츠 프리로드 | ✅ 완료 |
+| P7-T3 | `test_verify` | 빌드 검증 + 문서 로딩 플로우 코드 리뷰 (P7-T1/T2 의존) | ✅ 완료 |
+
+**Phase 7 완료 기준**: 빌드 성공, 문서 클릭 시 `getPostList()` 네트워크 호출 0회 (IndexedDB 캐시 hit 확인), hover 시 prefetch 동작
+
+---
+
 ## 상태 범례
 - ⬜ 미시작
 - 🔄 진행중 (PROGRESS.md 참고)

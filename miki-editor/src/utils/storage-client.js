@@ -144,6 +144,10 @@ class DebounceMap {
 
 const saveDebouncer = new DebounceMap();
 
+// 인메모리 포스트 콘텐츠 캐시 (hover prefetch 결과 재사용)
+const postContentCache = new Map(); // docId → { data, timestamp }
+const POST_CACHE_TTL_MS = 30_000; // 30초
+
 // 🗑️ 백그라운드 파일 정리 큐
 class CleanupQueue {
   constructor() {
@@ -363,26 +367,34 @@ export const storage = {
   },
 
   async getPost(id) {
-    const github = await getGithub();
-    const postList = await this.getPostList();
-    const post = postList.find(p => p.id === id);
+    // 1. 인메모리 캐시 확인 (hover prefetch 결과 재사용)
+    const cached = postContentCache.get(id);
+    if (cached && (Date.now() - cached.timestamp) < POST_CACHE_TTL_MS) {
+      console.log(`⚡ [getPost] 인메모리 캐시 hit: ${id.substring(0, 8)}`);
+      return cached.data;
+    }
 
-    // ✅ Optimistic Filename Creation
+    const github = await getGithub();
+
+    // 2. IndexedDB에서 filename 조회 (네트워크 없음, ~2ms)
     let filename;
-    if (!post) {
-      // 1순위: 로컬 캐시 확인 (IndexedDB)
-      const localDoc = await db.documents.where('docId').equals(id).first();
-      if (localDoc && localDoc.filename) {
-        filename = localDoc.filename;
-        console.log(`📦 [getPost] 로컬 캐시에서 filename 복구: ${filename}`);
+    const localDoc = await db.documents.where('docId').equals(id).first();
+    if (localDoc?.filename) {
+      filename = localDoc.filename;
+      console.log(`📦 [getPost] IndexedDB filename 캐시 hit: ${filename}`);
+    } else {
+      // 3. IndexedDB 미스 시만 GitHub 목록 조회 (첫 로드·새 기기 등 희귀 케이스)
+      console.log(`🌐 [getPost] IndexedDB 미스 → getPostList() 호출`);
+      const postList = await this.getPostList();
+      const post = postList.find(p => p.id === id);
+      if (post?.filename) {
+        filename = post.filename;
       } else {
-        // 2순위: createdAt 기반 예상 파일명 생성
+        // 예상 파일명 생성 (최후 수단)
         const now = new Date().toISOString();
         filename = generateFilename(now, '새 메모', id);
         console.log(`🔮 [getPost] 예상 filename 생성: ${filename}`);
       }
-    } else {
-      filename = post.filename;
     }
 
     console.log(`Fetching post: docId=${id}, filename=${filename}`);
@@ -431,7 +443,7 @@ export const storage = {
         }
       }
 
-      return {
+      const result = {
         id: frontMatter.docId || id,
         filename: filename,
         title: frontMatter.title || metadata.title || id,
@@ -442,6 +454,10 @@ export const storage = {
         updatedAt: frontMatter.updatedAt || new Date().toISOString(),
         wasMigrated: needsMigration // 디버깅용
       };
+
+      // 결과를 인메모리 캐시에 저장 (prefetchPost 결과 재사용용)
+      postContentCache.set(id, { data: result, timestamp: Date.now() });
+      return result;
     } catch (error) {
       if (error.status === 404) {
         throw new Error(`문서를 찾을 수 없습니다: ${id} (filename: ${filename})`);
@@ -449,6 +465,18 @@ export const storage = {
       console.error(`Failed to fetch post ${id}:`, error);
       throw new Error(`문서를 불러올 수 없습니다: ${error.message}`);
     }
+  },
+
+  /**
+   * 문서 콘텐츠를 백그라운드로 미리 로드합니다 (hover prefetch용).
+   * 결과는 postContentCache에 저장되어 이후 getPost() 호출 시 즉시 반환됩니다.
+   */
+  async prefetchPost(id) {
+    // 이미 캐시가 유효하면 건너뜀
+    const cached = postContentCache.get(id);
+    if (cached && (Date.now() - cached.timestamp) < POST_CACHE_TTL_MS) return;
+
+    this.getPost(id).catch(() => { /* prefetch 실패는 무시 */ });
   },
 
   // 🟢 [New] Local-First 래퍼 함수

@@ -116,6 +116,7 @@
 [YYYY-MM-DD] <role명> @ <태스크 ID>: <완료한 작업 한 줄 요약> → <결과: 성공/실패>
 ```
 
+[2026-03-12] api_dev @ P7-T1: storage-client getPost() IndexedDB-first 리팩토링 + postContentCache(TTL 30s) + prefetchPost() 추가. getPostList() 재호출 제거. 빌드 성공 → 성공
 [2026-03-08] api_dev @ Phase6.1: ws-handler decryptToken→getGitHubToken 교체, Fly.io 배포(health ✅), Vercel git push 트리거 완료 → 성공
 [2026-02-26] api_dev @ P1-T2: DOMPurify 설치 확인 및 src/utils/sanitize.js 생성 (sanitizeHtml, sanitizeMarkdown 함수 export) → 성공
 [2026-02-26] frontend_dev @ P1-T3: 마크다운 렌더러 3곳에 sanitizeHtml 적용 (MikiEditor.jsx:93, IsolatedPreview.jsx:58, conflict.js:231-233) → 성공
@@ -141,6 +142,7 @@
 [2026-03-05] api_dev @ P4-T0a: auth.js 듀얼모드 리팩토링 (isWsMode, getToken→null in WS, saveToken→no-op in WS, hasLegacyToken 추가, getCurrentUser→getCachedUser in WS), 8개 소비자 파일 WS 분기 추가 (App.jsx/usePublish.js/useAttachment.js/storage-client.js/OnboardingSetup.jsx/verify-setup.js/functional-test.js), 빌드 성공 (2158 modules, 0 errors) → 성공
 [2026-03-01] api_dev @ P2-wiring: ws-proxy/src/index.js에 createApp() 배선 — Express app을 http.createServer()에 연결, /health + /api/session 실구동 검증 완료 → 성공
 [2026-02-27] api_dev @ P2-T1: ws-proxy/ 디렉토리 생성, package.json + src/index.js (Express + ws 부트스트랩) + README.md 작성 → 성공
+[2026-03-12] frontend_dev @ P7-T2: Editor.jsx 문서 목록 항목에 onMouseEnter → storage.prefetchPost(id) hover prefetch 추가. 빌드 성공 → 성공
 [2026-02-26] test_verify @ P1-T6: Phase 1 전체 검증 (XSS 차단, DOMPurify 적용, PKCE 적용, iframe sandbox, CSP headers, 빌드 성공, 보안 감사) → 성공
 
 ---
