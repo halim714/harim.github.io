@@ -376,12 +376,32 @@ export const storage = {
 
     const github = await getGithub();
 
-    // 2. IndexedDB에서 filename 조회 (네트워크 없음, ~2ms)
+    // 2. IndexedDB에서 filename + content 조회 (~2ms)
     let filename;
     const localDoc = await db.documents.where('docId').equals(id).first();
     if (localDoc?.filename) {
       filename = localDoc.filename;
       console.log(`📦 [getPost] IndexedDB filename 캐시 hit: ${filename}`);
+
+      // ⚡ IndexedDB-first: content가 있으면 즉시 반환 (first-click <5ms)
+      if (localDoc?.content) {
+        const result = {
+          id: localDoc.docId,
+          filename: localDoc.filename,
+          title: localDoc.title || '새 메모',
+          content: localDoc.content,
+          frontMatter: localDoc.frontMatter || {},
+          sha: undefined, // IndexedDB에 SHA 미저장, 저장 시 _savePostToGitHub가 재조회
+          updatedAt: localDoc.updatedAt || new Date().toISOString(),
+          createdAt: localDoc.frontMatter?.createdAt || localDoc.updatedAt,
+          metadata: extractMetadata(localDoc.content)
+        };
+        postContentCache.set(id, { data: result, timestamp: Date.now() });
+        // 백그라운드 GitHub 동기화 — UI 차단 없이 postContentCache 최신화
+        this._backgroundRefresh(id, filename).catch(() => {});
+        console.log(`⚡ [getPost] IndexedDB-first 반환: ${id.substring(0, 8)}`);
+        return result;
+      }
     } else {
       // 3. IndexedDB 미스 시만 GitHub 목록 조회 (첫 로드·새 기기 등 희귀 케이스)
       console.log(`🌐 [getPost] IndexedDB 미스 → getPostList() 호출`);
@@ -479,6 +499,34 @@ export const storage = {
     this.getPost(id).catch(() => { /* prefetch 실패는 무시 */ });
   },
 
+  /**
+   * 백그라운드 GitHub 동기화 — IndexedDB-first 반환 후 postContentCache를 최신화.
+   * UI를 차단하지 않으며, 실패(새 문서 404, 오프라인 등)는 조용히 무시.
+   */
+  async _backgroundRefresh(id, filename) {
+    try {
+      const github = await getGithub();
+      const file = await github.getFile('miki-data', `miki-editor/posts/${filename}.md`);
+      let rawContent = decodeContent(file.content);
+      const content = await decryptContentIfNeeded(rawContent);
+      const { data: frontMatter, content: body } = parseFrontMatter(content);
+      const metadata = extractMetadata(content);
+      const result = {
+        id,
+        filename,
+        title: frontMatter.title || '새 메모',
+        content: body,
+        frontMatter,
+        sha: file.sha,
+        updatedAt: frontMatter.updatedAt || new Date().toISOString(),
+        createdAt: frontMatter.createdAt,
+        metadata
+      };
+      postContentCache.set(id, { data: result, timestamp: Date.now() });
+      console.log(`🔄 [backgroundRefresh] 캐시 갱신: ${id.substring(0, 8)}`);
+    } catch { /* 실패 무시 — 새 문서 404, 오프라인 등 정상 케이스 */ }
+  },
+
   // 🟢 [New] Local-First 래퍼 함수
   async savePost(post) {
     let docToSave = { ...post };
@@ -543,8 +591,10 @@ export const storage = {
 
     // 4. UI에는 즉시 성공 응답 (기다리지 않음)
     // 🟢 [Fix] 변경된 ID가 포함된 docToSave를 반환하여 에디터가 ID를 업데이트하도록 함
+    // isEmpty: false — 저장 완료 시점에 phantom 플래그 해제 (문서 전환 시 오삭제 방지)
     return {
       ...docToSave,
+      isEmpty: false,
       updatedAt: new Date().toISOString(),
       syncStatus: 'pending'
     };
