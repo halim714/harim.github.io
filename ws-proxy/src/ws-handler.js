@@ -22,7 +22,7 @@
 'use strict';
 
 const { Octokit } = require('@octokit/rest');
-const { getGitHubToken } = require('./server');
+const { getGitHubToken, decryptToken } = require('./server');
 
 // ─── Constants ─────────────────────────────────────────────────────────────
 
@@ -434,7 +434,11 @@ function handleWsConnection(ws, req) {
 
             try {
                 const jwtPayload = require('jsonwebtoken').verify(msg.token, JWT_SECRET);
-                const ghToken = getGitHubToken(jwtPayload.sid);
+                // sessionStore 우선 (메모리 있음), 없으면 JWT 내 enc_token 복호화 (서버 재시작 후)
+                let ghToken = getGitHubToken(jwtPayload.sid);
+                if (!ghToken && jwtPayload.enc_token) {
+                    ghToken = decryptToken(jwtPayload.enc_token);
+                }
                 if (!ghToken) throw new Error('Session not found or expired');
                 ws.ghToken = ghToken;
                 ws.wsLogin = jwtPayload.login;
