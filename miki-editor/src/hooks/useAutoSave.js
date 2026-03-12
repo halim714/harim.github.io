@@ -77,6 +77,10 @@ const useAutoSave = ({
       // "변경되지 않음" 상태로 초기화
       setHasUnsavedChanges(false);
 
+      // 저장 상태를 초기화 — 이전 문서의 "N분 전 저장됨" 표시 방지
+      setSaveStatus('saved');
+      setLastSaved(null);
+
       // 혹시 예약된 자동저장이 있다면 취소 (이전 문서의 잔여 작업 방지)
       if (saveTimeoutRef.current) {
         clearTimeout(saveTimeoutRef.current);
