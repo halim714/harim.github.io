@@ -464,6 +464,20 @@ export const storage = {
     // 이제 영구 ID로 저장되므로, 이후 GitHub 저장 시에도 이 ID가 유지됨
     await dbHelpers.saveLocal(docToSave);
 
+    // 2.5. optimistic sync.notify — GitHub write 기다리지 않고 즉시 브로드캐스트
+    if (import.meta.env.VITE_USE_WS_PROXY === 'true') {
+      try {
+        const vaultState = useVaultStore.getState();
+        const vaultActive = vaultState.isVaultReady && !!vaultState.cryptoKey;
+        const notifyPayload = vaultActive
+          ? { action: 'update', phase: 'optimistic', docId: docToSave.id }
+          : { action: 'update', phase: 'optimistic', docId: docToSave.id,
+              title: docToSave.title,
+              updatedAt: docToSave.updatedAt || new Date().toISOString() };
+        getWsClient().request('sync.notify', notifyPayload).catch(() => {});
+      } catch { /* ignore — sync is best-effort */ }
+    }
+
     // 3. GitHub 저장은 백그라운드 + 디바운스 (5초)
     // 문서 ID별로 타이머가 따로 돌아가므로 A문서 저장이 B문서 저장을 방해하지 않음
     saveDebouncer.run(docToSave.id, async () => {
@@ -487,6 +501,14 @@ export const storage = {
           console.log(`📥 [pendingSync] 재시도 큐 등록: ${docToSave.id}`);
         } catch (queueErr) {
           console.error('❌ [pendingSync] 큐 등록 실패:', queueErr);
+        }
+        // failed sync.notify — Device B가 optimistic 업데이트를 롤백할 수 있도록
+        if (import.meta.env.VITE_USE_WS_PROXY === 'true') {
+          try {
+            getWsClient().request('sync.notify', {
+              action: 'update', phase: 'failed', docId: docToSave.id
+            }).catch(() => {});
+          } catch { /* ignore */ }
         }
       }
     }, 5000);
@@ -613,6 +635,20 @@ export const storage = {
       renameInProgress.delete(docId); // Lock 해제 (Rename 아닌 경우)
     }
 
+    // committed sync.notify — GitHub write 성공 후 SHA/filename 포함 브로드캐스트
+    if (import.meta.env.VITE_USE_WS_PROXY === 'true') {
+      try {
+        const vaultState = useVaultStore.getState();
+        const vaultActive = vaultState.isVaultReady && !!vaultState.cryptoKey;
+        const notifyPayload = vaultActive
+          ? { action: 'update', phase: 'committed', docId }
+          : { action: 'update', phase: 'committed', docId,
+              title, filename: newFilename,
+              updatedAt: updatedFrontMatter.updatedAt, sha: newSha };
+        getWsClient().request('sync.notify', notifyPayload).catch(() => {});
+      } catch { /* ignore */ }
+    }
+
     return {
       ...post,
       id: docId,
@@ -694,6 +730,15 @@ export const storage = {
 
     // 5. IndexedDB 삭제
     await dbHelpers.deleteLocal(id);
+
+    // delete sync.notify — Device B가 캐시에서 직접 제거할 수 있도록
+    if (import.meta.env.VITE_USE_WS_PROXY === 'true') {
+      try {
+        getWsClient().request('sync.notify', {
+          action: 'delete', phase: 'committed', docId: id
+        }).catch(() => {});
+      } catch { /* ignore */ }
+    }
 
     return { id };
   },

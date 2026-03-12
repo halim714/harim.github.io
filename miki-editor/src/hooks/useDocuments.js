@@ -11,6 +11,8 @@ export function useDocuments() {
     refetchOnWindowFocus: true,
     // 5분 캐시 — 같은 탭 내 잦은 재조회 방지, 단 5분 후엔 GitHub 재조회
     staleTime: 5 * 60 * 1000,
+    // 비WS 모드 fallback: 2분 폴링 (WS 모드에선 push로 갱신하므로 불필요)
+    refetchInterval: import.meta.env.VITE_USE_WS_PROXY === 'true' ? false : 2 * 60 * 1000,
   });
 }
 
