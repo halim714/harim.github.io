@@ -14,7 +14,7 @@ import AppLayout from '../components/layout/AppLayout';
 
 // 훅 imports
 import { useDocuments } from '../hooks/useDocuments';
-import { useDocumentStore } from '../stores';
+import { useDocumentStore, useStore } from '../stores';
 import useResponsiveLayout from '../hooks/useResponsiveLayout';
 import useKeyboardShortcuts from '../hooks/useKeyboardShortcuts';
 import useAutoSave from '../hooks/useAutoSave';
@@ -91,6 +91,7 @@ function AppContent() {
   const [searchQuery, setSearchQuery] = useState('');
   const [title, setTitle] = useState('');
   const [content, setContent] = useState('');
+  const contentRef = useRef('');
   const [editorContext, setEditorContext] = useState(null);
   const [error, setError] = useState(null);
   // isPublishing state removed (handled by usePublish hook)
@@ -373,6 +374,7 @@ function AppContent() {
   // 에디터 내용 변경 핸들러
   const handleEditorChange = useCallback((newContent) => {
     setContent(newContent);
+    contentRef.current = newContent;
 
     // 🎯 핵심 개선: 자동 모드일 때만 제목 추출
     if (titleModeRef.current === 'auto') {
@@ -394,6 +396,31 @@ function AppContent() {
       logger.info(`🔒 [TITLE-MANUAL] 수동 모드이므로 제목 자동 추출 건너뜀`);
     }
   }, [currentDocument]);
+
+  // 빈 임시 문서 blur 정리 핸들러
+  // loadPost()를 거치지 않는 blur(검색창 클릭 등) 케이스에서 phantom 제거
+  const handleEditorBlur = useCallback(() => {
+    if (!currentDocument?.isEmpty) return;
+    if (contentRef.current.trim().length > 0) return;
+
+    const blurDocId = currentDocument.id;
+
+    setTimeout(() => {
+      // useStore.getState()로 클로저 캡처 없이 실시간 상태 읽기
+      const state = useStore.getState();
+      const liveDocId = state.currentDocumentId;
+      if (liveDocId !== blurDocId) return; // loadPost()가 이미 처리함 → skip
+      if (contentRef.current.trim().length > 0) return; // 타이핑했음 → skip
+
+      // 빈 임시 문서를 캐시와 store에서 제거
+      queryClient.setQueryData(queryKeys.documents.lists(), (old) => {
+        if (!Array.isArray(old)) return old;
+        return old.filter(d => d.id !== blurDocId);
+      });
+      setCurrentDocument(null);
+      logger.info(`🗑️ [BLUR-CLEANUP] 빈 임시 문서 제거: ${blurDocId}`);
+    }, 150);
+  }, [currentDocument, queryClient, setCurrentDocument]);
 
   // ✅ Publish 훅 추가
   const { publish, unpublish, isPublishing, isUnpublishing } = usePublish();
@@ -996,6 +1023,7 @@ function AppContent() {
           onToggleFullscreen={toggleFullscreen}
           onEditorContextUpdate={handleEditorContextUpdate}
           onEditorChange={handleEditorChange}
+          onEditorBlur={handleEditorBlur}
           onSendToAi={(data) => aiPanelRef.current?.triggerAiProcessing(data)}
           onNavigateRequest={handleNavigateToId}
           hasUnsavedChanges={hasUnsavedChanges}

@@ -22,6 +22,7 @@ const EditorPanel = ({
   onToggleFullscreen,
   onEditorContextUpdate,
   onEditorChange,
+  onEditorBlur,
   onSendToAi,
   onNavigateRequest,
   onPublish,
@@ -213,6 +214,7 @@ const EditorPanel = ({
       <div
         className="flex-grow relative editor-outer-scroll"
         style={{ overflowY: 'auto', overflowX: 'hidden', scrollbarGutter: 'stable', flex: '1 1 0%', minHeight: 0, height: '100%' }}
+        onBlur={onEditorBlur}
       >
         <MikiEditor
           ref={editorRef}

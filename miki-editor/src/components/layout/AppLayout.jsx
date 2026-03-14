@@ -32,6 +32,7 @@ const AppLayout = ({
   onToggleFullscreen,
   onEditorContextUpdate,
   onEditorChange,
+  onEditorBlur,
   onSendToAi,
   onNavigateRequest,
   isPublishing,
@@ -66,6 +67,7 @@ const AppLayout = ({
           onToggleFullscreen={onToggleFullscreen}
           onEditorContextUpdate={onEditorContextUpdate}
           onEditorChange={onEditorChange}
+          onEditorBlur={onEditorBlur}
           onSendToAi={onSendToAi}
           onNavigateRequest={onNavigateRequest}
           onPublish={onPublish}
@@ -116,6 +118,7 @@ const AppLayout = ({
         onToggleFullscreen={onToggleFullscreen}
         onEditorContextUpdate={onEditorContextUpdate}
         onEditorChange={onEditorChange}
+        onEditorBlur={onEditorBlur}
         onSendToAi={onSendToAi}
         onNavigateRequest={onNavigateRequest}
         currentDocument={currentDocument}
