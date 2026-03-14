@@ -142,6 +142,7 @@
 [2026-03-05] api_dev @ P4-T0a: auth.js 듀얼모드 리팩토링 (isWsMode, getToken→null in WS, saveToken→no-op in WS, hasLegacyToken 추가, getCurrentUser→getCachedUser in WS), 8개 소비자 파일 WS 분기 추가 (App.jsx/usePublish.js/useAttachment.js/storage-client.js/OnboardingSetup.jsx/verify-setup.js/functional-test.js), 빌드 성공 (2158 modules, 0 errors) → 성공
 [2026-03-01] api_dev @ P2-wiring: ws-proxy/src/index.js에 createApp() 배선 — Express app을 http.createServer()에 연결, /health + /api/session 실구동 검증 완료 → 성공
 [2026-02-27] api_dev @ P2-T1: ws-proxy/ 디렉토리 생성, package.json + src/index.js (Express + ws 부트스트랩) + README.md 작성 → 성공
+[2026-03-14] frontend_dev @ P8-T1: Editor.jsx handleEditorBlur 추가 (useStore.getState() + contentRef로 closure 해결, 150ms phantom 정리). AppLayout/EditorPanel onEditorBlur prop 연결. 빌드 성공 → 성공
 [2026-03-12] frontend_dev @ P7-T2: Editor.jsx 문서 목록 항목에 onMouseEnter → storage.prefetchPost(id) hover prefetch 추가. 빌드 성공 → 성공
 [2026-02-26] test_verify @ P1-T6: Phase 1 전체 검증 (XSS 차단, DOMPurify 적용, PKCE 적용, iframe sandbox, CSP headers, 빌드 성공, 보안 감사) → 성공
 
@@ -153,6 +154,18 @@
 - ✅ P7-T2: `DocumentSidebar.jsx` hover 시 `storage.prefetchPost(id)` 호출. 클릭 전 콘텐츠 프리로드.
 - ✅ P7-T3: 빌드 검증 통과 (2169 modules, 0 errors). Vercel 배포 트리거됨.
 - **예상 개선**: 문서 클릭 체감 로딩 ~750ms → hover 후 즉시(<50ms)
+
+---
+
+## Phase 8 완료 (2026-03-14)
+
+- ✅ P8-T1: `Editor.jsx` `handleEditorBlur` 추가.
+  - `useStore.getState()`로 setTimeout 내 stale closure 문제 해결 (`currentDocument` 캡처 대신 실시간 `currentDocumentId` 읽기)
+  - `contentRef.current`로 content 최신값 추적 (`handleEditorChange`에서 동기화)
+  - 150ms 후 liveDocId === blurDocId && content 없음 → queryClient 캐시 + Zustand store에서 phantom 제거
+  - `AppLayout.jsx` / `EditorPanel.jsx` `onEditorBlur` prop 체인 연결
+- **개선된 시나리오**: 빈 새글 + 검색창·드롭다운·탭전환 클릭 시 phantom 자동 정리
+- 커밋: `b4328b1` — 빌드 성공 (2169 modules, 0 errors)
 
 ---
 

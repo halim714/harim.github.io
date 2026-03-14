@@ -100,6 +100,19 @@ _Phase 2~4 안정화 후 착수_
 
 ---
 
+## Phase 8: UX 버그픽스 — 빈 메모 Phantom 정리
+
+> 2026-03-14: 빈 새글 상태에서 에디터 외부(검색창·정렬 드롭다운 등)를 클릭할 때
+> `loadPost()`가 호출되지 않아 phantom 항목이 사이드바에 잔류하던 문제 수정.
+
+| 태스크 ID | 담당 Role | 작업 내용 | 상태 |
+|---|---|---|---|
+| P8-T1 | `frontend_dev` | `Editor.jsx` `handleEditorBlur` 추가 — `useStore.getState()` + `contentRef`로 클로저 문제 해결, 150ms 후 phantom 제거. `AppLayout.jsx` / `EditorPanel.jsx` `onEditorBlur` prop 연결 | ✅ 완료 |
+
+**완료 기준**: 빈 새글 + 검색창 클릭 시 150ms 후 사이드바 phantom 자동 제거, 내용 입력 후 blur 시 자동저장 흐름 유지, 빌드 성공
+
+---
+
 ## 상태 범례
 - ⬜ 미시작
 - 🔄 진행중 (PROGRESS.md 참고)
