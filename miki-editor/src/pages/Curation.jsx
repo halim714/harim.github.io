@@ -48,17 +48,10 @@ export default function Curation() {
     };
 
     return (
-        <div className="min-h-screen bg-gray-50 flex flex-col">
+        <div className="min-h-screen bg-gray-50 md:pl-12 flex flex-col" style={{ paddingBottom: 'calc(3.5rem + env(safe-area-inset-bottom, 0px))' }}>
             {/* 헤더 */}
-            <header className="bg-white border-b border-gray-100 sticky top-0 z-10 safe-top">
-                <div className="px-4 py-3 flex items-center gap-3 max-w-xl mx-auto">
-                    <button
-                        onClick={() => navigate('/editor')}
-                        className="p-2 -ml-2 text-gray-500 hover:text-gray-800 rounded-full text-lg"
-                        aria-label="에디터로"
-                    >
-                        ←
-                    </button>
+            <header className="bg-white border-b border-gray-100 sticky top-0 z-10" style={{ paddingTop: 'env(safe-area-inset-top, 0px)' }}>
+                <div className="px-4 py-3 flex items-center gap-3 max-w-2xl mx-auto md:mx-0">
                     <div className="flex-1 min-w-0">
                         <h1 className="text-base font-semibold text-gray-900 leading-tight">
                             오늘의 큐레이션
@@ -82,7 +75,7 @@ export default function Curation() {
             </header>
 
             {/* 카드 목록 */}
-            <main className="flex-1 px-4 py-4 max-w-xl mx-auto w-full pb-32 flex flex-col gap-3">
+            <main className="flex-1 px-4 py-4 max-w-2xl mx-auto md:mx-0 w-full pb-32 flex flex-col gap-3">
                 {lastResult && (
                     <Banner
                         result={lastResult}
@@ -114,8 +107,8 @@ export default function Curation() {
 
             {/* sticky 하단 — 확정 영역 */}
             {pending.length > 0 && (
-                <div className="fixed bottom-0 left-0 right-0 bg-white/95 backdrop-blur border-t border-gray-200 px-4 py-3 safe-bottom">
-                    <div className="max-w-xl mx-auto flex items-center gap-3">
+                <div className="fixed bottom-14 md:bottom-0 left-0 md:left-12 right-0 bg-white/95 backdrop-blur border-t border-gray-200 px-4 py-3" style={{ paddingBottom: 'env(safe-area-inset-bottom, 0.75rem)' }}>
+                    <div className="max-w-2xl mx-auto md:mx-0 flex items-center gap-3">
                         <div className="text-xs text-gray-500 flex flex-col leading-tight">
                             <span><strong className="text-blue-600">{selectedCount}</strong> 추가</span>
                             <span><strong className="text-gray-700">{excludedCount}</strong> 비공개</span>

@@ -44,9 +44,11 @@ const STATUS_CONFIG = {
 export function SyncStatus() {
   const { status, pendingCount } = useSyncStatus();
   const cfg = STATUS_CONFIG[status];
+  const isMobileView = typeof window !== 'undefined' && window.innerWidth < 768;
 
   const barStyle = {
     ...styles.bar,
+    bottom: isMobileView ? '70px' : '14px',
     backgroundColor: cfg.bg,
     border: `1px solid ${cfg.border}`,
     color: cfg.color,
