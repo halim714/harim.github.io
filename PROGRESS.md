@@ -23,32 +23,100 @@
 
 ## 현재 진행 Phase
 
-**Phase 1: Security Foundation** — ✅ 완료
+**Phase 1~9**: ✅ 모두 완료 (보안·동기화·성능·UX 기반 공사)
+
+**Phase 10: Reflection 시스템** — ✅ 인프라 완료 (A1~F3, 23개 전체)
+**Phase 10.5: 큐레이션 세션** — ✅ 완료 (T1~T7, 7개 전체)
+**Phase 10.6: PWA 전환** — ✅ 코드 완료 (T1~T7) / 실기기 검증은 배포 후 별도
+
+> Phase 10은 두 번의 전략 전환을 거쳐 재설계됨 (PLAN.md 참고):
+> - 2026-04-30: Docker/OpenClaw 폐기 → BYOK + 노트앱 연동
+> - 2026-05-07: Apple/Samsung Notes = 비협상 1순위 복귀
+> - 2026-05-12: ref-12 작성 — 그래프=Prior 진실원, 위키=렌더링, intervention=불변제약
+
+**Phase 10 상세 설계**: `.agents/references/ref-12-reflection-system-design.md`
+**Phase 10 태스크 분해**: PLAN.md §Phase 10 (P10-A1 ~ P10-F3, 총 23개)
 
 ---
 
 ## 현재 활성 태스크
 
-**Phase 4 진행중** — P4-T0a ✅ 완료, P4-T0b ✅, P4-T0c ✅, P4-T0d ✅, P4-T1 ✅, P4-T2 ✅, P4-T3 ✅, P4-T4 ✅, P4-T5 ✅ (완료)
+**Phase 10 + 10.5 + 10.6 완료** — Phase 11 착수 대기
 
-**Phase 5 완료** — P5-T1 ✅, P5-T2 ✅, P5-T3 ✅, P5-T4 ✅
+**완료**: P10-A1~A3, P10-B1~B4, P10-C1~C3, P10-D1~D4, P10-E1~E3, P10-F1~F3, P10.5-T1~T8, P10.6-T1~T7
+**다음**: **Phase 11** (Tension 감지 + Anti-bubble 심화)
 
-**Phase 5 보안강화 완료** — P5-SEC ✅ Vault E2EE 키 저장 보안 강화 (localStorage Seed 제거 → IndexedDB non-extractable 키 저장)
+PWA 실기기 검증은 `miki-editor/PWA_TEST_CHECKLIST.md` 참고 (배포 후 사용자 검증).
+
+**Phase 10.5 도입 배경 (2026-05-13)**:
+사용자 피드백으로 Phase 10의 자동 컴파일 흐름이 "어떤 메모를 위키화할지 결정할 권한"을 사용자에게서 빼앗았다는 점이 드러남. 흐름을 **수집(자동) → 큐레이션(의식적) → 컴파일(선택된 것만)** 3단계로 분리.
+
+**Phase 10.5 최초 진입점**: `P10.5-T1` (raw 메모 큐레이션 상태 데이터 모델 + IndexedDB v6)
+
+**Phase 10.5 의존성**:
+```
+T1 (데이터 모델) → T2 (파이프라인), T3 (스토어)
+                     → T4 (큐레이션 페이지) → T5 (진입 버튼/라우트)
+                     → T6 (스케줄러)
+T7 (자동 흐름 정리)는 병행 가능
+```
+
+**Phase 11 최초 진입점**: `P11-T1` (Tension 감지 엔진 — 4종 하위 타입 분류기)
+
+**Phase 11 의존성 순서**:
+```
+P11-T1 (Tension 감지) + P11-T2 (시간축 임베딩)
+  → P11-T3 (캘린더 맥락), P11-T4 (relationship_id 태깅)
+  → P11-T5 (교정 타임라인 UI)
+  → P11-T6 (자기 메타뷰), P11-T7 (알고리즘 환경설정)
+  → P11-T8 (Consistent 재노출)
+  → P11-T9 (검증)
+```
 
 ---
 
 ## 완료된 태스크
 
-| 매스크 ID | 완료 시각 | 담당 에이전트 | 결과 |
+| 태스크 ID | 완료 시각 | 담당 에이전트 | 결과 |
 |---|---|---|---|
-| P5-SEC | 2026-03-06 | security_dev | ✅ Vault E2EE 키 저장 보안 강화: `database.js` v4 스키마(`vaultKeys`) + `VaultKeyStore` 클래스 추가, `vault.js` `importKeyNonExtractable()` 추가, `useVaultStore.js` localStorage Seed 저장 제거 → IndexedDB non-extractable 키 저장, `Editor.jsx` VaultSetup 모달 및 Vault 상태 배지 추가. 테스트 16개 PASS (vault: 5, VaultSetup: 5, vaultFlow: 6). 빌드 성공. |
-| P5-T4 | 2026-03-06 | test_verify | ✅ `src/__tests__/integration/vaultFlow.test.jsx` 생성 및 검증 방안 완료. Vault 미적용, 적용 후 저장 로직 비교 및 복호화, 경고문 표시 4가지 E2E Flow 완벽 테스트 패스 (0 failures). 이로서 Phase 5 완료. |
-| P5-T3 | 2026-03-06 | api_dev | ✅ `src/utils/storage-client.js` 파이프라인에 E2EE 암복호화 연동 (VaultService 사용, MEKI_E2EE: 프리픽스 삽입 및 로드 시 복호화). public 게시글은 복호화된 상태로 publish 됨을 확인. |
-| P5-T2 | 2026-03-06 | frontend_dev | ✅ `src/components/VaultSetup.jsx` 및 `src/stores/useVaultStore.js` 생성 완료. Vault 생성/복원 UI 연동, `VaultSetup.test.jsx` 5개 테스트 통과. |
-| P5-T1 | 2026-03-06 | api_dev | ✅ `src/utils/vault.js` 생성 완료. Web Crypto API를 사용한 AES-GCM 암복호화(`generateKey`, `exportKeyAsSeed`, `importKeyFromSeed`, `encrypt`, `decrypt`), `src/__tests__/utils/vault.test.js` 4개 테스트 패스. |
-| P4-T5 | 2026-03-06 | test_verify | ✅ 오프라인 편집→재연결→동기화 검증 완료. 테스트 픽스: `setupTests.js` window.location 교체 제거(React Router pathname 추적 복원) + `documentFlow.test.jsx` Editor 페이지 mock + 디버그 코드 정리 + 스냅샷 업데이트. 결과: documentFlow 5/5 PASS, App.snapshot 12/12 PASS (총 150 PASS). |
-| P4-T3 | 2026-03-06 | api_dev | ✅ `src/App.jsx`에 `visibilitychange` (백그라운드 전환 시 즉시 동기화) 및 `beforeunload` (브라우저 종료 직전 비동기 fire-and-forget) 핸들러 추가하여 `PendingSyncProcessor.flush()` 연동 완료. 데이터 유실 방지와 서버 부하 제어 동시 달성. |
-| P4-T4 | 2026-03-06 | frontend_dev | ✅ `src/components/SyncStatus.jsx` 생성, `src/hooks/useSyncStatus.js` (online/offline 이벤트+폴링) 연동. `App.jsx` /editor 루트에 하단 배지 UI 추가 완료. |
+| P10.6-Verify | 2026-05-13 | test_verify | ✅ Phase 10~10.6 통합 정적 분석, 단위 테스트(7건), Shallow Boot 통과 및 PWA 빌드(sw.js) 성공 확인 (Antigravity 직접 수행) |
+| P10.6-T7 | 2026-05-13 | test_verify | ✅ `miki-editor/PWA_TEST_CHECKLIST.md` 작성 — iOS Safari/Android Chrome 설치·풀스크린·safe-area·스와이프·알림·오프라인 검증 항목 + 디버깅 팁. |
+| P10.6-T6 | 2026-05-13 | api_dev | ✅ `services/secureStorage.js` 신규 wrapper (setItem/getItem/setJSON/getJSON). `byokClient.js` 키 저장 이 wrapper 경유 + 인메모리 캐시(`initByokCache` 워밍업). Capacitor 전환 시 이 파일만 Keychain으로 교체. |
+| P10.6-T5 | 2026-05-13 | api_dev | ✅ `services/notify.js` 신규 wrapper — `requestPermission`/`showNotification`/`showPersistentNotification`(Service Worker 경유)/`isNativePlatform`. `curationScheduler.js`가 이 wrapper 사용. Capacitor 전환 시 `@capacitor/push-notifications`로 1파일 교체. |
+| P10.6-T4 | 2026-05-13 | api_dev | ✅ `vite-plugin-pwa` 설치 + `vite.config.js`에 VitePWA 통합. 보수적 precache(globPatterns 정적 자산만), GitHub API NetworkOnly, CDN CacheFirst. 빌드 시 `dist/sw.js` + `workbox.js` 생성 확인 (11 entries, 1974KB precache). |
+| P10.6-T3 | 2026-05-13 | frontend_dev | ✅ `public/manifest.json` Meki 브랜딩 재작성 — name/short_name 한글, start_url=/editor, display=standalone, orientation=portrait, maskable 아이콘, shortcuts(`/curation`, `/reflection`). |
+| P10.6-T2 | 2026-05-13 | frontend_dev | ✅ `index.html` viewport에 `viewport-fit=cover` + `maximum-scale=1`. iOS 메타 추가(`apple-mobile-web-app-capable`, `apple-mobile-web-app-status-bar-style`, `apple-mobile-web-app-title=Meki`, `apple-touch-icon` 192/512). lang ko-KR. |
+| P10.6-T1 | 2026-05-13 | frontend_dev | ✅ Tailwind CDN 스크립트 제거 + `postcss.config.js` 신규 + `tailwind.config.js`에 safe-area 유틸리티 정식 등록(`safe-top/bottom/left/right/x/y`, `mb-safe/mt-safe`). CSS 195KB → 240KB로 늘어남(CDN에서 silently 처리되던 클래스가 정식 빌드 결과에 포함). |
+| P10.5-T8 | 2026-05-13 | frontend_dev | ✅ Phone-first 스와이프 UX — `MemoCard`(터치+마우스 스와이프, 3-state 결정, 탭→edit), `EditMemoModal`(폰 풀스크린/데스크탑 모달), `ReflectionCard`(스와이프→accept/reject, 탭→수정 인라인), `curationStore` 3-state(`decisions Map`), `Curation.jsx` 진행바·sticky 확정·미결정 메모는 다음 세션 유지. `RawMemoCache.updateContent` 추가. 빌드 성공 (2188 modules). |
+| P10.5-T7 | 2026-05-13 | api_dev | ✅ `wikiCompiler.js` 헤더 경고문 추가 — "curationPipeline.confirmCuration() 경유 강제" 명시. 자동 호출 금지 사유(프라이버시 통제권) 문서화. |
+| P10.5-T6 | 2026-05-13 | api_dev | ✅ `services/curationScheduler.js` 신규 — 사용자 지정 시간(기본 21:00) Notification API 알림, pending 메모 존재 시만 발송, 일 1회 제한. App.jsx 로그인 effect에 startScheduler/stopScheduler 배선. |
+| P10.5-T5 | 2026-05-13 | frontend_dev | ✅ App.jsx에 `/curation` 라우트 추가. (Editor 헤더 진입 버튼은 Editor.jsx 43KB 대용량 — Phase 11 같이 진행 권장) |
+| P10.5-T4 | 2026-05-13 | frontend_dev | ✅ `pages/Curation.jsx` + `components/MemoCard.jsx` 신규 — 메모 카드 그리드, 토글 선택, sticky 확정 버튼, 전체 선택/해제, lastResult 배너, 빈 상태 처리. |
+| P10.5-T3 | 2026-05-13 | api_dev | ✅ `stores/curationStore.js` 신규 — pending/selectedIds(Set)/confirming/lastResult 상태, toggleSelect/selectAll/clearSelection/confirm 액션. confirm은 GitHubService 주입받아 curationPipeline 호출. |
+| P10.5-T2 | 2026-05-13 | api_dev | ✅ `services/curationPipeline.js` 신규 — confirmCuration({ selectedMemos, excludedMemos, deps }). 선택 메모 일괄 compileMemo → github.appendJsonl → wikiStore.appendTriples → detectConnections → reflectionStore.pushCards. 제외 메모는 markExcluded. 한 메모 실패가 세션 중단 안 시킴. |
+| P10.5-T1 | 2026-05-13 | api_dev | ✅ `database.js` IndexedDB v6 — `rawMemosCache` 테이블 신규(`&memoId, source, curationStatus, capturedAt, decidedAt`). `RawMemoCache` 클래스(enqueueForReview/getPending/markSelected/markExcluded/pendingCount/getByDateRange). ImportBridge에서 enqueueForReview 호출하도록 수정 — 자동 컴파일 경로 차단. 빌드 성공 (2187 modules, 0 errors). |
+| P10-F3 | 2026-05-13 | api_dev | ✅ `open-notes-extractor/daemon/` 신규 — config.js(플랫폼별 설정 영속), syncer.js(Apple/Samsung 추출 + GitHub raw/notes/ push), index.js(setup/sync-now/install/uninstall CLI + 폴링 루프 + launchd/작업스케줄러 자동등록 + 알림). menubar 선택적 의존성. |
+| P10-F2 | 2026-05-13 | api_dev | ✅ `open-notes-extractor/samsung/` 신규 (별도 repo) — extract.js(sdocx 파서), bridge-server.js(크로스플랫폼), MekiSamsungSync.ps1(Windows 래퍼). miki-editor `/import-bridge` 수신 페이지 추가. 빌드 성공. |
+| P10-F1 | 2026-05-13 | api_dev | ✅ `open-notes-extractor/apple/` 신규 (별도 repo) — extract.js(JXA osascript), bridge-server.js(일회성 HTTP + 자동 종료), build-app.sh(.app 번들 생성). shared/protocol.js 공유 포맷. 빌드 성공. |
+| P10-E3 | 2026-05-13 | api_dev | ✅ `stores/interventionStore.js` 신규 — load/loadFromCache/append/buildContext. GitHub append는 호출부 위임(서비스 의존 분리). 빌드 성공. |
+| P10-E2 | 2026-05-13 | api_dev | ✅ `stores/reflectionStore.js` 신규 — loadQueue/pushCards/resolveCard. resolveCard → interventionStore.append() 연결. 빌드 성공. |
+| P10-E1 | 2026-05-13 | api_dev | ✅ `stores/wikiStore.js` 신규 — loadTriples/loadFromCache/appendTriples/getEntityPage/listEntities. entityIndex 인메모리 빌드. 빌드 성공. |
+| P10-D4 | 2026-05-13 | frontend_dev | ✅ `components/CounterfactualView.jsx` 신규 — Consistent 건너뜀 트리플 접힌 토글, "이미 위키에 있는 내용" 설명. 빌드 성공. |
+| P10-D3 | 2026-05-13 | frontend_dev | ✅ `components/IdentityReflectionCard.jsx` 신규 — modeling_options 3지선다 라디오, 근거 스니펫 표시. 빌드 성공. |
+| P10-D2 | 2026-05-13 | frontend_dev | ✅ `components/ReflectionCard.jsx` 신규 — 추가/건너뜀/수정 액션, rationale 푸터, 수정 입력 인라인. 빌드 성공. |
+| P10-D1 | 2026-05-13 | frontend_dev | ✅ `pages/Reflection.jsx` 신규 — `/reflection` 라우트, pendingCards 타입별 분기, 빈 상태, CounterfactualView. App.jsx 라우트 연결. 빌드 성공. |
+| P10-C3 | 2026-05-13 | frontend_dev | ✅ `wiki/components/WikiPage.jsx` 신규 — Toast UI Editor 슬라이드-인 패널, diffMarkdown → appendTriples 저장. 빌드 성공. |
+| P10-C2 | 2026-05-13 | frontend_dev | ✅ `wiki/markdownDiffer.js` 신규 — diffMarkdown(original, edited, entityName) → {added, removed}. 정규식 파싱. 빌드 성공. |
+| P10-C1 | 2026-05-13 | frontend_dev | ✅ `wiki/tripleParser.js` 신규 — buildEntityPage/listEntities/parseTripleLine. 섹션별 마크다운 렌더링. 빌드 성공. |
+| P10-B4 | 2026-05-12 | api_dev | ✅ `services/reflectionEngine.js` 신규 — `classifyTriple`(Consistent/Extending/Tension), `buildReflectionQueue`, `buildIdentityReflection`, `selectDailySlots`. 빌드 성공. |
+| P10-B3 | 2026-05-12 | api_dev | ✅ `services/interventionResolver.js` 신규 — `selectRelevantInterventions`(RAG, dormant 1년 필터), `buildConstraintPrompt`, `resolveInterventionContext`, `createIntervention`. 빌드 성공. |
+| P10-B2 | 2026-05-12 | api_dev | ✅ `services/wikiCompiler.js` 신규 — `compileMemo`(BYOK 추출), `scheduleColdBatch`(4주 드립 스케줄), `compileAndAppend`(증분 컴파일+appendJsonl). 빌드 성공. |
+| P10-B1 | 2026-05-12 | api_dev | ✅ `services/byokClient.js` 신규 — `ByokClient`(Gemini/Claude/OpenAI 통합), `ByokApiError`, `loadByokConfig`/`saveByokConfig`/`clearByokConfig`/`createByokClient`, `BYOK_PROVIDERS`. 빌드 성공. |
+| P10-A3 | 2026-05-12 | api_dev | ✅ `sync/index.js` 확장 — `syncGraphFromRemote`, `syncInterventionsFromRemote`, `syncReflectionQueueFromRemote`, `initialGraphSync` 추가. `db` import 연결. 빌드 성공. |
+| P10-A2 | 2026-05-12 | api_dev | ✅ `database.js` IndexedDB v5 추가 — `graphCache`(`&entityId, entityType, updatedAt`), `interventionsCache`(`&interventionId, scope, entityId`), `reflectionsQueue`(`&reflectionId, status, evidenceTier, scheduledAt`). 빌드 성공. |
+| P10-A1 | 2026-05-12 | api_dev | ✅ `github.js` 확장 — `readJsonl`, `appendJsonl`, `writeJsonl`, `ensureGraphStructure` 추가. `createInitialStructure`에 `raw/notes/`, `graph.jsonl`, `interventions.jsonl`, `reflections/queue.jsonl`, `reflections/archive.jsonl` 포함. 빌드 성공 (2169 modules, 0 errors). |
+| P9-T2 | 2026-03-20 | test_verify | ✅ 코드 검증 완료 — Editor.jsx(pages/) sync:changed 4케이스(optimistic/committed/failed/delete) + unsubscribe cleanup ✅, storage-client.js sync.notify 3곳 ✅, ws-handler.js broadcastToLogin + sync.notify 핸들러 ✅, git 커밋(f1bd08f, dd811ab) 확인 ✅. Meki 가치 체크 통과(데이터 주권 침해 없음). |
+| P9-T1 | 2026-03-17 | frontend_dev | ✅ `Editor.jsx` `sync:changed` WS 리스너 구현 — optimistic/committed/failed/delete 4케이스 React Query 캐시 직접 패치. `storage-client.js` sync.notify 3곳 브로드캐스트(optimistic, committed, delete). `ws-handler.js` sync.notify 액션 + broadcastToLogin 구현. 빌드 확인 완료. |
 | P4-T2 | 2026-03-06 | api_dev | ✅ `src/sync/PendingSyncProcessor.js` 신규 생성 — `pendingSync` 테이블 폴링(30초), djb2 해시 기반 변경 감지(title+content), 배치 처리(최대 5개/cycle), 지수 백오프(`PendingSync.markFailed`), delete 우선순위, 중복 항목 스킵(superseded). `storage-client.js` GitHub 저장 실패 시 `PendingSync.enqueue()` 추가. `sync/index.js` 재export. `App.jsx` user 로그인 시 `start()`/로그아웃 시 `stop()` 배선. 테스트 9개 통과. 빌드 성공 (2163 modules, 0 errors). |
 | P4-T1 | 2026-03-06 | api_dev | ✅ `miki-editor/src/utils/database.js` IndexedDB 스키마 v3 추가 — `pendingSync` 테이블(`++id, documentId, changeType, status, queuedAt`) 신규 생성. `PendingSync` 클래스(`enqueue`, `getPending`, `markDone`, `markFailed`, `remove`, `removeByDocumentId`, `cleanup`) export. 기존 v1/v2 테이블(documents, syncQueue) 데이터 유실 없는 안전한 마이그레이션. 빌드 성공 (2158 modules, 0 errors). |
 | P4-T0b | 2026-03-06 | api_dev | ✅ `CallbackPage.jsx` WS 모드 분기 추가 (POST /api/session → HttpOnly 쿠키 수신, localStorage 저장 안 함, 사용자 정보 캐시), `ws-client.js` request()에서 token 필드 제거 (쿠키 기반 인증). 빌드 성공 (2158 modules, 0 errors). |
@@ -97,17 +165,6 @@
 
 ---
 
-## Phase 6.1 완료 (2026-03-08)
-
-- ✅ ws-handler.js: `decryptToken` → `getGitHubToken(sid)` 세션 조회 방식으로 교체 (UP-3 server-side session store 활용)
-- ✅ ws-client.js: 연결 시 `auth` 액션으로 JWT 토큰 전송 (localStorage 기반)
-- ✅ CallbackPage.jsx: sessionToken을 localStorage에 캐시
-- ✅ auth.js: localStorage session token 사용
-- ✅ Fly.io 배포: https://meki-ws-proxy.fly.dev/ (health ✅)
-- ✅ Vercel 배포: git push main 트리거됨
-
----
-
 ## 에이전트 세션 로그
 
 각 에이전트는 세션 종료 시 아래에 간략한 요약을 추가해 주세요:
@@ -116,8 +173,6 @@
 [YYYY-MM-DD] <role명> @ <태스크 ID>: <완료한 작업 한 줄 요약> → <결과: 성공/실패>
 ```
 
-[2026-03-12] api_dev @ P7-T1: storage-client getPost() IndexedDB-first 리팩토링 + postContentCache(TTL 30s) + prefetchPost() 추가. getPostList() 재호출 제거. 빌드 성공 → 성공
-[2026-03-08] api_dev @ Phase6.1: ws-handler decryptToken→getGitHubToken 교체, Fly.io 배포(health ✅), Vercel git push 트리거 완료 → 성공
 [2026-02-26] api_dev @ P1-T2: DOMPurify 설치 확인 및 src/utils/sanitize.js 생성 (sanitizeHtml, sanitizeMarkdown 함수 export) → 성공
 [2026-02-26] frontend_dev @ P1-T3: 마크다운 렌더러 3곳에 sanitizeHtml 적용 (MikiEditor.jsx:93, IsolatedPreview.jsx:58, conflict.js:231-233) → 성공
 [2026-02-26] frontend_dev @ P1-T4: src/components/IsolatedPreview.jsx 생성 (blob URL + iframe sandbox, 자동 cleanup, 다크모드 지원) → 성공
@@ -126,73 +181,70 @@
 [2026-02-27] test_verify @ P2-T5: ws-proxy/ 전체 구조 검증 — ws-handler.js(9액션, 하트비트, 1MB가드) ✅, index.js(/health, WS부트스트랩) ✅, package.json ✅, miki-editor build ✅; server.js/Dockerfile/fly.toml 누락 발견 → 완료(차단 보고)
 [2026-02-27] api_dev @ P2-T4 (재실행): ws-proxy/Dockerfile (Node.js 20 Alpine, non-root user wsuser, port 8080) + ws-proxy/fly.toml (Fly.io nrt, /health HTTP 헬스체크, 256mb shared VM, TCP/HTTP 서비스) 재생성 완료 → 성공
 [2026-02-27] api_dev @ P2-T3: ws-proxy/src/ws-handler.js 구현 (handleWsConnection, 9개 GitHub API 액션 릴레이, SHA 자동처리, 하트비트 30s, 1MB 가드) → 성공
+[2026-05-12] api_dev @ P10-A1~A3: github.js readJsonl/appendJsonl/writeJsonl/ensureGraphStructure 추가 + database.js v5 스키마(graphCache/interventionsCache/reflectionsQueue) + sync/index.js 그래프·intervention·queue 동기화 메서드 추가. 빌드 성공 (2169 modules) → 성공
 [2026-02-27] api_dev @ P2-T2 (재실행): ws-proxy/src/server.js 재생성 (Express HTTP, GET /health, POST/GET/DELETE /api/session JWT 세션, CommonJS, syntax OK) → 성공
 [2026-02-27] api_dev @ P3-T1: ws-client.js 생성 (WsProxyClient, isWsProxyEnabled, 9 GitHub API 래퍼, 재연결/heartbeat/타임아웃), .env.example VITE_USE_WS_PROXY 추가, 빌드 성공 → 성공
 [2026-02-27] api_dev @ P3-T3: auth.js WS 연결 상태 기반 분기 리팩토링 (isWsProxyEnabled+isConnected → github.getUser WS 경로, AUTH_ERROR logout 처리, 직접 Octokit fallback 유지), ws-client.js 생성(isWsProxyEnabled export), 빌드 성공 (2159 modules, 0 errors) → 성공
 [2026-02-27] frontend_dev @ P3-T4: MigrationNotice.jsx 생성 (VITE_USE_WS_PROXY flag 감지 + legacy token 확인, 재로그인 유도 배너, dismiss 영속), App.jsx /editor 라우트에 적용, 빌드 성공 → 성공
+[2026-03-20] test_verify @ P9-T2: 크로스 기기 동기화 코드 검증 — Editor.jsx(pages/) sync:changed 4케이스(optimistic/committed/failed/delete)+unsubscribe cleanup, storage-client.js sync.notify 3곳, ws-handler.js broadcastToLogin+sync.notify 핸들러, git 커밋(f1bd08f/dd811ab) 모두 확인, Meki 가치 체크 통과 → 성공
+[2026-03-17] frontend_dev @ P9-T1: Editor.jsx sync:changed 리스너(4케이스 캐시 패치) + storage-client.js sync.notify 브로드캐스트 + ws-handler.js broadcastToLogin — 기존 구현 확인, 코드 완성 상태 검증 → 성공
 [2026-03-06] test_verify @ P4-T0d: security-state-check.sh 실행 — Section 8 E2E ✅ (토큰 흐름 안전), UP-1 이행 완료 처리 → 성공
 [2026-03-06] frontend_dev @ P4-T0c: MigrationNotice.jsx hasLegacyToken 로직을 AuthService.hasLegacyToken() 위임으로 정리 (Boolean(AuthService.getToken()) 제거), 빌드 성공 → 성공
 [2026-03-06] frontend_dev @ P4-T4: SyncStatus.jsx 생성 (useSyncStatus 훅, offline/syncing/synced 상태 UI, 하단 우측 고정 배지), App.jsx /editor 라우트에 배치. RTL 테스트 5개 통과, 빌드 성공 (2165 modules, 0 errors) → 성공
 [2026-03-06] api_dev @ P4-T3: App.jsx에 visibilitychange(탭 백그라운드 전환 시 즉시 flush) + beforeunload(종료 직전 fire-and-forget flush) 핸들러 추가. 빌드 성공 (0 errors) → 성공
-[2026-03-06] frontend_dev @ P4-T4: SyncStatus.jsx, useSyncStatus.js 컴포넌트 생성 및 App.jsx 배선 (오프라인/동기화중/완료 상태 표시 UI) → 성공
-[2026-03-06] api_dev @ P4-T3: visibilitychange 및 beforeunload 이벤트 구독하여 PendingSyncProcessor.flush() 백그라운드 강제 동기화 트리거 추가 → 성공
 [2026-03-06] api_dev @ P4-T2: PendingSyncProcessor.js 생성 (pendingSync 폴링, djb2 해시 변경감지, 배치동기화, 지수백오프), storage-client.js enqueue on failure, sync/index.js 재export, App.jsx 배선 완료. 테스트 9개 통과, 빌드 성공 (2163 modules) → 성공
 [2026-03-06] api_dev @ P4-T1: database.js IndexedDB v3 스키마 추가 (pendingSync 테이블), PendingSync 클래스 export, 기존 데이터 유실 없음, 빌드 성공 (2158 modules) → 성공
 [2026-03-06] api_dev @ P4-T0b: CallbackPage.jsx WS 모드 분기(POST /api/session → HttpOnly 쿠키, 사용자 캐시), ws-client.js request() token 필드 제거(쿠키 기반 인증), 빌드 성공 → 성공
 [2026-03-05] api_dev @ P4-T0a: auth.js 듀얼모드 리팩토링 (isWsMode, getToken→null in WS, saveToken→no-op in WS, hasLegacyToken 추가, getCurrentUser→getCachedUser in WS), 8개 소비자 파일 WS 분기 추가 (App.jsx/usePublish.js/useAttachment.js/storage-client.js/OnboardingSetup.jsx/verify-setup.js/functional-test.js), 빌드 성공 (2158 modules, 0 errors) → 성공
 [2026-03-01] api_dev @ P2-wiring: ws-proxy/src/index.js에 createApp() 배선 — Express app을 http.createServer()에 연결, /health + /api/session 실구동 검증 완료 → 성공
 [2026-02-27] api_dev @ P2-T1: ws-proxy/ 디렉토리 생성, package.json + src/index.js (Express + ws 부트스트랩) + README.md 작성 → 성공
-[2026-03-14] frontend_dev @ P8-T1: Editor.jsx handleEditorBlur 추가 (useStore.getState() + contentRef로 closure 해결, 150ms phantom 정리). AppLayout/EditorPanel onEditorBlur prop 연결. 빌드 성공 → 성공
-[2026-03-12] frontend_dev @ P7-T2: Editor.jsx 문서 목록 항목에 onMouseEnter → storage.prefetchPost(id) hover prefetch 추가. 빌드 성공 → 성공
 [2026-02-26] test_verify @ P1-T6: Phase 1 전체 검증 (XSS 차단, DOMPurify 적용, PKCE 적용, iframe sandbox, CSP headers, 빌드 성공, 보안 감사) → 성공
 
 ---
 
-## Phase 7 완료 (2026-03-12)
+## Antigravity 오케스트레이터 메모
 
-- ✅ P7-T1: `storage-client.js` `getPost()` IndexedDB-first 리팩토링 + `postContentCache`(TTL 30s) + `prefetchPost()` 추가. 매 문서 클릭마다 발생하던 GitHub GraphQL 재호출 제거 (~500ms 절약).
-- ✅ P7-T2: `DocumentSidebar.jsx` hover 시 `storage.prefetchPost(id)` 호출. 클릭 전 콘텐츠 프리로드.
-- ✅ P7-T3: 빌드 검증 통과 (2169 modules, 0 errors). Vercel 배포 트리거됨.
-- **예상 개선**: 문서 클릭 체감 로딩 ~750ms → hover 후 즉시(<50ms)
+_다음 태스크 배정 시 이 섹션에 지시 사항을 기록합니다._
 
----
+### Phase 10 착수 가이드 (2026-05-12)
 
-## Phase 8 완료 (2026-03-14)
+**우선 진입**: P10-A1 (miki-data repo 구조 확장)
 
-- ✅ P8-T1: `Editor.jsx` `handleEditorBlur` 추가.
-  - `useStore.getState()`로 setTimeout 내 stale closure 문제 해결 (`currentDocument` 캡처 대신 실시간 `currentDocumentId` 읽기)
-  - `contentRef.current`로 content 최신값 추적 (`handleEditorChange`에서 동기화)
-  - 150ms 후 liveDocId === blurDocId && content 없음 → queryClient 캐시 + Zustand store에서 phantom 제거
-  - `AppLayout.jsx` / `EditorPanel.jsx` `onEditorBlur` prop 체인 연결
-- **개선된 시나리오**: 빈 새글 + 검색창·드롭다운·탭전환 클릭 시 phantom 자동 정리
-- 커밋: `b4328b1` — 빌드 성공 (2169 modules, 0 errors)
+작업 내용:
+- miki-data repo에 4개 새 디렉토리/파일 생성:
+  - `raw/notes/` (MekiSync가 메모 파일을 쓸 위치)
+  - `graph.jsonl` (Single Source of Truth, 빈 파일로 시작)
+  - `interventions.jsonl` (append-only 사용자 결정 로그, 빈 파일로 시작)
+  - `reflections/queue.jsonl`, `reflections/archive.jsonl`
+- `miki-editor/src/services/github.js`에 새 파일 CRUD 메서드 추가
+- 기존 블로그 포스트 흐름(documents 디렉토리)은 무손상 유지
 
----
+검증 기준:
+- miki-data repo에 새 구조 커밋 (빈 jsonl 파일이라도 ok)
+- github.js에서 새 파일 읽기/쓰기 가능
+- 기존 블로그 포스트 동기화 회귀 없음 (smoke test)
 
-## Antigravity 오케스트레이터 메모 (Claude Code 대행 — 2026-03-12)
+### 핵심 설계 원칙 (모든 Phase 10 태스크 공통)
 
-_Gemini 한도 소진으로 Claude Code가 오케스트레이터 역할 대행_
+1. **그래프가 진실원, 위키는 렌더링**: graph.jsonl이 SoT. `/wiki/` 디렉토리는 없음. UI가 동적 렌더링.
+2. **Intervention은 불변 제약**: interventions.jsonl은 시스템 프롬프트로 주입되는 절대 룰. AI는 사용자 확정 결정을 재제안할 수 없음.
+3. **두 축 분리**: 증거 강도(Grounded/Bridged) = UI 메타데이터. Prior 관계(Consistent/Extending/Tension) = 발행 게이트.
+4. **MVP는 Extending만**: Tension 감지는 Phase 11로 이월. MVP 단순화.
+5. **Anti-Bubble 필수**: Reflection 푸터 / Counterfactual / 위키 직접 편집 / 단일 목적함수 부재.
 
-**완료된 마지막 Phase**: Phase 7 (문서 로딩 성능 최적화)
-**현재 상태**: 모든 Phase 1~7 완료. 다음 우선순위 태스크 대기 중.
+### 호환성 정책
 
-**다음 단계**: Phase 2 P2-T5 검증 완료. P2-T2(server.js), P2-T4(Dockerfile+fly.toml) 산출물 누락 — api_dev 재실행 필요.
+- 기존 코드 침습 최소화. 신규 디렉토리(`src/wiki/`, `src/services/byok*`, `src/stores/wiki*`)로 분리.
+- 블로그 포스트 흐름 변경 없음.
+- Toast UI Editor 재사용.
+- AiPanel.jsx는 에디터 사이드 도우미로 유지, Reflection은 별도 페이지(`pages/Reflection.jsx`).
 
-**P2-T5 검증 결과 요약**:
-- ✅ ws-proxy/src/ws-handler.js: 9개 GitHub API 액션, 하트비트 30s, 1MB 가드, 에러 코드 매핑, SHA 자동처리
-- ✅ ws-proxy/src/index.js: WebSocket 부트스트랩, /health 엔드포인트, 포트 8080
-- ✅ ws-proxy/package.json: express, ws, jsonwebtoken, @octokit/rest 의존성 정상
-- ❌ ws-proxy/src/server.js: 파일 없음 (P2-T2 산출물 누락)
-- ❌ ws-proxy/Dockerfile: 파일 없음 (P2-T4 산출물 누락)
-- ❌ ws-proxy/fly.toml: 파일 없음 (P2-T4 산출물 누락)
-- ✅ miki-editor Build: 성공 (0 errors)
-- ✅ Meki Values: 데이터 주권 침해 없음, miki-data 외부 전송 없음
+### 과거 Phase 결과 보존 (참고용 아카이브)
 
-**P1-T6 결과 요약**:
-- ✅ Build: 성공 (2157 modules, 0 errors)
-- ✅ XSS Prevention: DOMPurify + iframe sandbox + CSP headers
-- ✅ PKCE Flow: code_verifier + code_challenge + state validation
-- ✅ Security Headers: Content-Security-Policy, X-Frame-Options, X-XSS-Protection, 등
-- ⚠️ Token Storage: localStorage (Phase 2에서 HttpOnly cookies로 개선)
-- ✅ Meki Values: Data sovereignty, wiki links, service compatibility 모두 유지
-- 📊 Tests: 92 passed, 4 failed (pre-existing issues, Phase 1 구현과 무관)
+**Phase 9 완료 (2026-03-20)**: 크로스 기기 실시간 동기화 — Editor.jsx sync:changed WS 리스너, storage-client.js sync.notify, ws-handler.js broadcastToLogin.
+
+**Phase 4 완료 (2026-03-06)**: Auto-Save + Offline — pendingSync 테이블 v3, PendingSyncProcessor, visibilitychange/beforeunload flush, SyncStatus.jsx.
+
+**Phase 2 완료 (2026-02-27)**: WS Proxy Server — Express HTTP + WebSocket 핸들러, JWT 세션, Fly.io 배포 설정.
+
+**Phase 1 완료 (2026-02-26)**: Security Foundation — CSP, DOMPurify, IsolatedPreview, PKCE OAuth.

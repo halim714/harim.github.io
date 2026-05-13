@@ -1,18 +1,18 @@
 /**
  * shallow-boot.test.jsx — Shallow Boot Test (앱 크래시 방지 최소 보증)
- * 
- * 이 테스트는 앱이 "하얀 화면(White Screen of Death)"으로 
+ *
+ * 이 테스트는 앱이 "하얀 화면(White Screen of Death)"으로
  * 뻗지 않는다는 최소한의 보증을 제공합니다.
- * 
- * OAuth 리다이렉트 없이 JSDOM 환경에서 App 컴포넌트를 
- * 마운트하여, React 런타임 에러 없이 초기 렌더링이 
+ *
+ * OAuth 리다이렉트 없이 JSDOM 환경에서 App 컴포넌트를
+ * 마운트하여, React 런타임 에러 없이 초기 렌더링이
  * 완료되는지 확인합니다.
+ *
+ * Phase 10/10.5/10.6 추가: 신규 모듈 import 가능성 검증
  */
 import React from 'react';
 import { render } from '@testing-library/react';
 
-// App.jsx를 최소한으로 마운트 (라우터, 스토어 포함)
-// 외부 API 호출이 실패하더라도 앱이 크래시하지 않아야 함
 describe('Shallow Boot Test', () => {
     beforeEach(() => {
         // fetch를 가짜로 대체하여 네트워크 에러를 방지
@@ -56,5 +56,24 @@ describe('Shallow Boot Test', () => {
         expect(fatalErrors).toHaveLength(0);
 
         consoleSpy.mockRestore();
+    });
+
+    it('Phase 10 신규 모듈이 import 에러 없이 로드되어야 한다', async () => {
+        const modules = [
+            () => import('../stores/curationStore'),
+            () => import('../stores/wikiStore'),
+            () => import('../stores/reflectionStore'),
+            () => import('../stores/interventionStore'),
+            () => import('../services/byokClient'),
+            () => import('../services/curationScheduler'),
+            () => import('../services/notify'),
+            () => import('../services/secureStorage'),
+        ];
+
+        for (const loader of modules) {
+            let err;
+            try { await loader(); } catch (e) { err = e; }
+            expect(err).toBeUndefined();
+        }
     });
 });
