@@ -106,6 +106,93 @@ export async function compileAndAppend(memo, byokClient, github, dataRepo, inter
     return { triples, appended: triples.length };
 }
 
+/**
+ * 콜드 스타트 후보 중 안전하게 자동 처리 가능한 항목을 분류한다.
+ *
+ * @param {Array<object>} triples
+ * @param {object} [options]
+ * @returns {{ autoMerged: Array<object>, autoApproved: Array<object>, needsReview: Array<object> }}
+ */
+export function autoProcessCandidates(triples, options = {}) {
+    const autoMerged = [];
+    const autoApproved = [];
+    const needsReview = [];
+
+    for (const t of triples) {
+        const timeGapDays = t.time_gap_days || 0;
+        if (timeGapDays >= 365) {
+            needsReview.push({ ...t, _reason: 'time_gap_over_1year' });
+            continue;
+        }
+
+        if (t.register_differs) {
+            needsReview.push({ ...t, _reason: 'register_differs' });
+            continue;
+        }
+
+        if (t.surface_similarity != null && t.surface_similarity >= 0.95) {
+            autoMerged.push({
+                ...t,
+                _autoAction: 'merge',
+                _autoReason: `surface_similarity=${t.surface_similarity.toFixed(2)}`,
+            });
+            continue;
+        }
+
+        const evidenceCount = (t.evidence || []).length;
+        if (evidenceCount >= 3 && (t.ai_self_score || 0) >= 0.9) {
+            autoApproved.push({
+                ...t,
+                _autoAction: 'approve',
+                _autoReason: `evidence=${evidenceCount},score=${t.ai_self_score}`,
+            });
+            continue;
+        }
+
+        needsReview.push(t);
+    }
+
+    return { autoMerged, autoApproved, needsReview };
+}
+
+/**
+ * 자동 처리 결과를 reflections/archive.jsonl에 기록할 엔트리로 변환한다.
+ *
+ * @param {Array<object>} autoMerged
+ * @param {Array<object>} autoApproved
+ * @returns {Array<object>}
+ */
+export function buildAutoApprovedArchiveEntries(autoMerged = [], autoApproved = []) {
+    const now = new Date().toISOString();
+    const entries = [];
+
+    for (const t of autoMerged) {
+        entries.push({
+            id: `auto-${Date.now()}-${Math.random().toString(36).slice(2, 7)}`,
+            type: 'auto_merge',
+            reason: t._autoReason,
+            subject: t.subject,
+            predicate: t.predicate,
+            object: t.object,
+            archived_at: now,
+        });
+    }
+
+    for (const t of autoApproved) {
+        entries.push({
+            id: `auto-${Date.now()}-${Math.random().toString(36).slice(2, 7)}`,
+            type: 'auto_approve',
+            reason: t._autoReason,
+            subject: t.subject,
+            predicate: t.predicate,
+            object: t.object,
+            archived_at: now,
+        });
+    }
+
+    return entries;
+}
+
 // ── Helpers ────────────────────────────────────────────────────────────────
 
 function parseTripleResponse(raw) {
