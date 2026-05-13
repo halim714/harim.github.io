@@ -43,17 +43,20 @@ export const useReflectionStore = create(
                     await db.reflectionsQueue.update(record.id, { status: decision });
                 }
 
-                // 수락/수정 시 intervention으로 기록
-                if (decision === 'accepted' || decision === 'modified') {
+                // 수락/수정/거절 시 intervention으로 기록
+                const TYPE_MAP = { accepted: 'accept', modified: 'modify', rejected: 'reject' };
+                if (TYPE_MAP[decision]) {
                     const card = get().queue.find(q => q.id === id);
                     if (card) {
                         const intervention = createIntervention({
-                            type: decision === 'accepted' ? 'accept' : 'modify',
+                            type: TYPE_MAP[decision],
                             scope: `entity:${card.proposed_update.subject}`,
                             subject: card.proposed_update.subject,
                             predicate: card.proposed_update.predicate,
                             object: card.proposed_update.object,
-                            user_note: note,
+                            user_note: decision === 'rejected'
+                                ? '재제안 영구 차단 (ref-12 §3.3)'
+                                : note,
                         });
                         await useInterventionStore.getState().append(intervention);
                     }
