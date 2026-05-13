@@ -75,16 +75,105 @@ export function buildConstraintPrompt(selected) {
 }
 
 /**
- * interventions 배열 + 메모 컨텍스트 → 주입용 시스템 프롬프트 문자열
+ * intervention 누적 로그 → 사용자 결정 패턴 통계 요약
+ *
+ * @param {Array} interventions
+ * @returns {object|null}
+ */
+export function buildUserModelProfile(interventions = []) {
+    if (!interventions.length) return null;
+
+    const byType = interventions.reduce((acc, iv) => {
+        acc[iv.type] = (acc[iv.type] || 0) + 1;
+        return acc;
+    }, {});
+
+    const byScope = interventions.reduce((acc, iv) => {
+        const prefix = (iv.scope || 'always').split(':')[0];
+        acc[prefix] = (acc[prefix] || 0) + 1;
+        return acc;
+    }, {});
+
+    const rejections = interventions
+        .filter(iv => iv.type === 'reject')
+        .reduce((acc, iv) => {
+            const key = iv.subject || 'unknown';
+            acc[key] = (acc[key] || 0) + 1;
+            return acc;
+        }, {});
+    const topRejections = Object.entries(rejections)
+        .sort((a, b) => b[1] - a[1])
+        .slice(0, 5)
+        .map(([subject, count]) => ({ subject, count }));
+
+    const approvals = interventions
+        .filter(iv => iv.type === 'accept' || iv.type === 'edit')
+        .reduce((acc, iv) => {
+            const key = iv.subject || 'unknown';
+            acc[key] = (acc[key] || 0) + 1;
+            return acc;
+        }, {});
+    const topApprovals = Object.entries(approvals)
+        .sort((a, b) => b[1] - a[1])
+        .slice(0, 5)
+        .map(([subject, count]) => ({ subject, count }));
+
+    return {
+        total: interventions.length,
+        byType,
+        byScope,
+        topRejections,
+        topApprovals,
+    };
+}
+
+/**
+ * 사용자 결정 패턴 요약 → 시스템 프롬프트 컨텍스트
+ *
+ * @param {object|null} profile
+ * @returns {string}
+ */
+export function buildProfilePrompt(profile) {
+    if (!profile) return '';
+    const lines = ['[사용자 결정 패턴 요약 — 컴파일 참고]'];
+    lines.push(`- 총 결정: ${profile.total}건`);
+    if (profile.topRejections.length) {
+        lines.push(`- 자주 거절한 주제: ${profile.topRejections.map(r => `${r.subject}(${r.count})`).join(', ')}`);
+    }
+    if (profile.topApprovals.length) {
+        lines.push(`- 자주 승인한 주제: ${profile.topApprovals.map(r => `${r.subject}(${r.count})`).join(', ')}`);
+    }
+    return lines.join('\n');
+}
+
+/**
+ * interventions 배열 + 메모 컨텍스트 → 주입용 시스템 프롬프트 컨텍스트
  * (wikiCompiler.js, reflectionEngine.js에서 직접 호출)
  *
  * @param {Array} interventions
  * @param {{ entities?: string[], concepts?: string[] }} context
- * @returns {string}
+ * @returns {object}
  */
 export function resolveInterventionContext(interventions, context = {}) {
-    const selected = selectRelevantInterventions(interventions, context);
-    return buildConstraintPrompt(selected);
+    const relevant = selectRelevantInterventions(interventions, context);
+    const constraintPrompt = buildConstraintPrompt(relevant);
+    const userProfile = buildUserModelProfile(interventions);
+    const profilePrompt = buildProfilePrompt(userProfile);
+    const fullSystemPrompt = [constraintPrompt, profilePrompt].filter(Boolean).join('\n\n');
+    const resolved = {
+        relevant,
+        constraintPrompt,
+        userProfile,
+        profilePrompt,
+        fullSystemPrompt,
+    };
+
+    Object.defineProperty(resolved, 'toString', {
+        value: () => fullSystemPrompt,
+        enumerable: false,
+    });
+
+    return resolved;
 }
 
 /**
