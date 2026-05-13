@@ -219,6 +219,7 @@ const EditorPanel = ({
         <MikiEditor
           ref={editorRef}
           key={getEditorKey()}
+          isMobile={isMobile}
           onContextUpdate={onEditorContextUpdate}
           onContentChange={onEditorChange}
           onSendToAi={onSendToAi}
