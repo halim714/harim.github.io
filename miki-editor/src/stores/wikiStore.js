@@ -35,6 +35,14 @@ export const useWikiStore = create(
                 });
             },
 
+            removeTriples(triplesToRemove) {
+                const removeKeys = new Set(triplesToRemove.map(tripleKey));
+                set(state => {
+                    state.triples = state.triples.filter(t => !removeKeys.has(tripleKey(t)));
+                    state.entityIndex = buildEntityIndex(state.triples);
+                });
+            },
+
             getEntityPage(entityName) {
                 return buildEntityPage(entityName, get().triples);
             },
@@ -48,6 +56,10 @@ export const useWikiStore = create(
 
 function normalize(str) {
     return String(str || '').toLowerCase().trim();
+}
+
+function tripleKey(t) {
+    return [t.subject, t.predicate, t.object].map(normalize).join('\u0000');
 }
 
 function buildEntityIndex(triples) {
