@@ -38,7 +38,7 @@ const BookIcon = () => (
 const NAV_ITEMS = [
     { path: '/editor', label: '쓰기', Icon: PencilIcon },
     { path: '/curation', label: '큐레이션', Icon: ClipboardIcon, badgeKey: 'curation' },
-    { path: '/reflection', label: '연결', Icon: LinkIcon, badgeKey: 'reflection' },
+    { path: '/reflection', label: '회고', Icon: LinkIcon, badgeKey: 'reflection' },
     { path: '/wiki', label: '위키', Icon: BookIcon },
 ];
 

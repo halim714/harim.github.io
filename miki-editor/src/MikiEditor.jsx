@@ -606,7 +606,7 @@ const LinkButton = ({ position, onClick, selectedText }) => {
 };
 
 // --- MikiEditor Component ---
-const MikiEditor = forwardRef(({ onContentChange, onSendToAi, onContextUpdate, onNavigateRequest }, ref) => {
+const MikiEditor = forwardRef(({ onContentChange, onSendToAi, onContextUpdate, onNavigateRequest, isMobile }, ref) => {
   const editorRef = useRef(null);
   const [currentContent, setCurrentContent] = useState('');
   const [editorSelection, setEditorSelection] = useState(null); // Store { range, text, cursor }
@@ -1574,8 +1574,7 @@ const MikiEditor = forwardRef(({ onContentChange, onSendToAi, onContextUpdate, o
           target: '_self', // 같은 탭에서 열기
           rel: null // rel 속성 제거
         }}
-        // 서식 도구모음 추가
-        toolbarItems={[
+        toolbarItems={isMobile ? [] : [
           ['heading', 'bold', 'italic', 'strike'],
           ['hr', 'quote', 'ul', 'ol', 'task'],
           ['table', 'image', 'link'],
