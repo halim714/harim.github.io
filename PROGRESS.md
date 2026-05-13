@@ -18,6 +18,7 @@
 | UP-3 | 보안감사 | JWT payload ghToken 제거 → 서버측 sessionStore 저장 | ✅ 이행 완료 |
 | UP-5 | 보안감사 | callback.js CORS 순서 버그 — 토큰 교환 전 origin 검증 | ✅ 이행 완료 |
 | UP-6 | 보안감사 | ws-proxy cookie-parser 설치 + 세션 쿠키 읽기 준비 | ✅ 이행 완료 |
+| UP-7 | P10.7-T6 검증 | 선행 회귀 5건: `vaultFlow.test.jsx`, `storage-client.test.js`, `MigrationNotice.test.jsx`, `useAutoSave.test.js`, `IsolatedPreview.test.jsx`. P10.7 이전부터 실패 (stash 검증). 학습 루프와 무관. | ⬜ 미이행 |
 
 ---
 
@@ -28,7 +29,16 @@
 **Phase 10: Reflection 시스템** — ✅ 인프라 완료 (A1~F3, 23개 전체)
 **Phase 10.5: 큐레이션 세션** — ✅ 완료 (T1~T8, 8개 전체)
 **Phase 10.6: PWA 전환** — ✅ 코드 완료 (T1~T7) / 실기기 검증은 배포 후 별도
-**Phase 10.7: Reflection 학습 루프 완성** — ⬜ 신설 (T1~T6) ← ref-12 격차 보강 필요
+**Phase 10.7: Reflection 학습 루프 완성** — ✅ 완료 (T1~T6, 6개) — 2026-05-13 GPT-5.5 스웜 오케스트레이션
+
+> **오케스트레이션 결과 (2026-05-13)**:
+> - T1·T3·T4 자동 머지 (3개)
+> - T2·T5 회귀 가드레일에 차단 → stale base false positive 진단 → 의도된 파일만 cherry-pick (DEL>ADD×2 가드레일이 동시 디스패치 + 순차 머지의 부산물을 회귀로 오인)
+> - T2의 wikiCompiler 87줄 삭제는 **진짜 스코프 위반** — 가드레일이 정확히 보호 (수동 cherry-pick으로 의도된 reflectionStore 변경만 적용)
+> - T6 검증: 학습 루프 항목 전체 ✅, 빌드 ✅, shallow-boot ✅, 회귀(시그니처 보존) ✅
+> - 선행 회귀 5건 발견 → UP-7로 분리 추적
+>
+> **스웜 교훈**: 동시 디스패치 시 모든 에이전트가 같은 base에서 분기하면, 먼저 머지된 작업이 후속 브랜치에서 "삭제"로 보여 가드레일 false positive 발생. 다음 스웜은 각 머지 확인 후 순차 디스패치 또는 base 명시 권장.
 
 > **ref-12 격차 발견 (2026-05-13)**: Phase 10/10.5/10.6 코드 검증 중 ref-12 §3.3 (`edit` 인터벤션 액션), §5.1 (intervention의 학습 신호 역할), §5.4 (사용자 의미 모델 프로파일)이 PLAN.md에 누락된 채 코드도 그대로 누락된 상태가 확인됨. 구체적으로 `WikiPage.jsx` 저장 시 `interventionStore.append`가 호출되지 않아 위키 직접 편집이 AI 학습 신호로 이어지지 않음. ref-12 §2.3 "위키 직접 편집은 MVP 필수"의 절반(편집 UI)만 구현되고 나머지 절반(intervention 기록)이 빠짐.
 >
@@ -46,10 +56,10 @@
 
 ## 현재 활성 태스크
 
-**Phase 10 + 10.5 + 10.6 완료** — **Phase 10.7 (ref-12 학습 루프 보강) 착수 대기**
+**Phase 10 + 10.5 + 10.6 + 10.7 완료** — **Phase 11 (Tension 감지) 착수 대기**
 
-**완료**: P10-A1~A3, P10-B1~B4, P10-C1~C3, P10-D1~D4, P10-E1~E3, P10-F1~F3, P10.5-T1~T8, P10.6-T1~T7
-**다음**: **Phase 10.7** (P10.7-T1~T6) → 그 후 Phase 11
+**완료**: P10-A1~A3, P10-B1~B4, P10-C1~C3, P10-D1~D4, P10-E1~E3, P10-F1~F3, P10.5-T1~T8, P10.6-T1~T7, P10.7-T1~T6
+**다음**: **Phase 11** (Tension 감지 + Anti-bubble 심화) — 또는 UP-7 선행 회귀 5건 우선 해소
 
 ### Phase 10.7 진입점
 
