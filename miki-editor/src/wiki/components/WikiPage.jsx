@@ -2,6 +2,8 @@ import { useState, useEffect, useRef, useCallback } from 'react';
 import { Editor } from '@toast-ui/react-editor';
 import '@toast-ui/editor/dist/toastui-editor.css';
 import { useWikiStore } from '../../stores/wikiStore';
+import { useInterventionStore } from '../../stores/interventionStore';
+import { createIntervention } from '../../services/interventionResolver';
 import { diffMarkdown } from '../markdownDiffer';
 
 /**
@@ -14,6 +16,7 @@ import { diffMarkdown } from '../markdownDiffer';
 export function WikiPage({ entityName, onClose, onSave }) {
     const getEntityPage = useWikiStore(s => s.getEntityPage);
     const appendTriples = useWikiStore(s => s.appendTriples);
+    const removeTriples = useWikiStore(s => s.removeTriples);
 
     const [originalMarkdown, setOriginalMarkdown] = useState('');
     const [isDirty, setIsDirty] = useState(false);
@@ -29,9 +32,10 @@ export function WikiPage({ entityName, onClose, onSave }) {
         setIsDirty(true);
     }, []);
 
-    const handleSave = useCallback(() => {
+    const handleSave = useCallback(async () => {
         const edited = editorRef.current?.getInstance().getMarkdown() || '';
         const { added, removed } = diffMarkdown(originalMarkdown, edited, entityName);
+        const appendIntervention = useInterventionStore.getState().append;
 
         if (added.length > 0) {
             const now = new Date().toISOString();
@@ -46,10 +50,36 @@ export function WikiPage({ entityName, onClose, onSave }) {
             appendTriples(newTriples);
         }
 
+        if (removed.length > 0) {
+            removeTriples(removed);
+        }
+
+        // ref-12 §3.3 학습 신호 기록
+        for (const t of added) {
+            await appendIntervention(createIntervention({
+                type: 'edit',
+                scope: `entity:${t.subject}`,
+                subject: t.subject,
+                predicate: t.predicate,
+                object: t.object,
+                user_note: 'wiki direct edit (add)',
+            }));
+        }
+        for (const t of removed) {
+            await appendIntervention(createIntervention({
+                type: 'reject',
+                scope: `entity:${t.subject}`,
+                subject: t.subject,
+                predicate: t.predicate,
+                object: t.object,
+                user_note: 'wiki direct edit (remove) — 재제안 금지',
+            }));
+        }
+
         onSave?.(added, removed);
         setOriginalMarkdown(edited);
         setIsDirty(false);
-    }, [originalMarkdown, entityName, appendTriples, onSave]);
+    }, [originalMarkdown, entityName, appendTriples, removeTriples, onSave]);
 
     return (
         <div className="fixed inset-0 z-50 flex justify-end" onClick={onClose}>
