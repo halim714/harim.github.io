@@ -31,6 +31,20 @@ export class MikiDatabase extends Dexie {
       vaultKeys: '&keyId, createdAt'
     });
 
+    // Version 5: Phase 10 — graph triple store cache, intervention log cache, reflection queue
+    this.version(5).stores({
+      graphCache: '++id, &entityId, entityType, updatedAt',
+      interventionsCache: '++id, &interventionId, scope, entityId, updatedAt',
+      reflectionsQueue: '++id, &reflectionId, status, evidenceTier, scheduledAt'
+    });
+
+    // Version 6: Phase 10.5 — raw 메모 큐레이션 상태 캐시
+    // curation_status: 'pending_review' | 'selected' | 'excluded'
+    // 모든 신규 메모는 pending_review로 시작. 사용자가 큐레이션 세션에서 결정.
+    this.version(6).stores({
+      rawMemosCache: '++id, &memoId, source, curationStatus, capturedAt, decidedAt'
+    });
+
     // Add hooks for automatic timestamps
     this.documents.hook('creating', function (primKey, obj, trans) {
       obj.createdAt = new Date().toISOString();
@@ -135,6 +149,81 @@ export const dbHelpers = {
     }
   }
 };
+
+// Phase 10.5 — raw 메모 큐레이션 상태 캐시
+// 메모 ingest 흐름: ImportBridge / Editor 저장 / 데몬 sync → enqueueForReview()
+// 큐레이션 흐름: getPending() → user 선택 → markSelected() / markExcluded()
+export class RawMemoCache {
+  static async enqueueForReview(memo) {
+    const existing = await db.rawMemosCache.where('memoId').equals(memo.id).first();
+    if (existing) return existing.id;
+    return await db.rawMemosCache.add({
+      memoId: memo.id,
+      title: memo.title || '',
+      body: memo.body || memo.content || '',
+      source: memo.source || 'meki_editor',
+      folder: memo.folder || '',
+      curationStatus: 'pending_review',
+      capturedAt: memo.createdAt || new Date().toISOString(),
+      decidedAt: null,
+    });
+  }
+
+  static async getPending() {
+    return await db.rawMemosCache
+      .where('curationStatus')
+      .equals('pending_review')
+      .reverse()
+      .sortBy('capturedAt');
+  }
+
+  static async getByDateRange(startISO, endISO) {
+    return await db.rawMemosCache
+      .where('capturedAt')
+      .between(startISO, endISO, true, true)
+      .toArray();
+  }
+
+  static async markSelected(memoId) {
+    const record = await db.rawMemosCache.where('memoId').equals(memoId).first();
+    if (record) {
+      await db.rawMemosCache.update(record.id, {
+        curationStatus: 'selected',
+        decidedAt: new Date().toISOString(),
+      });
+    }
+  }
+
+  static async markExcluded(memoId) {
+    const record = await db.rawMemosCache.where('memoId').equals(memoId).first();
+    if (record) {
+      await db.rawMemosCache.update(record.id, {
+        curationStatus: 'excluded',
+        decidedAt: new Date().toISOString(),
+      });
+    }
+  }
+
+  static async getStatus(memoId) {
+    const record = await db.rawMemosCache.where('memoId').equals(memoId).first();
+    return record?.curationStatus || null;
+  }
+
+  static async pendingCount() {
+    return await db.rawMemosCache.where('curationStatus').equals('pending_review').count();
+  }
+
+  // 큐레이션 세션 도중 사용자가 메모 본문 수정
+  static async updateContent(memoId, { title, body }) {
+    const record = await db.rawMemosCache.where('memoId').equals(memoId).first();
+    if (record) {
+      const updates = {};
+      if (title !== undefined) updates.title = title;
+      if (body !== undefined) updates.body = body;
+      await db.rawMemosCache.update(record.id, updates);
+    }
+  }
+}
 
 // Migration utilities
 export class DatabaseMigration {

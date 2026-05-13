@@ -10,6 +10,12 @@
 1. **`PLAN.md`** — 전체 계획, 태스크별 담당 Role과 상태
 2. **`PROGRESS.md`** — 현재 진행 상황, 완료 목록, 실패 이력
 
+**코드베이스 구조 파악 (파일 직접 읽기 전에 먼저):**
+- `graphify-out/graph.json` — 644 nodes, 877 edges (2026-05-06 추출)
+- 쿼리: `graphify query "<질문>"` 으로 지형 파악 후 필요한 파일만 Read
+- 보고서: `graphify-out/GRAPH_REPORT.md` — God Nodes, 커뮤니티 구조 요약
+- 핵심 허브: `createLogger()`(33), `GitHubService`(32), `storage-client.js`(23), `WebSocketAdapter`(22), `AuthService`(21)
+
 ---
 ## 절대 금지 사항
 

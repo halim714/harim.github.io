@@ -26,3 +26,8 @@ task.md.resolved
 *.resolved
 .DS_Store
 .worktrees/
+
+# Graphify knowledge graph (generated)
+graphify-out/
+.vercel
+.env*.local

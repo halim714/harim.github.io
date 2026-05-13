@@ -6,6 +6,9 @@ import OnboardingSetup from './pages/OnboardingSetup';
 import LoginPage from './pages/LoginPage';
 import CallbackPage from './pages/CallbackPage';
 import VerificationPage from './pages/VerificationPage';
+import Reflection from './pages/Reflection';
+import ImportBridge from './pages/ImportBridge';
+import Curation from './pages/Curation';
 import { AuthService } from './services/auth';
 import { ConfirmProvider } from './contexts/ConfirmContext';
 import MigrationNotice from './components/MigrationNotice';
@@ -120,10 +123,25 @@ export const useAuth = () => useContext(AuthContext);
 
 import { dbHelpers } from './utils/database';
 import { getPendingSyncProcessor } from './sync';
+import { startScheduler, stopScheduler, requestNotificationPermission } from './services/curationScheduler';
+import { initByokCache } from './services/byokClient';
 
 function AppContent() {
   const { loading, user, needsSetup } = useAuth();
   const location = useLocation();
+
+  // BYOK 캐시 워밍업 (비동기 저장소 → 인메모리)
+  useEffect(() => {
+    initByokCache().catch(() => { });
+  }, []);
+
+  // 큐레이션 알림 스케줄러 (로그인 상태에서만)
+  useEffect(() => {
+    if (!user) return;
+    requestNotificationPermission().catch(() => { });
+    startScheduler();
+    return () => stopScheduler();
+  }, [user]);
 
   // 오프라인 보류 항목 배치 동기화 (로그인 상태에서만 실행)
   useEffect(() => {
@@ -164,11 +182,18 @@ function AppContent() {
     return () => window.removeEventListener('beforeunload', handleBeforeUnload);
   }, []);
 
-  // CallbackPage 최우선 처리
+  // 인증 불필요 경로 최우선 처리
   if (location.pathname === '/callback') {
     return (
       <Routes>
         <Route path="/callback" element={<CallbackPage />} />
+      </Routes>
+    );
+  }
+  if (location.pathname === '/import-bridge') {
+    return (
+      <Routes>
+        <Route path="/import-bridge" element={<ImportBridge />} />
       </Routes>
     );
   }
@@ -203,6 +228,8 @@ function AppContent() {
               <SyncStatus />
             </>
           } />
+          <Route path="/reflection" element={<Reflection />} />
+          <Route path="/curation" element={<Curation />} />
           <Route path="*" element={<Navigate to="/editor" replace />} />
         </>
       )}

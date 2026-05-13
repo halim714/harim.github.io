@@ -222,19 +222,107 @@ This is your private wiki data storage.
 
 \`\`\`
 miki-editor/
-└── posts/ # Your markdown files
+└── posts/              # Your markdown files
+raw/notes/              # MekiSync note copies (read-only)
+graph.jsonl             # Triple store — Prior (source of truth)
+interventions.jsonl     # Append-only AI constraint log
+reflections/
+  queue.jsonl           # Pending daily reflections
+  archive.jsonl         # Resolved reflections
 \`\`\`
 `;
 
-        // .gitkeep 생성 (이미 존재하면 무시)
-        try {
-            await this.createOrUpdateFile(repo.name, 'miki-editor/posts/.gitkeep', '', 'Initialize directory structure');
-        } catch (error) {
-            if (error.status !== 422) throw error;
+        const initialFiles = [
+            ['miki-editor/posts/.gitkeep', '', 'Initialize posts directory'],
+            ['raw/notes/.gitkeep', '', 'Initialize raw notes directory'],
+            ['graph.jsonl', '', 'Initialize graph triple store'],
+            ['interventions.jsonl', '', 'Initialize intervention log'],
+            ['reflections/queue.jsonl', '', 'Initialize reflection queue'],
+            ['reflections/archive.jsonl', '', 'Initialize reflection archive'],
+        ];
+
+        for (const [path, content, message] of initialFiles) {
+            try {
+                await this.createOrUpdateFile(repo.name, path, content, message, null, { skipShaLookup: true });
+            } catch (error) {
+                if (error.status !== 422) throw error;
+            }
         }
 
-        // README 생성
         await this.createOrUpdateFile(repo.name, 'README.md', readme, 'Add README');
+    }
+
+    /**
+     * graph.jsonl / interventions.jsonl / reflections/*.jsonl 읽기
+     * @returns {Array<Object>} 파싱된 라인 배열 (빈 라인 제거)
+     */
+    async readJsonl(repoName, path) {
+        try {
+            const file = await this.getFile(repoName, path);
+            const text = atob(file.content.replace(/\n/g, ''));
+            return text
+                .split('\n')
+                .filter(line => line.trim())
+                .map(line => JSON.parse(line));
+        } catch (error) {
+            if (error.status === 404) return [];
+            throw error;
+        }
+    }
+
+    /**
+     * .jsonl 파일에 새 라인들 추가 (append-only)
+     * @param {Array<Object>} newLines - 추가할 객체 배열
+     */
+    async appendJsonl(repoName, path, newLines) {
+        if (!newLines.length) return;
+
+        let existing = '';
+        let sha = null;
+        try {
+            const file = await this.getFile(repoName, path);
+            existing = atob(file.content.replace(/\n/g, ''));
+            sha = file.sha;
+        } catch (error) {
+            if (error.status !== 404) throw error;
+        }
+
+        const appended = newLines.map(obj => JSON.stringify(obj)).join('\n');
+        const content = existing
+            ? existing.trimEnd() + '\n' + appended + '\n'
+            : appended + '\n';
+
+        await this.createOrUpdateFile(repoName, path, content, `Append ${newLines.length} line(s) to ${path}`, sha);
+    }
+
+    /**
+     * .jsonl 파일 전체 덮어쓰기 (reflections/queue.jsonl 업데이트용)
+     * @param {Array<Object>} lines - 전체 내용
+     */
+    async writeJsonl(repoName, path, lines) {
+        const content = lines.map(obj => JSON.stringify(obj)).join('\n') + (lines.length ? '\n' : '');
+        await this.createOrUpdateFile(repoName, path, content, `Update ${path}`);
+    }
+
+    /**
+     * miki-data repo에 graph/reflection 구조가 없을 경우 초기화
+     * (온보딩 이후 첫 Phase 10 진입 시 1회 호출)
+     */
+    async ensureGraphStructure(dataRepoName = 'miki-data') {
+        const paths = [
+            'graph.jsonl',
+            'interventions.jsonl',
+            'reflections/queue.jsonl',
+            'reflections/archive.jsonl',
+            'raw/notes/.gitkeep',
+        ];
+
+        await Promise.allSettled(
+            paths.map(path =>
+                this.createOrUpdateFile(dataRepoName, path, '', `Initialize ${path}`, null, { skipShaLookup: true })
+                    .catch(err => { if (err.status !== 422) throw err; })
+            )
+        );
     }
 
     /**

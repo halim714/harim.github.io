@@ -87,5 +87,27 @@ module.exports = {
   		}
   	}
   },
-  plugins: [require("tailwindcss-animate")],
+  plugins: [
+    require("tailwindcss-animate"),
+    // Phase 10.6: safe-area 유틸리티 (iOS notch / Dynamic Island, Android gesture bar)
+    function ({ addUtilities }) {
+      addUtilities({
+        '.safe-top': { 'padding-top': 'env(safe-area-inset-top)' },
+        '.safe-bottom': { 'padding-bottom': 'env(safe-area-inset-bottom)' },
+        '.safe-left': { 'padding-left': 'env(safe-area-inset-left)' },
+        '.safe-right': { 'padding-right': 'env(safe-area-inset-right)' },
+        '.safe-x': {
+          'padding-left': 'env(safe-area-inset-left)',
+          'padding-right': 'env(safe-area-inset-right)',
+        },
+        '.safe-y': {
+          'padding-top': 'env(safe-area-inset-top)',
+          'padding-bottom': 'env(safe-area-inset-bottom)',
+        },
+        // 마진 버전 (sticky bottom 영역에 더 자연스러움)
+        '.mb-safe': { 'margin-bottom': 'env(safe-area-inset-bottom)' },
+        '.mt-safe': { 'margin-top': 'env(safe-area-inset-top)' },
+      });
+    },
+  ],
 };
