@@ -1,5 +1,5 @@
 import React, { useState, useEffect, createContext, useContext } from 'react';
-import { BrowserRouter, Routes, Route, Navigate, useLocation } from 'react-router-dom';
+import { BrowserRouter, Routes, Route, Navigate, useLocation, Outlet } from 'react-router-dom';
 import { Octokit } from 'octokit';
 import Editor from './pages/Editor';
 import OnboardingSetup from './pages/OnboardingSetup';
@@ -9,10 +9,12 @@ import VerificationPage from './pages/VerificationPage';
 import Reflection from './pages/Reflection';
 import ImportBridge from './pages/ImportBridge';
 import Curation from './pages/Curation';
+import WikiIndex from './pages/WikiIndex';
 import { AuthService } from './services/auth';
 import { ConfirmProvider } from './contexts/ConfirmContext';
 import MigrationNotice from './components/MigrationNotice';
 import SyncStatus from './components/SyncStatus';
+import AppNav from './components/layout/AppNav';
 
 const LoadingScreen = () => (
   <div className="flex items-center justify-center h-screen bg-gray-900 text-white">
@@ -126,6 +128,15 @@ import { getPendingSyncProcessor } from './sync';
 import { startScheduler, stopScheduler, requestNotificationPermission } from './services/curationScheduler';
 import { initByokCache } from './services/byokClient';
 
+function AuthLayout() {
+  return (
+    <>
+      <AppNav />
+      <Outlet />
+    </>
+  );
+}
+
 function AppContent() {
   const { loading, user, needsSetup } = useAuth();
   const location = useLocation();
@@ -221,15 +232,18 @@ function AppContent() {
       {/* 로그인 + 설정 완료 */}
       {user && !needsSetup && (
         <>
-          <Route path="/editor" element={
-            <>
-              <MigrationNotice />
-              <Editor />
-              <SyncStatus />
-            </>
-          } />
-          <Route path="/reflection" element={<Reflection />} />
-          <Route path="/curation" element={<Curation />} />
+          <Route element={<AuthLayout />}>
+            <Route path="/editor" element={
+              <>
+                <MigrationNotice />
+                <Editor />
+                <SyncStatus />
+              </>
+            } />
+            <Route path="/reflection" element={<Reflection />} />
+            <Route path="/curation" element={<Curation />} />
+            <Route path="/wiki" element={<WikiIndex />} />
+          </Route>
           <Route path="*" element={<Navigate to="/editor" replace />} />
         </>
       )}

@@ -1,12 +1,10 @@
 import { useEffect } from 'react';
-import { useNavigate } from 'react-router-dom';
 import { useReflectionStore } from '../stores/reflectionStore';
 import { ReflectionCard } from '../components/ReflectionCard';
 import { IdentityReflectionCard } from '../components/IdentityReflectionCard';
 import { CounterfactualView } from '../components/CounterfactualView';
 
 export default function Reflection() {
-    const navigate = useNavigate();
     const { pendingCards, queue, loadQueue, resolveCard } = useReflectionStore();
 
     useEffect(() => {
@@ -18,17 +16,10 @@ export default function Reflection() {
         .map(q => q.proposed_update);
 
     return (
-        <div className="min-h-screen bg-gray-50 flex flex-col">
+        <div className="min-h-screen bg-gray-50 md:pl-12 flex flex-col" style={{ paddingBottom: 'calc(3.5rem + env(safe-area-inset-bottom, 0px))' }}>
             {/* 헤더 — sticky */}
-            <header className="bg-white border-b border-gray-100 sticky top-0 z-10 safe-top">
-                <div className="px-4 py-3 flex items-center gap-3 max-w-xl mx-auto">
-                    <button
-                        onClick={() => navigate('/editor')}
-                        className="p-2 -ml-2 text-gray-500 hover:text-gray-800 rounded-full text-lg"
-                        aria-label="에디터로"
-                    >
-                        ←
-                    </button>
+            <header className="bg-white border-b border-gray-100 sticky top-0 z-10" style={{ paddingTop: 'env(safe-area-inset-top, 0px)' }}>
+                <div className="px-4 py-3 flex items-center gap-3 max-w-2xl mx-auto md:mx-0">
                     <div className="flex-1 min-w-0">
                         <h1 className="text-base font-semibold text-gray-900 leading-tight">
                             오늘의 연결
@@ -43,7 +34,7 @@ export default function Reflection() {
             </header>
 
             {/* 카드 목록 */}
-            <main className="flex-1 px-4 py-4 max-w-xl mx-auto w-full flex flex-col gap-3 pb-8">
+            <main className="flex-1 px-4 py-4 max-w-2xl mx-auto md:mx-0 w-full flex flex-col gap-3 pb-8">
                 {pendingCards.length === 0 ? (
                     <EmptyState />
                 ) : (

@@ -866,7 +866,7 @@ function AppContent() {
 
   if (isLoadingDocuments) {
     return (
-      <div className="miki-root h-screen flex flex-col bg-gray-100">
+      <div className="miki-root h-screen flex flex-col bg-gray-100 md:pl-12">
         {/* 상단 메뉴 바 (로딩 상태) */}
         <header className="px-4 py-2 bg-white border-b">
           <div className="container mx-auto flex justify-between items-center">
@@ -915,8 +915,8 @@ function AppContent() {
   }
 
   return (
-    <div className="miki-root h-screen flex flex-col bg-gray-100">
-      {/* 상단 메뉴 바 제거 (세로 메뉴로 대체) */}
+    <div className="miki-root h-screen flex flex-col bg-gray-100 md:pl-12 pb-14 md:pb-0">
+      {/* 상단 메뉴 바 제거 (AppNav 전역 네비게이션으로 대체) */}
       <header className={`px-4 py-2 bg-white border-b ${isFullscreen ? 'hidden' : ''}`} style={{ display: 'none' }} />
       {/* 단축키 도움말 오버레이 */}
       {helpOpen && (
@@ -966,7 +966,7 @@ function AppContent() {
 
       {/* Vault 상태 배지 */}
       <button
-        className={`fixed bottom-4 right-4 z-40 px-3 py-1.5 rounded-full text-xs font-medium shadow-md border ${isVaultReady ? 'bg-green-50 border-green-300 text-green-800' : 'bg-red-50 border-red-300 text-red-800'}`}
+        className={`fixed bottom-16 right-4 md:bottom-4 z-40 px-3 py-1.5 rounded-full text-xs font-medium shadow-md border ${isVaultReady ? 'bg-green-50 border-green-300 text-green-800' : 'bg-red-50 border-red-300 text-red-800'}`}
         onClick={() => setVaultPanelOpen(true)}
         title="Vault 암호화 설정"
       >
