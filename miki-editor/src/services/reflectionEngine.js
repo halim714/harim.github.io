@@ -142,6 +142,63 @@ export function selectPendingCards(queue, maxSlots = 5) {
         .slice(0, maxSlots);
 }
 
+/**
+ * pending Reflection queue를 일자별 드립 피드 슬롯으로 배정
+ *
+ * @param {Array} queue - reflectionsQueue 전체
+ * @param {object} options
+ * @param {Date|string} [options.startDate] - 스케줄 시작일
+ * @returns {Array} 일자별 Reflection 슬롯
+ */
+export function scheduleDripFeed(queue, options = {}) {
+    const pending = queue.filter(q => q.status === 'pending');
+    if (!pending.length) return [];
+
+    const total = pending.length;
+    const periodDays = Math.max(14, Math.min(28, Math.ceil(total / 4)));
+    const baseDaily = Math.max(3, Math.min(5, Math.ceil(total / periodDays)));
+    const tierOrder = { Grounded: 0, Bridged: 1, Speculative: 2 };
+
+    const sorted = [...pending].sort((a, b) => {
+        const tierDiff = (tierOrder[a.evidence_tier] ?? 2) - (tierOrder[b.evidence_tier] ?? 2);
+        if (tierDiff !== 0) return tierDiff;
+        return new Date(b.triggered_at) - new Date(a.triggered_at);
+    });
+
+    const schedule = [];
+    const startDate = options.startDate ? new Date(options.startDate) : new Date();
+    let cursor = 0;
+
+    for (let day = 0; day < periodDays && cursor < sorted.length; day++) {
+        const dailyLimit = day < 7 ? Math.min(3, baseDaily) : baseDaily;
+        const slot = sorted.slice(cursor, cursor + dailyLimit);
+        const scheduledFor = new Date(startDate);
+        scheduledFor.setDate(scheduledFor.getDate() + day);
+        const date = scheduledFor.toISOString().slice(0, 10);
+
+        schedule.push({
+            date,
+            cards: slot.map(c => ({ ...c, scheduled_for: date })),
+        });
+        cursor += dailyLimit;
+    }
+
+    return schedule;
+}
+
+/**
+ * 스케줄에서 지정 날짜의 Reflection 카드만 반환
+ *
+ * @param {Array} schedule - scheduleDripFeed() 결과
+ * @param {Date} [date] - 조회 날짜
+ * @returns {Array}
+ */
+export function selectTodaysSlot(schedule, date) {
+    const today = (date || new Date()).toISOString().slice(0, 10);
+    const slot = schedule.find(s => s.date === today);
+    return slot ? slot.cards : [];
+}
+
 // ── Helpers ────────────────────────────────────────────────────────────────
 
 function normalize(str) {
