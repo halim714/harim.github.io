@@ -166,6 +166,8 @@ Apple/Samsung Notes (원본 불변)
 4. **두 축 분리 — 증거 vs Prior 관계**: 증거 강도(Grounded/Bridged)는 UI 메타데이터, Prior 관계(Consistent/Extending/Tension)는 발행 게이트. MVP는 Extending만 발행, Tension은 Phase 11.
 5. **Anti-Bubble 투명성**: Reflection 푸터 "왜 이걸 보여드리나요?", Counterfactual 가시화("오늘 발행 안 된 후보"), 위키 직접 편집 가능 — 모두 MVP 필수.
 6. **단일 목적함수 부재**: Meki는 watch time 같은 KPI 최적화 안 함. 알고리즘은 명시적이고 사용자 통제 하에.
+7. **사용자 수정 = 가장 강력한 학습 신호** (ref-12 §3.3·§5.1·§5.4): 위키 직접 편집·Reflection edit·reject는 모두 `interventions.jsonl`에 기록되어 다음 컴파일의 시스템 프롬프트로 주입된다. 이게 AI가 사용자 의미 모델을 학습하는 유일한 채널이고, "AI가 잘못 알아들으면 사용자가 고친다"의 구조적 보장. **`edit` 액션이 누락되면 시스템 전체가 자기 강화 편향에 빠진다.**
+8. **Pull/Push 양립** (ref-12 §0.4): Reflection은 push, 위키 직접 조회·편집은 pull. Push 채널이 막혀도 사용자는 자기 Prior에 접근 가능해야 한다.
 
 ### 기술 스펙 및 태스크
 
@@ -323,6 +325,44 @@ T7 (실기기 검증) ← 모든 작업 완료 후
 5. 21시 알림이 PWA 설치 상태에서 실제로 도달 (iOS 16.4+ 가정)
 6. notch 영역(iPhone)에 sticky 헤더가 가려지지 않음
 7. `services/notify.js`와 `services/secureStorage.js`가 외부에 노출되어 Capacitor 마이그레이션 시 두 파일만 교체하면 됨
+
+---
+
+## Phase 10.7: Reflection 학습 루프 완성 — ref-12 격차 보강 ← 현재 단계
+
+> Phase 10/10.5/10.6 코드 검증 (2026-05-13) 중 **ref-12 §3.3·§5.1·§5.4의 학습 루프가 PLAN과 코드 양쪽에서 누락**된 것이 발견됐다. 위키 직접 편집·Reflection edit이 `interventions.jsonl`에 기록되지 않아 AI가 사용자 의미 모델을 학습하지 못하는 상태.
+>
+> "AI가 잘못 알아들으면 어떻게 합니까?"라는 사용자 우려가 이 누락의 정확한 진단. ref-12는 이 답을 `edit` intervention + 시스템 프롬프트 주입 + 사용자 프로파일 누적으로 명시했으나 PLAN.md에 옮겨지지 않았다.
+>
+> **롤백하지 않는 이유**: Phase 10 아키텍처(graph.jsonl SoT, 위키=렌더링, 큐레이션 파이프라인, 4분리 스토어)는 ref-12와 일치. 누락은 *기존 코드에 덧붙이는* 학습 루프 배선뿐이므로 추가형 보강이 적절.
+
+| 태스크 ID | 담당 Role | 작업 내용 | 종류 | 상태 |
+|---|---|---|---|---|
+| P10.7-T1 | `frontend_dev` | `WikiPage.jsx` 저장 시 `diffMarkdown` 결과(added/removed)를 각각 `interventionStore.append({type:'edit', subject, predicate, object, user_rationale?})` 호출. ref-12 §3.3 `edit` 액션 구현. removed 트리플은 현재 무시되는데 함께 처리. | 확장 | ⬜ |
+| P10.7-T2 | `frontend_dev` | `ReflectionCard.jsx`/`IdentityReflectionCard.jsx` approve/reject/edit 액션이 모두 `interventionStore.append`로 기록되는지 검증·수정. `reflectionStore.resolveCard`는 이미 accepted/modified만 기록 — reject도 기록 필요 (ref-12 §3.3 "재제안 영구 차단"). | 확장 | ⬜ |
+| P10.7-T3 | `api_dev` | `interventionResolver.js`에 §5.4 사용자 의미 모델 프로파일 빌더 추가 — interventions.jsonl 누적의 통계 요약(호칭 레지스터/시기 분화/거절 패턴/선호 패턴). `buildSystemPrompt` 호출 시 컨텍스트로 주입. | 확장 | ⬜ |
+| P10.7-T4 | `api_dev` | `wikiCompiler.js` 콜드 스타트 자동 처리 규칙 (ref-12 §4.2): 표면형 유사도 ≥0.95 자동 merge, evidence ≥3 + ai_self_score ≥0.9 자동 grounded approve. 위험 회피(레지스터 차이 있는 표면형, 시기 차 1년+) 자동 처리 금지. archive.jsonl에 "auto-approved" 기록. | 확장 | ⬜ |
+| P10.7-T5 | `api_dev` | `reflectionEngine.js` 드립 피드 스케줄링 (ref-12 §4.4): 하루 1건 = 3~5개 Reflection, 배포 기간 `max(14, min(28, candidates/4))` 일, 1주차 최근 3개월 우선, 첫 1주 ≤3개. `selectPendingCards`는 현재 단순 정렬만 — 스케줄링 로직 추가. | 확장 | ⬜ |
+| P10.7-T6 | `test_verify` | 학습 루프 회귀 테스트: 위키 편집 → interventions.jsonl 라인 추가 확인 → 다음 컴파일 시 시스템 프롬프트에 포함 확인. `removed` 트리플도 graph.jsonl에서 제거되는지 확인. | 검증 | ⬜ |
+
+### Phase 10.7 의존성
+
+```
+T1 (위키 편집 → intervention) + T2 (Reflection → intervention) — 병행 가능 (UI 레이어)
+T3 (프로파일 빌더) ← T1·T2 데이터 누적 후 의미. 단 코드는 병행 작성 가능
+T4 (콜드 스타트 자동 규칙) — 독립
+T5 (드립 피드) — 독립
+T6 (검증) ← 모두 완료 후
+```
+
+### Phase 10.7 완료 기준
+
+1. 사용자가 위키 페이지 편집 → `interventions.jsonl`에 `{type:'edit', ...}` append 확인
+2. Reflection reject 시 `interventions.jsonl`에 `{type:'reject', scope:'entity:...'}` append → 다음 컴파일에서 시스템 프롬프트로 주입되어 동일 제안 재발생 안 함
+3. `removed` 트리플이 graph.jsonl에서 실제 제거되고 wikiStore에 반영
+4. interventions 누적 후 `interventionResolver.buildSystemPrompt`가 사용자 프로파일 통계를 포함
+5. 콜드 임포트 100건 → 자동 처리된 항목(표면형 ≥0.95 merge 등)이 archive.jsonl에 "auto-approved" 기록
+6. Daily Reflection이 드립 피드 스케줄대로 1일 3~5건 배포되고 첫 1주는 ≤3건
 
 ---
 

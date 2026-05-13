@@ -26,8 +26,13 @@
 **Phase 1~9**: ✅ 모두 완료 (보안·동기화·성능·UX 기반 공사)
 
 **Phase 10: Reflection 시스템** — ✅ 인프라 완료 (A1~F3, 23개 전체)
-**Phase 10.5: 큐레이션 세션** — ✅ 완료 (T1~T7, 7개 전체)
+**Phase 10.5: 큐레이션 세션** — ✅ 완료 (T1~T8, 8개 전체)
 **Phase 10.6: PWA 전환** — ✅ 코드 완료 (T1~T7) / 실기기 검증은 배포 후 별도
+**Phase 10.7: Reflection 학습 루프 완성** — ⬜ 신설 (T1~T6) ← ref-12 격차 보강 필요
+
+> **ref-12 격차 발견 (2026-05-13)**: Phase 10/10.5/10.6 코드 검증 중 ref-12 §3.3 (`edit` 인터벤션 액션), §5.1 (intervention의 학습 신호 역할), §5.4 (사용자 의미 모델 프로파일)이 PLAN.md에 누락된 채 코드도 그대로 누락된 상태가 확인됨. 구체적으로 `WikiPage.jsx` 저장 시 `interventionStore.append`가 호출되지 않아 위키 직접 편집이 AI 학습 신호로 이어지지 않음. ref-12 §2.3 "위키 직접 편집은 MVP 필수"의 절반(편집 UI)만 구현되고 나머지 절반(intervention 기록)이 빠짐.
+>
+> **롤백 vs 업데이트 판단**: 아키텍처(graph.jsonl SoT, 위키=렌더링, 큐레이션 파이프라인, 4분리 스토어)는 ref-12와 일치. 누락은 *기존 코드에 덧붙이는* 학습 루프 배선뿐이므로 업데이트(Phase 10.7 신설)가 적절. 롤백 시 ~95% 정상 코드 폐기 발생.
 
 > Phase 10은 두 번의 전략 전환을 거쳐 재설계됨 (PLAN.md 참고):
 > - 2026-04-30: Docker/OpenClaw 폐기 → BYOK + 노트앱 연동
@@ -41,10 +46,29 @@
 
 ## 현재 활성 태스크
 
-**Phase 10 + 10.5 + 10.6 완료** — Phase 11 착수 대기
+**Phase 10 + 10.5 + 10.6 완료** — **Phase 10.7 (ref-12 학습 루프 보강) 착수 대기**
 
 **완료**: P10-A1~A3, P10-B1~B4, P10-C1~C3, P10-D1~D4, P10-E1~E3, P10-F1~F3, P10.5-T1~T8, P10.6-T1~T7
-**다음**: **Phase 11** (Tension 감지 + Anti-bubble 심화)
+**다음**: **Phase 10.7** (P10.7-T1~T6) → 그 후 Phase 11
+
+### Phase 10.7 진입점
+
+**우선**: P10.7-T1 (WikiPage 저장 시 interventionStore.append)
+- `miki-editor/src/wiki/components/WikiPage.jsx` `handleSave` 내 `appendTriples` 직후 `diffMarkdown` 결과의 added/removed를 순회하며 `interventionStore.append({type:'edit', subject, predicate, object})` 호출
+- `interventionStore.append`는 `db.interventionsCache.add` + `github.appendJsonl`까지 일관 처리 (현재 구현 확인 필요)
+- `markdownDiffer.diffMarkdown`이 `removed`를 이미 반환하므로 wikiStore에 `removeTriples` 메서드 추가 필요
+
+**병행 가능**: P10.7-T2 (ReflectionCard reject 시 interventionStore 기록 검증)
+
+### Phase 10.7 의존성
+
+```
+T1 (위키 편집 → intervention) + T2 (Reflection → intervention) — 병행 (UI 레이어)
+T3 (사용자 프로파일 빌더) — 코드 병행 가능, 의미는 T1·T2 누적 후
+T4 (콜드 스타트 자동 규칙) — 독립
+T5 (드립 피드 스케줄링) — 독립
+T6 (회귀 검증) ← 전부 완료 후
+```
 
 PWA 실기기 검증은 `miki-editor/PWA_TEST_CHECKLIST.md` 참고 (배포 후 사용자 검증).
 
@@ -61,7 +85,9 @@ T1 (데이터 모델) → T2 (파이프라인), T3 (스토어)
 T7 (자동 흐름 정리)는 병행 가능
 ```
 
-**Phase 11 최초 진입점**: `P11-T1` (Tension 감지 엔진 — 4종 하위 타입 분류기)
+**Phase 10.7 최초 진입점**: `P10.7-T1` (WikiPage 편집 → interventionStore.append 배선 — ref-12 §3.3·§5.1 학습 루프 완성)
+
+**Phase 11 최초 진입점** (10.7 완료 후): `P11-T1` (Tension 감지 엔진 — 4종 하위 타입 분류기)
 
 **Phase 11 의존성 순서**:
 ```
