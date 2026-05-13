@@ -1,6 +1,15 @@
 {
-  "short_name": "React App",
-  "name": "Create React App Sample",
+  "name": "Meki — 일기와 위키 사이",
+  "short_name": "Meki",
+  "description": "메모를 큐레이션해서 내 위키를 만드는 도구",
+  "lang": "ko-KR",
+  "scope": "/",
+  "start_url": "/editor",
+  "display": "standalone",
+  "orientation": "portrait",
+  "theme_color": "#ffffff",
+  "background_color": "#f5f5f7",
+  "categories": ["productivity", "lifestyle"],
   "icons": [
     {
       "src": "favicon.ico",
@@ -10,16 +19,40 @@
     {
       "src": "logo192.png",
       "type": "image/png",
-      "sizes": "192x192"
+      "sizes": "192x192",
+      "purpose": "any"
+    },
+    {
+      "src": "logo192.png",
+      "type": "image/png",
+      "sizes": "192x192",
+      "purpose": "maskable"
     },
     {
       "src": "logo512.png",
       "type": "image/png",
-      "sizes": "512x512"
+      "sizes": "512x512",
+      "purpose": "any"
+    },
+    {
+      "src": "logo512.png",
+      "type": "image/png",
+      "sizes": "512x512",
+      "purpose": "maskable"
     }
   ],
-  "start_url": ".",
-  "display": "standalone",
-  "theme_color": "#000000",
-  "background_color": "#ffffff"
+  "shortcuts": [
+    {
+      "name": "오늘의 큐레이션",
+      "short_name": "큐레이션",
+      "description": "오늘 작성한 메모 검토",
+      "url": "/curation"
+    },
+    {
+      "name": "오늘의 연결",
+      "short_name": "Reflection",
+      "description": "AI가 제안한 관계 검토",
+      "url": "/reflection"
+    }
+  ]
 }

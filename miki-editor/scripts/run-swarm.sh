@@ -46,7 +46,7 @@ echo "Worktree: $WORKTREE_DIR" >> "$LOG_FILE"
 echo "Branch: $BRANCH_NAME" >> "$LOG_FILE"
 echo "========================================" >> "$LOG_FILE"
 
-echo "Using Anthropic direct API (Claude Code) with model: $MODEL" >> "$LOG_FILE"
+echo "Using Codex CLI with model: $MODEL" >> "$LOG_FILE"
 
 # ─── Git Worktree 생성 (에이전트 격리) ───
 cd "$PROJECT_ROOT" || exit 1
@@ -86,17 +86,17 @@ else
   fi
 fi
 
-# ─── Pre-flight: claude CLI 정상 여부 확인 (중립 환경 /tmp에서 실행) ───
+# ─── Pre-flight: codex CLI 정상 여부 확인 (중립 환경 /tmp에서 실행) ───
 # P1 fix: CWD가 원인인 hang이면 pre-flight도 같이 실패하므로, /tmp 서브쉘로 격리
-echo "[pre-flight] claude 기본 실행 테스트 (/tmp에서)..." >> "$DIR/$LOG_FILE"
-PF_RESULT=$(cd /tmp && unset CLAUDECODE && echo "respond with OK" | timeout 15 claude --model "${MODEL}" --dangerously-skip-permissions \
-  --output-format text 2>&1 || true)
+echo "[pre-flight] codex 기본 실행 테스트 (/tmp에서)..." >> "$DIR/$LOG_FILE"
+PF_RESULT=$(cd /tmp && unset CODEX_HOME && echo "respond with OK" | timeout 15 codex exec --model "${MODEL}" --dangerously-bypass-approvals-and-sandbox \
+  --color never 2>&1 || true)
 if echo "${PF_RESULT}" | grep -qi "OK"; then
-  echo "[pre-flight] ✅ claude 정상" >> "$DIR/$LOG_FILE"
+  echo "[pre-flight] ✅ codex 정상" >> "$DIR/$LOG_FILE"
 else
-  echo "[pre-flight] ❌ claude CLI 자체 실행 실패, abort" >> "$DIR/$LOG_FILE"
+  echo "[pre-flight] ❌ codex CLI 자체 실행 실패, abort" >> "$DIR/$LOG_FILE"
   echo "[pre-flight] 출력: ${PF_RESULT}" >> "$DIR/$LOG_FILE"
-  echo "❌ [pre-flight] claude CLI 실행 실패 — API 키/설치 확인 필요"
+  echo "❌ [pre-flight] codex CLI 실행 실패 — API 키/설치 확인 필요"
   echo "[PRE_FLIGHT_FAIL] ${LOG_NAME}" >> "$DIR/logs/regression_alerts.log"
   # worktree 정리
   if [ -n "${WORKTREE_DIR}" ] && [ -d "${WORKTREE_DIR}" ]; then
@@ -107,16 +107,16 @@ else
   exit 2
 fi
 
-# ─── Claude CLI 실행 (포그라운드 파이프 + timeout) ───
+# ─── Codex CLI 실행 (포그라운드 파이프 + timeout) ───
 RAW_FILE="$DIR/$LOG_FILE.raw"
 MAX_WAIT=600
 
 echo "[agent] 실행 시작 (timeout: ${MAX_WAIT}s)..." >> "$DIR/$LOG_FILE"
 
-echo "$FULL_PROMPT" | timeout $MAX_WAIT claude \
+echo "$FULL_PROMPT" | timeout $MAX_WAIT codex exec \
   --model "$MODEL" \
-  --dangerously-skip-permissions \
-  --output-format text \
+  --dangerously-bypass-approvals-and-sandbox \
+  --color never \
   > "$RAW_FILE" 2>&1
 AGENT_EXIT=$?
 

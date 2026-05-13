@@ -1,7 +1,7 @@
 import { createLogger } from '../utils/logger';
 
 const logger = createLogger('index');
-import { SyncQueue } from '../utils/database';
+import { SyncQueue, db } from '../utils/database';
 
 import { HttpAdapter } from './httpAdapter';
 import { WebSocketAdapter } from './wsAdapter';
@@ -334,6 +334,99 @@ export class SyncManager {
     return await this.processPendingQueue();
   }
   
+  /**
+   * graph.jsonl 원격 → graphCache 동기화
+   * GitHubService 인스턴스를 주입받아 사용 (토큰 의존성 최소화)
+   * @param {GitHubService} github
+   * @param {string} dataRepo
+   */
+  async syncGraphFromRemote(github, dataRepo = 'miki-data') {
+    if (!this.isOnline) return { success: false, reason: 'offline' };
+    try {
+      const triples = await github.readJsonl(dataRepo, 'graph.jsonl');
+      if (!triples.length) return { success: true, synced: 0 };
+
+      await db.transaction('rw', db.graphCache, async () => {
+        for (const triple of triples) {
+          const existing = await db.graphCache.where('entityId').equals(triple.id).first();
+          if (!existing) {
+            await db.graphCache.add({ ...triple, updatedAt: new Date().toISOString() });
+          } else if (triple.updatedAt > existing.updatedAt) {
+            await db.graphCache.update(existing.id, { ...triple, updatedAt: triple.updatedAt });
+          }
+        }
+      });
+
+      logger.info(`✅ [GraphSync] ${triples.length}개 triple 캐시 완료`);
+      return { success: true, synced: triples.length };
+    } catch (error) {
+      logger.error('❌ [GraphSync] 실패:', error);
+      return { success: false, error: error.message };
+    }
+  }
+
+  /**
+   * interventions.jsonl 원격 → interventionsCache 동기화
+   */
+  async syncInterventionsFromRemote(github, dataRepo = 'miki-data') {
+    if (!this.isOnline) return { success: false, reason: 'offline' };
+    try {
+      const interventions = await github.readJsonl(dataRepo, 'interventions.jsonl');
+      if (!interventions.length) return { success: true, synced: 0 };
+
+      await db.transaction('rw', db.interventionsCache, async () => {
+        for (const item of interventions) {
+          const existing = await db.interventionsCache.where('interventionId').equals(item.id).first();
+          if (!existing) {
+            await db.interventionsCache.add({ ...item, updatedAt: new Date().toISOString() });
+          }
+        }
+      });
+
+      logger.info(`✅ [InterventionSync] ${interventions.length}개 intervention 캐시 완료`);
+      return { success: true, synced: interventions.length };
+    } catch (error) {
+      logger.error('❌ [InterventionSync] 실패:', error);
+      return { success: false, error: error.message };
+    }
+  }
+
+  /**
+   * reflections/queue.jsonl 원격 → reflectionsQueue 동기화
+   */
+  async syncReflectionQueueFromRemote(github, dataRepo = 'miki-data') {
+    if (!this.isOnline) return { success: false, reason: 'offline' };
+    try {
+      const queue = await github.readJsonl(dataRepo, 'reflections/queue.jsonl');
+
+      await db.transaction('rw', db.reflectionsQueue, async () => {
+        await db.reflectionsQueue.clear();
+        for (const item of queue) {
+          await db.reflectionsQueue.add(item);
+        }
+      });
+
+      logger.info(`✅ [ReflectionSync] queue ${queue.length}개 항목 동기화 완료`);
+      return { success: true, synced: queue.length };
+    } catch (error) {
+      logger.error('❌ [ReflectionSync] 실패:', error);
+      return { success: false, error: error.message };
+    }
+  }
+
+  /**
+   * Phase 10 전체 초기 동기화 (최초 진입 시 1회)
+   */
+  async initialGraphSync(github, dataRepo = 'miki-data') {
+    await github.ensureGraphStructure(dataRepo);
+    const [graph, interventions, queue] = await Promise.all([
+      this.syncGraphFromRemote(github, dataRepo),
+      this.syncInterventionsFromRemote(github, dataRepo),
+      this.syncReflectionQueueFromRemote(github, dataRepo),
+    ]);
+    return { graph, interventions, queue };
+  }
+
   /**
    * 정리
    */
