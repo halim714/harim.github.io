@@ -73,7 +73,7 @@ Graphify는 코드/문서를 LLM으로 읽어 `graph.json`을 만든다. 출력 
 - **근거(Evidence)**: 노트 A(3/15)와 노트 B(4/2)에서 비슷한 맥락에서 사용됨
 - **신뢰도(Confidence)**: 0.65 (INFERRED)
 
-Rule→Why→How가 아니라 **What→Evidence→Confidence**가 Meki 큐레이션 카드의 구조다.
+Rule→Why→How가 아니라 **What→Evidence→Confidence**가 Meki 메모 큐레이션의 구조다.
 
 **관찰 3: forked agent 패턴은 백그라운드 추출의 구현 패턴이다.**
 
@@ -187,7 +187,7 @@ graphify-out/
 - **단일 노트 안에서 완결되는 사실**은 추출하지 않는다 (노트 원문 검색으로 충분)
 - **노트 간 관계, 시간에 따른 변화, 암묵적 패턴**은 추출한다 (전문 검색으로 발견 불가)
 
-**큐레이션 카드 구조** (Claude Code의 body_structure에서 착안, Meki용으로 변환):
+**메모 큐레이션 구조** (Claude Code의 body_structure에서 착안, Meki용으로 변환):
 - 원본: Rule → Why → How to apply (feedback 교정 전용)
 - **Meki 변환**: What(관계) → Evidence(근거) → Confidence(신뢰도)
 

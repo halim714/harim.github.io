@@ -53,6 +53,13 @@ fi
 - `🔴 미이행` 항목이 있으면 → 해당 항목을 **현재 Phase 태스크 프롬프트에 직접 포함**
 - 현재 Phase에서 해결 불가능하면 → `🟡 P{N} 대기`로 상태 변경 후 사유 기록
 
+### 지식그래프 및 SPEC 사전 진단 (graphify & SPEC 룰)
+에이전트가 코드를 임의로 자의적으로 추정하여 정크 코드를 양산하는 것을 막기 위해, Phase 실행 전 다음 진단을 의무화한다:
+1. **목표 SPEC 리딩**: 현재 구현할 기능의 도메인 SPEC 문서(`.claude/docs/SPEC_[domain].md`)를 읽고 입력, 출력, 구체적 인수조건(Acceptance Criteria)을 숙지한다.
+2. **코드 클러스터 검색**: 터미널에 `graphify query "[도메인 또는 컴포넌트명]"`을 실행하여 해당 SPEC에 매핑된 관련 코드베이스 구조와 최신 엣지 관계를 사전에 브리핑받는다.
+3. **자의적 설계 차단**: 검증 불가능한 설계나 사용자가 발화하지 않은 기능을 임의로 덧붙여 코드가 비대해지는 것을 엄격히 경계한다.
+
+
 ## Step 2: Phase 실행
 
 // turbo
@@ -126,6 +133,9 @@ Step 4의 판단에 따라 자동으로 행동한다. 행동 후 Step 2로 돌�
 
 // turbo
 ```bash
+# 코드 지식그래프 최신화 (graphify update)
+graphify update .
+
 # 태스크 단위 자동 커밋
 ./scripts/commit-phase.sh <PHASE>
 
@@ -136,7 +146,7 @@ Step 4의 판단에 따라 자동으로 행동한다. 행동 후 Step 2로 돌�
 Phase Gate 통과 시:
 1. PROGRESS.md 업데이트 (완료 기록)
 2. PLAN.md의 다음 Phase 상태를 🔄로 변경
-3. 사용자에게 **완료 보고** (notify_user)
+3. 지식그래프 동기화 상태 검증 및 사용자에게 **완료 보고** (notify_user)
 
 Phase Gate 실패 시:
 → 실패 항목을 분석하여 해당 태스크만 재실행
